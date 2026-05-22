@@ -1,0 +1,15 @@
+{
+  "name": "@anthropics/skill-creator",
+  "version": "0.4.0",
+  "description": "Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
+  "source": {
+    "repo": "https://github.com/anthropics/skills",
+    "ref": "main",
+    "path": "/skills",
+    "commit": "b0cbd3df1533b396d281a6886d5132f623393a9c",
+    "date": "2026-03-06T21:00:36.186Z"
+  }
+}

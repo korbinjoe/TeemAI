@@ -1,0 +1,74 @@
+{
+  "title": "Geplante Aufgaben",
+  "newTask": "Neue Aufgabe",
+  "editTask": "Aufgabe bearbeiten",
+  "deleteTask": "Aufgabe löschen",
+  "deleteConfirm": "Möchten Sie \"{{name}}\" wirklich löschen?",
+  "runNow": "Jetzt ausführen",
+  "runNowConfirm": "\"{{name}}\" sofort ausführen?",
+  "enable": "Aktivieren",
+  "disable": "Deaktivieren",
+  "form": {
+    "name": "Aufgabenname",
+    "namePlaceholder": "z.B. Tägliche Code-Überprüfung",
+    "workspace": "Arbeitsbereich",
+    "agent": "Agent (optional)",
+    "model": "Modell (optional)",
+    "trigger": "Zeitplan",
+    "triggerCron": "Cron-Ausdruck",
+    "triggerOnce": "Einmalig",
+    "triggerInterval": "Intervall",
+    "cronExpression": "Cron-Ausdruck",
+    "cronPlaceholder": "z.B. 0 9 * * 1-5",
+    "cronHelp": "Minute Stunde Tag Monat Wochentag",
+    "timezone": "Zeitzone",
+    "nextRun": "Nächste Ausführung: {{time}}",
+    "invalidCron": "Ungültiger Cron-Ausdruck",
+    "scheduledTime": "Geplante Zeit",
+    "interval": "Intervall",
+    "intervalUnit": "Einheit",
+    "minutes": "Minuten",
+    "hours": "Stunden",
+    "days": "Tage",
+    "prompt": "Initialer Prompt",
+    "promptPlaceholder": "Die Nachricht, die beim Start an den Agenten gesendet wird...",
+    "retryOnFailure": "Bei Fehler wiederholen",
+    "maxRetries": "Maximale Wiederholungen"
+  },
+  "status": {
+    "enabled": "Aktiviert",
+    "disabled": "Deaktiviert",
+    "running": "Läuft",
+    "success": "Erfolgreich",
+    "failed": "Fehlgeschlagen"
+  },
+  "executions": "Ausführungsverlauf",
+  "noExecutions": "Noch keine Ausführungen",
+  "lastRun": "Letzte Ausführung",
+  "nextRun": "Nächste Ausführung",
+  "neverRun": "Nie",
+  "empty": {
+    "title": "Keine geplanten Aufgaben",
+    "description": "Erstellen Sie Ihre erste geplante Aufgabe, damit der Agent automatisch arbeitet"
+  },
+  "toast": {
+    "created": "Aufgabe \"{{name}}\" erstellt",
+    "updated": "Aufgabe \"{{name}}\" aktualisiert",
+    "deleted": "Aufgabe \"{{name}}\" gelöscht",
+    "triggered": "Aufgabe \"{{name}}\" ausgelöst"
+  },
+  "nl": {
+    "title": "Geplante Aufgabe erstellen",
+    "description": "Beschreiben Sie die geplante Aufgabe in natürlicher Sprache",
+    "placeholder": "z.B. Jeden Morgen um 9 Uhr my-app PRs überprüfen",
+    "send": "Analysieren",
+    "parsing": "Analyse...",
+    "skipToManual": "Manueller Modus",
+    "or": "oder",
+    "error": {
+      "parseFailed": "Intelligente Analyse fehlgeschlagen, Wechsel zum manuellen Modus",
+      "noCredentials": "Bitte konfigurieren Sie ANTHROPIC_API_KEY, um KI-Funktionen zu aktivieren",
+      "networkError": "Netzwerkfehler, Wechsel zum manuellen Modus"
+    }
+  }
+}

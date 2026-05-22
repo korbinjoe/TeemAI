@@ -1,0 +1,18 @@
+{
+  "title": "通知",
+  "markAllRead": "すべて既読にする",
+  "clearRead": "既読を消去",
+  "allCaughtUp": "すべて確認済み",
+  "empty": "通知はまだありません",
+  "tabs": {
+    "all": "すべて",
+    "unread": "未読"
+  },
+  "category": {
+    "cron_success": "タスク完了",
+    "cron_failed": "タスク失敗",
+    "system": "システム"
+  },
+  "viewChat": "チャットを見る",
+  "justNow": "たった今"
+}

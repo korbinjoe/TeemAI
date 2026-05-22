@@ -1,0 +1,166 @@
+{
+  "title": "Configuración",
+  "apiConfig": "Configuración de API",
+  "apiKeyPlaceholder": "sk-ant-… (no necesario con OAuth)",
+  "showPassword": "Mostrar",
+  "hidePassword": "Ocultar",
+  "showPasswordLabel": "Mostrar contraseña",
+  "hidePasswordLabel": "Ocultar contraseña",
+  "workingDir": "Directorio de trabajo",
+  "defaultWorkingDir": "Directorio de trabajo predeterminado",
+  "appearance": "Apariencia",
+  "brandTheme": "Tema de marca",
+  "brandThemeDesc": "Elige el color de acento de la marca",
+  "lightMode": "Modo claro",
+  "lightModeDesc": "Cambiar al tema claro",
+  "switchToLight": "Cambiar al tema claro",
+  "toggleLightMode": "Alternar modo claro",
+  "language": "Idioma",
+  "featureToggles": "Funciones",
+  "autoSave": "Guardado automático",
+  "autoSaveDesc": "Guardar archivos automáticamente al modificar",
+  "autoSaveToggle": "Alternar guardado automático",
+  "enableNotifications": "Habilitar notificaciones",
+  "enableNotificationsDesc": "Mostrar notificación al completar tareas",
+  "enableNotificationsToggle": "Alternar notificaciones",
+  "agentCapabilities": "Capacidades del agente",
+  "toolsParamHint": "El conjunto de herramientas se puede ajustar con el parámetro <code>--tools</code>",
+  "saveSettings": "Guardar configuración",
+  "agentList": {
+    "title": "Agentes ({{count}})",
+    "fetchFailed": "Error al obtener la lista de agentes",
+    "applied": "Agente seleccionado",
+    "selectHint": "Seleccione un agente para ver detalles",
+    "current": "Actual",
+    "apply": "Aplicar",
+    "subAgents": "Sub-agentes",
+    "systemPrompt": "Prompt del sistema",
+    "rawDefinition": "Definición sin procesar"
+  },
+  "languageCurrent": "Actual: {{lang}}",
+  "agentConfig": {
+    "comingSoon": "Gestión de configuración de agentes próximamente",
+    "currentManaged": "Actualmente gestionado a través del directorio ai-assets/agents/"
+  },
+  "multiAgent": {
+    "loadWorkspaceFailed": "Error al cargar el espacio de trabajo",
+    "initWorkspace": "Inicializar",
+    "workspaceInitialized": "Espacio de trabajo inicializado",
+    "initFailed": "Error de inicialización",
+    "initWorkspaceFailed": "Error al inicializar el espacio de trabajo",
+    "loadTasksFailed": "Error al cargar tareas",
+    "loadSessionsFailed": "Error al cargar sesiones de agentes",
+    "scheduleDone": "Programación completada",
+    "scheduleFailed": "Error de programación",
+    "triggerScheduleFailed": "Error al activar la programación",
+    "triggerSchedule": "Activar programación",
+    "scheduling": "Programando...",
+    "loading": "Cargando...",
+    "noTasks": "Sin tareas",
+    "noSessions": "Sin sesiones",
+    "workspaceNotInit": "Espacio de trabajo no inicializado. Haga clic en \"Inicializar\".",
+    "leadAgent": "Líder",
+    "experts": "Expertos",
+    "agentSessions": "Sesiones de agentes",
+    "tableHeaders": {
+      "id": "ID",
+      "title": "Título",
+      "type": "Tipo",
+      "status": "Estado",
+      "priority": "Prioridad",
+      "assignedTo": "Asignado a",
+      "dependencies": "Dependencias",
+      "agent": "Agente",
+      "name": "Nombre",
+      "currentTask": "Tarea actual",
+      "completedFailed": "Completado/Fallido"
+    }
+  },
+  "update": {
+    "title": "Gestor de actualizaciones",
+    "currentVersion": "Actual: v{{version}}",
+    "confirmRollback": "¿Seguro que desea revertir a v{{version}}?",
+    "tabs": {
+      "overview": "Resumen",
+      "releases": "Lanzamientos",
+      "devices": "Dispositivos",
+      "alerts": "Alertas",
+      "storage": "Almacenamiento"
+    },
+    "metrics": {
+      "activeVersion": "Versión activa",
+      "noRelease": "Sin lanzamiento",
+      "onlineDevices": "Dispositivos en línea",
+      "versionCount": "{{count}} versiones",
+      "adoptionRate": "Tasa de adopción",
+      "adoptionSub": "Proporción de versión objetivo",
+      "recentErrors": "Errores recientes",
+      "recentErrorsSub": "Última hora"
+    },
+    "release": {
+      "currentRelease": "Lanzamiento actual: v{{version}}",
+      "confirm": "Confirmar",
+      "cancel": "Cancelar",
+      "adjustRollout": "Ajustar despliegue",
+      "rollbackTo": "Revertir a v{{version}}",
+      "rollbackToThis": "Revertir a esta versión",
+      "releaseTime": "Fecha de lanzamiento: ",
+      "minShell": "Shell mínimo: ",
+      "rolloutPercent": "Porcentaje de despliegue: ",
+      "noRecords": "Sin registros de lanzamiento",
+      "active": "Activo"
+    },
+    "devices": {
+      "noDevices": "Sin dispositivos reportados",
+      "headers": {
+        "deviceId": "ID de dispositivo",
+        "type": "Tipo",
+        "currentVersion": "Versión actual",
+        "shellVersion": "Versión Shell",
+        "platform": "Plataforma",
+        "lastSeen": "Última conexión"
+      }
+    },
+    "alerts": {
+      "noAlerts": "Sin alertas"
+    },
+    "storage": {
+      "loading": "Cargando...",
+      "versionCount": "Versiones almacenadas",
+      "totalSize": "Tamaño total",
+      "allVersions": "Todas las versiones",
+      "versionList": "Lista de versiones",
+      "perVersion": "Almacenamiento por versión"
+    },
+    "strategy": {
+      "full": "Completo",
+      "gradual": "Gradual",
+      "canary": "Canario",
+      "pinned": "Fijado"
+    },
+    "versionDistribution": "Distribución de versiones",
+    "time": {
+      "justNow": "Ahora mismo",
+      "minutesAgo": "Hace {{count}} min",
+      "hoursAgo": "Hace {{count}} h"
+    }
+  },
+  "updateSettings": {
+    "loading": "Cargando información de actualización...",
+    "installed": "Instaladas: {{versions}}",
+    "noInstalled": "Sin versiones instaladas",
+    "checking": "Verificando...",
+    "checkUpdate": "Buscar actualizaciones",
+    "upToDate": "Ya está actualizado",
+    "upToDateDesc": "Está ejecutando la última versión",
+    "newVersion": "Nueva versión v{{version}} disponible",
+    "checkFailed": "Verificación fallida",
+    "cannotConnect": "No se puede conectar al servicio de actualización",
+    "checkFailed2": "Error al buscar actualizaciones",
+    "confirmRollback": "¿Seguro que desea revertir a v{{version}}? Se aplica tras reiniciar.",
+    "rollbackTitle": "Revertir versión",
+    "rollbackDesc": "Volver a la versión anterior instalada, se aplica tras reiniciar",
+    "rollback": "Revertir",
+    "activeRelease": "Lanzamiento activo del servidor:"
+  }
+}

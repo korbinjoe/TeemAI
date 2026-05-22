@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenTeam UI Optimization Prototype</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary:       10 10 16;
+    --bg-secondary:     16 16 24;
+    --bg-tertiary:      22 22 32;
+    --bg-hover:         30 30 42;
+    --bg-tab-bar:       14 14 22;
+    --bg-selected:      36 36 50;
+    --bg-input:         18 18 28;
+    --bg-elevated:      24 24 36;
+    --text-primary:     226 228 240;
+    --text-secondary:   148 156 172;
+    --text-emphasis:    248 250 252;
+    --text-muted:       90 100 120;
+    --accent-brand:     90 143 202;
+    --accent-brand-light: 130 176 222;
+    --accent-brand-deep: 62 114 172;
+    --accent-green:     52 211 153;
+    --accent-yellow:    251 191 36;
+    --accent-red:       239 68 68;
+    --accent-orange:    245 158 11;
+    --accent-purple:    167 139 250;
+    --border-color:     38 38 54;
+    --border-subtle:    28 28 42;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: rgb(10 10 16);
+    color: rgb(226 228 240);
+    overflow-x: hidden;
+  }
+  .font-nunito { font-family: 'Nunito', sans-serif; }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.12); }
+
+  /* animations */
+  @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  @keyframes slide-up { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .animate-pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+  .animate-slide-up { animation: slide-up 0.3s ease-out; }
+  .animate-fade-in { animation: fade-in 0.2s ease-out; }
+  .skeleton {
+    background: linear-gradient(90deg, rgb(24 24 36) 25%, rgb(36 36 50) 50%, rgb(24 24 36) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+  }
+
+  /* page nav */
+  .page-nav-item {
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.15s;
+    white-space: nowrap;
+    color: rgb(148 156 172);
+  }
+  .page-nav-item:hover { background: rgba(255,255,255,0.04); color: rgb(226 228 240); }
+  .page-nav-item.active { background: rgba(90 143 202 / 0.15); color: rgb(130 176 222); font-weight: 600; }
+
+  /* section labels */
+  .section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  .section-label.p0 { background: rgba(239 68 68 / 0.12); color: rgb(239 68 68); }
+  .section-label.p1 { background: rgba(251 191 36 / 0.12); color: rgb(251 191 36); }
+  .section-label.p2 { background: rgba(90 143 202 / 0.12); color: rgb(130 176 222); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TOP NAV — Page Switcher                                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div style="position:sticky;top:0;z-index:100;background:rgb(10 10 16);border-bottom:1px solid rgb(28 28 42);">
+  <div style="max-width:1200px;margin:0 auto;padding:12px 24px;display:flex;align-items:center;gap:8px;overflow-x:auto;">
+    <div style="display:flex;align-items:center;gap:8px;margin-right:16px;flex-shrink:0;">
+      <svg width="24" height="24" viewBox="0 0 352 352" fill="none"><rect width="352" height="352" rx="56" fill="#5a8fca"/><rect x="75" y="92" width="202" height="48" rx="24" fill="white"/><rect x="150" y="92" width="52" height="192" rx="26" fill="white"/></svg>
+      <span class="font-nunito" style="font-size:14px;font-weight:800;color:rgb(248 250 252);">OpenTeam</span>
+      <span style="font-size:10px;color:rgb(90 100 120);padding:2px 8px;border:1px solid rgb(38 38 54);border-radius:4px;">UI Redesign</span>
+    </div>
+    <div class="page-nav-item active" onclick="showPage('workspace')">Agent Workspace</div>
+    <div class="page-nav-item" onclick="showPage('workspace-split')">Split Pane</div>
+    <div class="page-nav-item" onclick="showPage('workspace-cmd')">Command Palette</div>
+    <div class="page-nav-item" onclick="showPage('dashboard')">Mission Control</div>
+    <div class="page-nav-item" onclick="showPage('tabs')">Tab Bar</div>
+    <div class="page-nav-item" onclick="showPage('quickstart')">Quick Start</div>
+    <div class="page-nav-item" onclick="showPage('sidebar')">Sidebar</div>
+    <div class="page-nav-item" onclick="showPage('heartbeat')">Heartbeat</div>
+    <div class="page-nav-item" onclick="showPage('history')">Chat History</div>
+    <div class="page-nav-item" onclick="showPage('agents')">Agent Picker</div>
+    <div class="page-nav-item" onclick="showPage('completion')">Completion</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE 0A: AGENT WORKSPACE — Full Layout (NEW)           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="page-workspace" class="page-content" style="display:block;">
+<div style="position:relative;height:calc(100vh - 52px);overflow:hidden;">
+  <a href="workspace-interactive.html" target="_blank" style="position:absolute;top:12px;right:16px;z-index:10;padding:6px 14px;border-radius:6px;background:rgba(90,143,202,0.1);border:1px solid rgba(90,143,202,0.25);color:rgb(130 176 222);font-size:11px;font-weight:500;text-decoration:none;transition:all 0.15s;" onmouseover="this.style.background='rgba(90,143,202,0.2)'" onmouseout="this.style.background='rgba(90,143,202,0.1)'">Open Full Window ↗</a>
+  <iframe src="workspace-interactive.html" style="width:100%;height:100%;border:none;"></iframe>
+</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE 0B: SPLIT PANE VIEW (NEW)                         -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="page-workspace-split" class="page-content" style="display:none;">
+<div style="max-width:1200px;margin:0 auto;padding:32px 24px;">
+
+  <div class="section-label p0">P0 Critical — Layout Redesign</div>
+  <h2 style="font-size:20px;font-weight:700;color:rgb(248 250 252);margin-bottom:4px;">Split Pane — Interaction Flow</h2>
+  <p style="font-size:13px;color:rgb(148 156 172);margin-bottom:24px;max-width:640px;line-height:1.6;">
+    Three ways to enter split: ⌘\ shortcut, toolbar button, or drag an agent from the list into the workspace. Each pane is independently focusable and resizable.
+  </p>
+
+  <!-- ═══ Step 1: Drag to Split (interaction in progress) ═══ -->
+  <div style="margin-bottom:32px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <span style="width:20px;height:20px;border-radius:50%;background:rgba(90,143,202,0.12);border:1px solid rgba(90,143,202,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:rgb(130 176 222);">1</span>
+      <span style="font-size:13px;font-weight:600;color:rgb(248 250 252);">Drag agent from list → Drop zone appears</span>
+    </div>
+    <div style="border:1px solid rgb(38 38 54);border-radius:12px;overflow:hidden;background:rgb(10 10 16);">
+      <div style="display:flex;height:320px;">
+        <!-- Narrow agent list with one being dragged -->
+        <div style="width:180px;background:rgb(14 14 22);border-right:1px solid rgb(28 28 42);display:flex;flex-direction:column;flex-shrink:0;padding:8px 6px;">
+          <div style="padding:6px 8px;border-radius:5px;margin-bottom:2px;cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:6px;height:6px;border-radius:50%;background:rgb(90 143 202);animation:pulse-dot 1.5s ease-in-out infinite;"></span>
+              <span style="font-size:11px;color:rgb(226 228 240);">Redesign settings...</span>
+            </div>
+          </div>
+          <div style="padding:6px 8px;border-radius:5px;margin-bottom:2px;cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:6px;height:6px;border-radius:50%;background:rgb(251 191 36);"></span>
+              <span style="font-size:11px;color:rgb(226 228 240);">Implement auth flow</span>
+            </div>
+          </div>
+          <!-- Dragging this one — ghost state -->
+          <div style="padding:6px 8px;border-radius:5px;margin-bottom:2px;opacity:0.4;border:1px dashed rgb(90 143 202);">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:6px;height:6px;border-radius:50%;background:rgb(239 68 68);"></span>
+              <span style="font-size:11px;color:rgb(226 228 240);">Security audit...</span>
+            </div>
+          </div>
+          <div style="padding:6px 8px;border-radius:5px;margin-bottom:2px;cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:6px;height:6px;border-radius:50%;background:rgb(90 143 202);animation:pulse-dot 1.5s ease-in-out infinite;"></span>
+              <span style="font-size:11px;color:rgb(226 228 240);">Code review auth...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workspace with drop zones visible -->
+        <div style="flex:1;position:relative;display:flex;">
+          <!-- Current content (single pane, dimmed) -->
+          <div style="flex:1;opacity:0.3;display:flex;flex-direction:column;">
+            <div style="height:28px;border-bottom:1px solid rgb(28 28 42);display:flex;align-items:center;padding:0 10px;gap:6px;background:rgb(12 12 18);">
+              <span style="width:5px;height:5px;border-radius:50%;background:rgb(90 143 202);"></span>
+              <span style="font-size:10px;color:rgb(226 228 240);">Designer — Redesign settings page</span>
+            </div>
+            <div style="flex:1;padding:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgb(148 156 172);">
+              <div>✓ Write SettingsPage.tsx +84 −156</div>
+              <div>⚡ Write SettingsTabs.tsx new</div>
+            </div>
+          </div>
+
+          <!-- Drop Zone Overlay: LEFT -->
+          <div style="position:absolute;top:8px;left:8px;bottom:8px;width:calc(50% - 12px);border:2px dashed rgba(90,143,202,0.4);border-radius:8px;background:rgba(90,143,202,0.03);display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:11px;color:rgb(90 143 202);font-weight:500;">Left</span>
+          </div>
+          <!-- Drop Zone Overlay: RIGHT (highlighted — cursor is here) -->
+          <div style="position:absolute;top:8px;right:8px;bottom:8px;width:calc(50% - 12px);border:2px solid rgba(90,143,202,0.6);border-radius:8px;background:rgba(90,143,202,0.08);display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(90,143,202,0.1);">
+            <span style="font-size:11px;color:rgb(130 176 222);font-weight:600;">Drop here →</span>
+          </div>
+
+          <!-- Floating drag ghost -->
+          <div style="position:absolute;top:60px;right:80px;padding:6px 12px;border-radius:6px;background:rgb(22 22 32);border:1px solid rgba(90,143,202,0.3);box-shadow:0 8px 24px rgba(0,0,0,0.5);display:flex;align-items:center;gap:6px;transform:rotate(-2deg);z-index:10;">
+            <span style="width:6px;height:6px;border-radius:50%;background:rgb(239 68 68);"></span>
+            <span style="font-size:11px;color:rgb(226 228 240);font-weight:500;">Security audit Docker...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Step 2: Result — horizontal split established ═══ -->
+  <div style="margin-bottom:32px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <span style="width:20px;height:20px;border-radius:50%;background:rgba(90,143,202,0.12);border:1px solid rgba(90,143,202,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:rgb(130 176 222);">2</span>
+      <span style="font-size:13px;font-weight:600;color:rgb(248 250 252);">Split established — Resize handle between panes</span>
+    </div>
+    <div style="border:1px solid rgb(38 38 54);border-radius:12px;overflow:hidden;background:rgb(10 10 16);">
+      <!-- Toolbar showing split mode active -->
+      <div style="height:34px;border-bottom:1px solid rgb(28 28 42);display:flex;align-items:center;padding:0 12px;gap:8px;background:rgb(12 12 18);">
+        <span style="font-size:11px;color:rgb(148 156 172);">Layout:</span>
+        <div style="display:flex;align-items:center;gap:1px;padding:2px;border-radius:5px;background:rgba(255,255,255,0.03);border:1px solid rgb(38 38 54);">
+          <div style="width:22px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Single">
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="rgb(90 100 120)" stroke-width="1.5"/></svg>
+          </div>
+          <div style="width:22px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;background:rgba(90,143,202,0.15);cursor:pointer;" title="Split H (active)">
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="rgb(130 176 222)" stroke-width="1.5"/><line x1="8" y1="1" x2="8" y2="15" stroke="rgb(130 176 222)" stroke-width="1.5"/></svg>
+          </div>
+          <div style="width:22px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Split V">
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="rgb(90 100 120)" stroke-width="1.5"/><line x1="1" y1="8" x2="15" y2="8" stroke="rgb(90 100 120)" stroke-width="1.5"/></svg>
+          </div>
+          <div style="width:22px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Quad">
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="rgb(90 100 120)" stroke-width="1.5"/><line x1="8" y1="1" x2="8" y2="15" stroke="rgb(90 100 120)" stroke-width="1.5"/><line x1="1" y1="8" x2="15" y2="8" stroke="rgb(90 100 120)" stroke-width="1.5"/></svg>
+          </div>
+        </div>
+        <span style="flex:1;"></span>
+        <span style="font-size:10px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">⌘\ split · ⌘W close · ⌘[ ] focus</span>
+      </div>
+      <!-- Split panes with resize handle -->
+      <div style="display:flex;height:280px;">
+        <!-- Left pane (focused) -->
+        <div style="flex:1;display:flex;flex-direction:column;border-right:none;position:relative;">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:rgb(90 143 202);"></div>
+          <div style="height:28px;border-bottom:1px solid rgb(28 28 42);display:flex;align-items:center;padding:0 10px;gap:6px;background:rgb(12 12 18);">
+            <span style="width:5px;height:5px;border-radius:50%;background:rgb(90 143 202);animation:pulse-dot 1.5s ease-in-out infinite;"></span>
+            <span style="font-size:11px;font-weight:600;color:rgb(130 176 222);">Designer</span>
+            <span style="font-size:9px;color:rgb(90 100 120);">— Redesign settings</span>
+            <span style="flex:1;"></span>
+            <span style="font-size:9px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">⌘1</span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="2" stroke-linecap="round" style="cursor:pointer;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+          <div style="flex:1;padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:rgb(148 156 172);overflow:hidden;">
+            <div><span style="color:rgb(52 211 153);">✓</span> Write SettingsPage.tsx <span style="color:rgb(52 211 153);">+84 −156</span></div>
+            <div><span style="color:rgb(251 191 36);">⚡</span> Write SettingsTabs.tsx <span style="color:rgb(52 211 153);">new</span></div>
+            <div><span style="color:rgb(251 191 36);">⚡</span> Write AgentSettingsTab.tsx <span style="color:rgb(52 211 153);">new</span></div>
+            <div style="margin-top:6px;color:rgb(130 176 222);"><span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:rgb(90 143 202);animation:pulse-dot 1.5s ease-in-out infinite;"></span> Working on AppearanceTab...</div>
+          </div>
+        </div>
+
+        <!-- Resize Handle -->
+        <div style="width:5px;background:rgb(28 28 42);cursor:col-resize;display:flex;align-items:center;justify-content:center;position:relative;transition:background 0.15s;" onmouseover="this.style.background='rgb(90 143 202)'" onmouseout="this.style.background='rgb(28 28 42)'">
+          <div style="width:3px;height:24px;border-radius:2px;background:rgba(255,255,255,0.1);"></div>
+        </div>
+
+        <!-- Right pane -->
+        <div style="flex:1;display:flex;flex-direction:column;">
+          <div style="height:28px;border-bottom:1px solid rgba(239,68,68,0.15);display:flex;align-items:center;padding:0 10px;gap:6px;background:rgba(239,68,68,0.02);">
+            <span style="width:5px;height:5px;border-radius:50%;background:rgb(239 68 68);"></span>
+            <span style="font-size:11px;font-weight:600;color:rgb(239 68 68);">Shield</span>
+            <span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(239,68,68,0.12);color:rgb(239 68 68);">ERROR</span>
+            <span style="flex:1;"></span>
+            <span style="font-size:9px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">⌘2</span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="2" stroke-linecap="round" style="cursor:pointer;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+          <div style="flex:1;padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;color:rgb(148 156 172);overflow:hidden;">
+            <div><span style="color:rgb(52 211 153);">✓</span> Scanned Dockerfile</div>
+            <div><span style="color:rgb(52 211 153);">✓</span> Checked compose config</div>
+            <div style="margin-top:8px;padding:6px 8px;border-radius:5px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.12);">
+              <div style="color:rgb(239 68 68);font-size:9px;">✗ Permission denied: /etc/docker/daemon.json</div>
+            </div>
+          </div>
+          <div style="padding:4px 8px;border-top:1px solid rgba(239,68,68,0.1);display:flex;gap:4px;">
+            <button style="flex:1;padding:3px;border-radius:4px;border:1px solid rgba(239,68,68,0.2);background:transparent;color:rgb(239 68 68);font-size:9px;cursor:pointer;">Retry</button>
+            <button style="flex:1;padding:3px;border-radius:4px;border:1px solid rgb(38 38 54);background:transparent;color:rgb(148 156 172);font-size:9px;cursor:pointer;">Dismiss</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Step 3: Quad view final state ═══ -->
+  <div style="margin-bottom:32px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <span style="width:20px;height:20px;border-radius:50%;background:rgba(90,143,202,0.12);border:1px solid rgba(90,143,202,0.3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:rgb(130 176 222);">3</span>
+      <span style="font-size:13px;font-weight:600;color:rgb(248 250 252);">Quad view — Monitor 4 agents at once</span>
+    </div>
+    <div style="border:1px solid rgb(38 38 54);border-radius:12px;overflow:hidden;background:rgb(10 10 16);">
+      <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;height:340px;gap:1px;background:rgb(28 28 42);">
+        <!-- Q1: Designer (focused) -->
+        <div style="background:rgb(10 10 16);display:flex;flex-direction:column;overflow:hidden;position:relative;">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:rgb(90 143 202);"></div>
+          <div style="height:26px;display:flex;align-items:center;padding:0 8px;gap:5px;border-bottom:1px solid rgb(28 28 42);background:rgb(12 12 18);">
+            <span style="width:5px;height:5px;border-radius:50%;background:rgb(90 143 202);animation:pulse-dot 1.5s ease-in-out infinite;"></span>
+            <span style="font-size:10px;font-weight:600;color:rgb(130 176 222);flex:1;">Designer</span>
+            <span style="font-size:8px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">⌘1</span>
+          </div>
+          <div style="flex:1;padding:6px 8px;font-family:'JetBrains Mono',monospace;font-size:9px;line-height:1.6;color:rgb(148 156 172);overflow:hidden;">
+            <div><span style="color:rgb(52 211 153);">✓</span> Write SettingsPage.tsx</div>
+            <div><span style="color:rgb(251 191 36);">⚡</span> Write SettingsTabs.tsx</div>
+            <div style="color:rgb(130 176 222);margin-top:3px;">● Working on AppearanceTab...</div>
+          </div>
+        </div>
+        <!-- Q2: Fullstack (waiting) -->
+        <div style="background:rgb(10 10 16);display:flex;flex-direction:column;overflow:hidden;">
+          <div style="height:26px;display:flex;align-items:center;padding:0 8px;gap:5px;border-bottom:1px solid rgba(251,191,36,0.15);background:rgba(251,191,36,0.02);">
+            <span style="width:5px;height:5px;border-radius:50%;background:rgb(251 191 36);"></span>
+            <span style="font-size:10px;font-weight:600;color:rgb(251 191 36);flex:1;">Fullstack</span>
+            <span style="font-size:8px;padding:1px 4px;border-radius:2px;background:rgba(251,191,36,0.12);color:rgb(251 191 36);">INPUT</span>
+          </div>
+          <div style="flex:1;padding:6px 8px;font-family:'JetBrains Mono',monospace;font-size:9px;line-height:1.6;color:rgb(148 156 172);overflow:hidden;">
+            <div><span style="color:rgb(52 211 153);">✓</span> Created auth routes</div>
+            <div style="margin-top:4px;padding:5px;border-radius:4px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.1);">
+              <div style="color:rgb(251 191 36);font-size:9px;">⚠ "JWT or session auth?"</div>
+            </div>
+          </div>
+        </div>
+        <!-- Q3: Shield (error) -->
+        <div style="background:rgb(10 10 16);display:flex;flex-direction:column;overflow:hidden;">
+          <div style="height:26px;display:flex;align-items:center;padding:0 8px;gap:5px;border-bottom:1px solid rgba(239,68,68,0.15);background:rgba(239,68,68,0.02);">
+            <span style="width:5px;height:5px;border-radius:50%;background:rgb(239 68 68);"></span>
+            <span style="font-size:10px;font-weight:600;color:rgb(239 68 68);flex:1;">Shield</span>
+            <span style="font-size:8px;padding:1px 4px;border-radius:2px;background:rgba(239,68,68,0.12);color:rgb(239 68 68);">ERR</span>
+          </div>
+          <div style="flex:1;padding:6px 8px;font-family:'JetBrains Mono',monospace;font-size:9px;line-height:1.6;color:rgb(148 156 172);overflow:hidden;">
+            <div><span style="color:rgb(52 211 153);">✓</span> Scanned Dockerfile</div>
+            <div style="margin-top:4px;padding:5px;border-radius:4px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.1);">
+              <div style="color:rgb(239 68 68);font-size:9px;">✗ Permission denied</div>
+            </div>
+          </div>
+        </div>
+        <!-- Q4: Reviewer (running) -->
+        <div style="background:rgb(10 10 16);display:flex;flex-direction:column;overflow:hidden;">
+          <div style="height:26px;display:flex;align-items:center;padding:0 8px;gap:5px;border-bottom:1px solid rgb(28 28 42);background:rgb(12 12 18);">
+            <span style="width:5px;height:5px;border-radius:50%;background:rgb(90 143 202);animation:pulse-dot 1.5s ease-in-out infinite;"></span>
+            <span style="font-size:10px;font-weight:500;color:rgb(226 228 240);flex:1;">Reviewer</span>
+            <span style="font-size:8px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">⌘4</span>
+          </div>
+          <div style="flex:1;padding:6px 8px;font-family:'JetBrains Mono',monospace;font-size:9px;line-height:1.6;color:rgb(148 156 172);overflow:hidden;">
+            <div><span style="color:rgb(251 191 36);">⚡</span> Read auth.ts</div>
+            <div><span style="color:rgb(251 191 36);">⚡</span> Grep "password" in src/</div>
+            <div style="color:rgb(130 176 222);margin-top:3px;">● Analyzing patterns...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interaction Summary -->
+  <div style="padding:16px 20px;border-radius:10px;border:1px solid rgb(28 28 42);background:rgb(14 14 22);">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:rgb(90 143 202);margin-bottom:10px;">Keyboard Shortcuts</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;border:1px solid rgb(28 28 42);">
+        <kbd style="font-size:10px;padding:2px 5px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);color:rgb(148 156 172);font-family:'JetBrains Mono',monospace;">⌘\</kbd>
+        <span style="font-size:11px;color:rgb(226 228 240);">Toggle split</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;border:1px solid rgb(28 28 42);">
+        <kbd style="font-size:10px;padding:2px 5px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);color:rgb(148 156 172);font-family:'JetBrains Mono',monospace;">⌘W</kbd>
+        <span style="font-size:11px;color:rgb(226 228 240);">Close pane</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;border:1px solid rgb(28 28 42);">
+        <kbd style="font-size:10px;padding:2px 5px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);color:rgb(148 156 172);font-family:'JetBrains Mono',monospace;">⌘1-4</kbd>
+        <span style="font-size:11px;color:rgb(226 228 240);">Focus pane</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;border:1px solid rgb(28 28 42);">
+        <kbd style="font-size:10px;padding:2px 5px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);color:rgb(148 156 172);font-family:'JetBrains Mono',monospace;">⌘[ ]</kbd>
+        <span style="font-size:11px;color:rgb(226 228 240);">Prev / Next</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;border:1px solid rgb(28 28 42);">
+        <kbd style="font-size:10px;padding:2px 5px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);color:rgb(148 156 172);font-family:'JetBrains Mono',monospace;">Drag</kbd>
+        <span style="font-size:11px;color:rgb(226 228 240);">Drop to split</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;border:1px solid rgb(28 28 42);">
+        <kbd style="font-size:10px;padding:2px 5px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);color:rgb(148 156 172);font-family:'JetBrains Mono',monospace;">Resize</kbd>
+        <span style="font-size:11px;color:rgb(226 228 240);">Drag divider</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE 0C: COMMAND PALETTE (NEW)                          -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="page-workspace-cmd" class="page-content" style="display:none;">
+<div style="max-width:1200px;margin:0 auto;padding:32px 24px;">
+
+  <div class="section-label p1">P1 Important</div>
+  <h2 style="font-size:20px;font-weight:700;color:rgb(248 250 252);margin-bottom:4px;">Command Palette — Universal Access (⌘K)</h2>
+  <p style="font-size:13px;color:rgb(148 156 172);margin-bottom:24px;max-width:640px;line-height:1.6;">
+    Replaces the icon sidebar as the navigation mechanism. Quick fuzzy-search access to agents, workspaces, settings, and all features. Inspired by VS Code / Raycast.
+  </p>
+
+  <!-- Command Palette Mock -->
+  <div style="position:relative;max-width:560px;margin:0 auto;">
+    <!-- Dimmed background hint -->
+    <div style="position:absolute;inset:-20px;background:rgba(0,0,0,0.4);border-radius:16px;"></div>
+
+    <!-- Palette container -->
+    <div style="position:relative;border:1px solid rgb(38 38 54);border-radius:12px;background:rgb(16 16 24);box-shadow:0 24px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(90,143,202,0.1);overflow:hidden;">
+      <!-- Search input -->
+      <div style="padding:14px 16px;border-bottom:1px solid rgb(28 28 42);display:flex;align-items:center;gap:10px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(90 143 202)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span style="font-size:14px;color:rgb(226 228 240);">auth</span>
+        <span style="width:2px;height:18px;background:rgb(90 143 202);animation:pulse-dot 1s ease-in-out infinite;border-radius:1px;"></span>
+        <span style="flex:1;"></span>
+        <kbd style="display:inline-flex;align-items:center;justify-content:center;height:20px;padding:0 6px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">esc</kbd>
+      </div>
+
+      <!-- Results -->
+      <div style="padding:6px;">
+        <!-- Category: Agents -->
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgb(90 100 120);padding:8px 10px 4px;">Agents</div>
+
+        <!-- Result item: highlighted -->
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:rgba(90,143,202,0.08);cursor:pointer;">
+          <div style="width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,#4a6fa5,#6b8fc5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;">F</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;color:rgb(248 250 252);">Fullstack — Implement user <span style="background:rgba(90,143,202,0.2);padding:0 2px;border-radius:2px;">auth</span> flow</div>
+            <div style="font-size:11px;color:rgb(251 191 36);margin-top:2px;">⚠ Waiting: "JWT or session-based auth?"</div>
+          </div>
+          <span style="font-size:10px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">↵</span>
+        </div>
+
+        <!-- Category: Actions -->
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgb(90 100 120);padding:12px 10px 4px;">Actions</div>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background 0.1s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+          <div style="width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgb(148 156 172)" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;color:rgb(226 228 240);">New Session — <span style="background:rgba(90,143,202,0.2);padding:0 2px;border-radius:2px;">auth</span> related</div>
+          </div>
+          <span style="font-size:10px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">⌘N</span>
+        </div>
+
+        <!-- Category: Navigation -->
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgb(90 100 120);padding:12px 10px 4px;">Navigation</div>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background 0.1s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+          <div style="width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgb(148 156 172)" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;color:rgb(226 228 240);">Chat History</div>
+            <div style="font-size:11px;color:rgb(90 100 120);">Browse past sessions</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background 0.1s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+          <div style="width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgb(148 156 172)" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;color:rgb(226 228 240);">Settings</div>
+            <div style="font-size:11px;color:rgb(90 100 120);">Preferences & configuration</div>
+          </div>
+          <span style="font-size:10px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">⌘,</span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background 0.1s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+          <div style="width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgb(148 156 172)" stroke-width="1.5" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;color:rgb(226 228 240);">Skills</div>
+            <div style="font-size:11px;color:rgb(90 100 120);">Manage agent skills</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="padding:8px 16px;border-top:1px solid rgb(28 28 42);display:flex;align-items:center;gap:16px;font-size:10px;color:rgb(90 100 120);">
+        <span style="display:inline-flex;align-items:center;gap:4px;">
+          <kbd style="display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:16px;padding:0 3px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:9px;font-family:'JetBrains Mono',monospace;">↑↓</kbd>
+          navigate
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:4px;">
+          <kbd style="display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:16px;padding:0 3px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:9px;font-family:'JetBrains Mono',monospace;">↵</kbd>
+          select
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:4px;">
+          <kbd style="display:inline-flex;align-items:center;justify-content:center;height:16px;min-width:16px;padding:0 3px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:9px;font-family:'JetBrains Mono',monospace;">esc</kbd>
+          close
+        </span>
+        <span style="flex:1;"></span>
+        <span style="color:rgb(148 156 172);">5 results</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyboard shortcuts reference -->
+  <div style="margin-top:48px;max-width:560px;margin-left:auto;margin-right:auto;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:rgb(90 100 120);margin-bottom:12px;">Keyboard Shortcuts (Workspace Mode)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;border:1px solid rgb(28 28 42);">
+        <div style="display:flex;gap:3px;">
+          <kbd style="height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(148 156 172);display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;">⌘</kbd>
+          <kbd style="height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(148 156 172);display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;">K</kbd>
+        </div>
+        <span style="font-size:12px;color:rgb(226 228 240);">Command palette</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;border:1px solid rgb(28 28 42);">
+        <div style="display:flex;gap:3px;">
+          <kbd style="height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(148 156 172);display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;">⌘</kbd>
+          <kbd style="height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(148 156 172);display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;">\</kbd>
+        </div>
+        <span style="font-size:12px;color:rgb(226 228 240);">Split pane</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;border:1px solid rgb(28 28 42);">
+        <div style="display:flex;gap:3px;">
+          <kbd style="height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(148 156 172);display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;">⌘</kbd>
+          <kbd style="height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(148 156 172);display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;">N</kbd>
+        </div>
+        <span style="font-size:12px;color:rgb(226 228 240);">New session</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;border:1px solid rgb(28 28 42);">
+        <div style="display:flex;gap:3px;">
+          <kbd style="height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(148 156 172);display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;">⌘</kbd>
+          <kbd style="height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(148 156 172);display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;">1-4</kbd>
+        </div>
+        <span style="font-size:12px;color:rgb(226 228 240);">Focus pane</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;border:1px solid rgb(28 28 42);">
+        <div style="display:flex;gap:3px;">
+          <kbd style="height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(148 156 172);display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;">⌘</kbd>
+          <kbd style="height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(148 156 172);display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;">W</kbd>
+        </div>
+        <span style="font-size:12px;color:rgb(226 228 240);">Close pane</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;border:1px solid rgb(28 28 42);">
+        <div style="display:flex;gap:3px;">
+          <kbd style="height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(148 156 172);display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;">⌘</kbd>
+          <kbd style="height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(148 156 172);display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;">[</kbd>
+          <kbd style="height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(148 156 172);display:inline-flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;">]</kbd>
+        </div>
+        <span style="font-size:12px;color:rgb(226 228 240);">Prev / Next agent</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE 1: MISSION CONTROL (P0)                           -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="page-dashboard" class="page-content" style="display:none;">
+<div style="max-width:1200px;margin:0 auto;padding:32px 24px;">
+
+  <div class="section-label p0">P0 Critical</div>
+  <h2 style="font-size:20px;font-weight:700;color:rgb(248 250 252);margin-bottom:4px;">Mission Control — Global Dashboard</h2>
+  <p style="font-size:13px;color:rgb(148 156 172);margin-bottom:24px;max-width:640px;line-height:1.6;">
+    The homepage users see when they return. At a glance: what's done, what needs attention, and what's still running.
+    Replaces the current EmptyTabPage which is just a "new chat" form.
+  </p>
+
+  <!-- Mock: Full app layout -->
+  <div style="border:1px solid rgb(38 38 54);border-radius:12px;overflow:hidden;background:rgb(10 10 16);">
+
+    <!-- Sidebar + Content -->
+    <div style="display:flex;height:720px;">
+
+      <!-- Sidebar (simplified — see sidebar page for details) -->
+      <div style="width:52px;background:rgb(16 16 24);border-right:1px solid rgba(255,255,255,0.04);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:2px;">
+        <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;">
+          <svg width="24" height="24" viewBox="0 0 352 352" fill="none"><rect width="352" height="352" rx="56" fill="#5a8fca"/><rect x="75" y="92" width="202" height="48" rx="24" fill="white"/><rect x="150" y="92" width="52" height="192" rx="26" fill="white"/></svg>
+        </div>
+        <div style="width:24px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);margin-bottom:8px;"></div>
+        <!-- Active: Dashboard -->
+        <div style="position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(90,143,202,0.15);">
+          <div style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:2.5px;height:16px;border-radius:0 2px 2px 0;background:linear-gradient(180deg,rgb(130 176 222),rgb(90 143 202));"></div>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgb(130 176 222)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </div>
+        <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3"/><path d="M7 20a5 5 0 0 1 10 0"/><circle cx="5" cy="9.5" r="2"/><path d="M1 19c0-2.5 1.8-4 4-4"/><circle cx="19" cy="9.5" r="2"/><path d="M23 19c0-2.5-1.8-4-4-4"/></svg>
+        </div>
+      </div>
+
+      <!-- Main Content: Dashboard -->
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+
+        <!-- Header -->
+        <div style="height:44px;border-bottom:1px solid rgb(28 28 42);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;">
+          <span style="font-size:14px;font-weight:700;color:rgb(248 250 252);">Mission Control</span>
+          <span style="flex:1;"></span>
+          <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">Updated 12s ago</span>
+          <button style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:8px;background:rgb(90 143 202);color:white;font-size:12px;font-weight:600;border:none;cursor:pointer;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Chat
+          </button>
+        </div>
+
+        <div style="flex:1;overflow-y:auto;padding:20px;">
+          <div style="max-width:920px;margin:0 auto;">
+
+            <!-- Attention Required Banner -->
+            <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+              <div style="width:32px;height:32px;border-radius:8px;background:rgba(239,68,68,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(239 68 68)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
+              <div style="flex:1;">
+                <div style="font-size:13px;font-weight:600;color:rgb(248 250 252);">2 tasks need your attention</div>
+                <div style="font-size:11px;color:rgb(148 156 172);margin-top:2px;">1 waiting for input · 1 encountered an error</div>
+              </div>
+              <button style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid rgba(239,68,68,0.2);background:transparent;color:rgb(239 68 68);cursor:pointer;">Review All</button>
+            </div>
+
+            <!-- Stats Row -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;">
+              <!-- Running -->
+              <div style="padding:16px;border-radius:10px;border:1px solid rgb(38 38 54);background:rgb(16 16 24);">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                  <div style="width:8px;height:8px;border-radius:50%;background:rgb(90 143 202);animation:pulse-dot 1.5s ease-in-out infinite;"></div>
+                  <span style="font-size:11px;color:rgb(148 156 172);font-weight:500;">Running</span>
+                </div>
+                <div style="font-size:28px;font-weight:700;color:rgb(248 250 252);font-family:'JetBrains Mono',monospace;">3</div>
+              </div>
+              <!-- Needs Input -->
+              <div style="padding:16px;border-radius:10px;border:1px solid rgba(251,191,36,0.15);background:rgba(251,191,36,0.04);">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                  <div style="width:8px;height:8px;border-radius:50%;background:rgb(251 191 36);"></div>
+                  <span style="font-size:11px;color:rgb(251 191 36);font-weight:500;">Needs Input</span>
+                </div>
+                <div style="font-size:28px;font-weight:700;color:rgb(251 191 36);font-family:'JetBrains Mono',monospace;">1</div>
+              </div>
+              <!-- Error -->
+              <div style="padding:16px;border-radius:10px;border:1px solid rgba(239,68,68,0.15);background:rgba(239,68,68,0.04);">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                  <div style="width:8px;height:8px;border-radius:50%;background:rgb(239 68 68);"></div>
+                  <span style="font-size:11px;color:rgb(239 68 68);font-weight:500;">Error</span>
+                </div>
+                <div style="font-size:28px;font-weight:700;color:rgb(239 68 68);font-family:'JetBrains Mono',monospace;">1</div>
+              </div>
+              <!-- Completed Today -->
+              <div style="padding:16px;border-radius:10px;border:1px solid rgb(38 38 54);background:rgb(16 16 24);">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                  <div style="width:8px;height:8px;border-radius:50%;background:rgb(52 211 153);"></div>
+                  <span style="font-size:11px;color:rgb(148 156 172);font-weight:500;">Done Today</span>
+                </div>
+                <div style="font-size:28px;font-weight:700;color:rgb(248 250 252);font-family:'JetBrains Mono',monospace;">7</div>
+              </div>
+            </div>
+
+            <!-- Active Chats -->
+            <div style="margin-bottom:24px;">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:rgb(148 156 172);margin-bottom:10px;">Active Tasks</div>
+
+              <!-- Chat Card: Needs Input -->
+              <div style="border:1px solid rgba(251,191,36,0.2);border-radius:10px;padding:14px 16px;margin-bottom:8px;background:rgba(251,191,36,0.03);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(251,191,36,0.06)'" onmouseout="this.style.background='rgba(251,191,36,0.03)'">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <!-- Agent Avatar -->
+                  <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#4a6fa5,#6b8fc5);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">F</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <span style="font-size:13px;font-weight:600;color:rgb(248 250 252);">Implement user auth flow</span>
+                      <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(251,191,36,0.15);color:rgb(251 191 36);font-weight:600;">NEEDS INPUT</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+                      <span style="font-size:11px;color:rgb(148 156 172);">openteam-web</span>
+                      <span style="font-size:11px;color:rgb(148 156 172);">·</span>
+                      <span style="font-size:11px;color:rgb(148 156 172);">Fullstack Engineer</span>
+                      <span style="font-size:11px;color:rgb(148 156 172);">·</span>
+                      <span style="font-size:11px;color:rgb(251 191 36);">Asking: "Should I use JWT or session-based auth?"</span>
+                    </div>
+                  </div>
+                  <div style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;flex-shrink:0;">4m 23s</div>
+                  <button style="padding:4px 12px;border-radius:6px;background:rgb(251 191 36);color:rgb(10 10 16);font-size:11px;font-weight:600;border:none;cursor:pointer;">Reply</button>
+                </div>
+              </div>
+
+              <!-- Chat Card: Error -->
+              <div style="border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:14px 16px;margin-bottom:8px;background:rgba(239,68,68,0.03);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.06)'" onmouseout="this.style.background='rgba(239,68,68,0.03)'">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#8b5cf6,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">S</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <span style="font-size:13px;font-weight:600;color:rgb(248 250 252);">Fix CI pipeline failures</span>
+                      <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(239,68,68,0.15);color:rgb(239 68 68);font-weight:600;">ERROR</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+                      <span style="font-size:11px;color:rgb(148 156 172);">infra-tools</span>
+                      <span style="font-size:11px;color:rgb(148 156 172);">·</span>
+                      <span style="font-size:11px;color:rgb(148 156 172);">Shield</span>
+                      <span style="font-size:11px;color:rgb(148 156 172);">·</span>
+                      <span style="font-size:11px;color:rgb(239 68 68);">Permission denied: /etc/docker/daemon.json</span>
+                    </div>
+                  </div>
+                  <div style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;flex-shrink:0;">12m 8s</div>
+                  <button style="padding:4px 12px;border-radius:6px;background:transparent;border:1px solid rgba(239,68,68,0.3);color:rgb(239 68 68);font-size:11px;font-weight:600;cursor:pointer;">View</button>
+                </div>
+              </div>
+
+              <!-- Chat Card: Running (normal) -->
+              <div style="border:1px solid rgb(38 38 54);border-radius:10px;padding:14px 16px;margin-bottom:8px;background:rgb(16 16 24);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgb(22 22 32)'" onmouseout="this.style.background='rgb(16 16 24)'">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#059669,#34d399);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;">D</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <span style="font-size:13px;font-weight:600;color:rgb(248 250 252);">Redesign settings page</span>
+                      <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(90,143,202,0.12);color:rgb(130 176 222);font-weight:500;">RUNNING</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+                      <span style="font-size:11px;color:rgb(148 156 172);">openteam-web</span>
+                      <span style="font-size:11px;color:rgb(148 156 172);">·</span>
+                      <span style="font-size:11px;color:rgb(148 156 172);">Designer</span>
+                      <span style="font-size:11px;color:rgb(148 156 172);">·</span>
+                      <span style="font-size:11px;color:rgb(130 176 222);">Edit web/pages/SettingsPage.tsx</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">14/21 tools</span>
+                    <span style="font-size:11px;color:rgb(167 139 250);font-family:'JetBrains Mono',monospace;font-weight:600;">2m 41s</span>
+                  </div>
+                </div>
+                <!-- Progress bar -->
+                <div style="margin-top:10px;height:3px;border-radius:2px;background:rgb(38 38 54);overflow:hidden;">
+                  <div style="width:67%;height:100%;border-radius:2px;background:linear-gradient(90deg,rgb(90 143 202),rgb(130 176 222));transition:width 0.5s;"></div>
+                </div>
+              </div>
+
+              <!-- Chat Card: Running (multi-agent) -->
+              <div style="border:1px solid rgb(38 38 54);border-radius:10px;padding:14px 16px;margin-bottom:8px;background:rgb(16 16 24);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgb(22 22 32)'" onmouseout="this.style.background='rgb(16 16 24)'">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div style="display:flex;margin-right:-4px;">
+                    <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#4a6fa5,#6b8fc5);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;border:2px solid rgb(16 16 24);position:relative;z-index:2;">F</div>
+                    <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#059669,#34d399);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;border:2px solid rgb(16 16 24);margin-left:-8px;position:relative;z-index:1;">D</div>
+                  </div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <span style="font-size:13px;font-weight:600;color:rgb(248 250 252);">Build onboarding flow</span>
+                      <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(90,143,202,0.12);color:rgb(130 176 222);font-weight:500;">2 AGENTS</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+                      <span style="font-size:11px;color:rgb(148 156 172);">openteam-web</span>
+                      <span style="font-size:11px;color:rgb(148 156 172);">·</span>
+                      <span style="font-size:11px;color:rgb(130 176 222);">Fullstack: Creating routes · Designer: Wireframing</span>
+                    </div>
+                  </div>
+                  <div style="font-size:11px;color:rgb(167 139 250);font-family:'JetBrains Mono',monospace;font-weight:600;">8m 12s</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recently Completed -->
+            <div>
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:rgb(148 156 172);margin-bottom:10px;">Completed Today</div>
+
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <!-- Completed item -->
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;border:1px solid rgb(28 28 42);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(52 211 153)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span style="font-size:13px;color:rgb(226 228 240);flex:1;">Add dark mode toggle to header</span>
+                  <span style="font-size:11px;color:rgb(52 211 153);font-family:'JetBrains Mono',monospace;">3 files changed</span>
+                  <span style="font-size:11px;color:rgb(90 100 120);">32 min ago</span>
+                  <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">$0.12</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;border:1px solid rgb(28 28 42);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(52 211 153)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span style="font-size:13px;color:rgb(226 228 240);flex:1;">Fix WebSocket reconnection logic</span>
+                  <span style="font-size:11px;color:rgb(52 211 153);font-family:'JetBrains Mono',monospace;">1 file changed</span>
+                  <span style="font-size:11px;color:rgb(90 100 120);">1h ago</span>
+                  <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">$0.08</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;border:1px solid rgb(28 28 42);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(52 211 153)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  <span style="font-size:13px;color:rgb(226 228 240);flex:1;">Refactor agent config validation</span>
+                  <span style="font-size:11px;color:rgb(52 211 153);font-family:'JetBrains Mono',monospace;">5 files changed</span>
+                  <span style="font-size:11px;color:rgb(90 100 120);">2h ago</span>
+                  <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">$0.34</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE 2: ENHANCED TAB BAR (P0)                          -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="page-tabs" class="page-content" style="display:none;">
+<div style="max-width:1200px;margin:0 auto;padding:32px 24px;">
+
+  <div class="section-label p0">P0 Critical</div>
+  <h2 style="font-size:20px;font-weight:700;color:rgb(248 250 252);margin-bottom:4px;">Enhanced Tab Bar</h2>
+  <p style="font-size:13px;color:rgb(148 156 172);margin-bottom:24px;max-width:640px;line-height:1.6;">
+    Stronger visual status indicators. Users should instantly see which tabs need attention without reading text.
+    Added: global status summary pill, color-coded borders, pulsing badges.
+  </p>
+
+  <!-- Before -->
+  <div style="margin-bottom:32px;">
+    <div style="font-size:11px;font-weight:600;color:rgb(90 100 120);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Before — Subtle dots, hard to scan</div>
+    <div style="border:1px solid rgb(38 38 54);border-radius:10px;overflow:hidden;">
+      <div style="height:32px;background:rgb(14 14 22);display:flex;align-items:flex-end;padding-left:8px;">
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 14px;border-radius:6px 6px 0 0;background:rgb(10 10 16);font-size:12px;color:rgb(248 250 252);font-weight:500;">
+          <span style="width:5px;height:5px;border-radius:50%;background:rgb(90 143 202);"></span>
+          Auth flow
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 14px;font-size:12px;color:rgb(148 156 172);">
+          <span style="width:5px;height:5px;border-radius:50%;background:rgb(251 191 36);"></span>
+          CI fix
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 14px;font-size:12px;color:rgb(148 156 172);">
+          <span style="width:5px;height:5px;border-radius:50%;background:rgb(239 68 68);"></span>
+          Settings redesign
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;height:28px;padding:0 14px;font-size:12px;color:rgb(148 156 172);">
+          <span style="width:5px;height:5px;border-radius:50%;background:rgb(52 211 153);"></span>
+          Dark mode
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- After -->
+  <div>
+    <div style="font-size:11px;font-weight:600;color:rgb(52 211 153);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">After — Unmissable status signals</div>
+    <div style="border:1px solid rgb(38 38 54);border-radius:10px;overflow:hidden;">
+      <div style="height:36px;background:rgb(14 14 22);display:flex;align-items:flex-end;padding-left:8px;gap:1px;">
+
+        <!-- Active Tab: Running -->
+        <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 14px;border-radius:6px 6px 0 0;background:rgb(10 10 16);font-size:12px;color:rgb(248 250 252);font-weight:500;border-top:2px solid rgb(90 143 202);position:relative;">
+          <span style="width:6px;height:6px;border-radius:50%;background:rgb(90 143 202);animation:pulse-dot 1.5s ease-in-out infinite;"></span>
+          Auth flow
+          <span style="font-size:10px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">2m</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="2" style="cursor:pointer;margin-left:4px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </div>
+
+        <!-- Waiting Input Tab — STRONG signal -->
+        <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 14px;border-radius:6px 6px 0 0;font-size:12px;color:rgb(251 191 36);font-weight:500;background:rgba(251,191,36,0.06);border-top:2px solid rgb(251 191 36);cursor:pointer;position:relative;">
+          <span style="width:6px;height:6px;border-radius:50%;background:rgb(251 191 36);"></span>
+          CI fix
+          <span style="position:absolute;top:-1px;right:6px;width:7px;height:7px;border-radius:50%;background:rgb(251 191 36);border:2px solid rgb(14 14 22);"></span>
+        </div>
+
+        <!-- Error Tab — RED signal -->
+        <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 14px;border-radius:6px 6px 0 0;font-size:12px;color:rgb(239 68 68);font-weight:500;background:rgba(239,68,68,0.05);border-top:2px solid rgb(239 68 68);cursor:pointer;position:relative;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgb(239 68 68)" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          Settings
+          <span style="position:absolute;top:-1px;right:6px;width:7px;height:7px;border-radius:50%;background:rgb(239 68 68);border:2px solid rgb(14 14 22);"></span>
+        </div>
+
+        <!-- Completed Tab — Subtle, unread dot -->
+        <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 14px;border-radius:6px 6px 0 0;font-size:12px;color:rgb(148 156 172);cursor:pointer;position:relative;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgb(52 211 153)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Dark mode
+          <span style="position:absolute;top:2px;right:4px;width:6px;height:6px;border-radius:50%;background:rgb(90 143 202);border:1.5px solid rgb(14 14 22);"></span>
+        </div>
+
+        <!-- Running Tab (no attention needed) -->
+        <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 14px;border-radius:6px 6px 0 0;font-size:12px;color:rgb(148 156 172);cursor:pointer;">
+          <span style="width:6px;height:6px;border-radius:50%;background:rgb(90 143 202);animation:pulse-dot 1.5s ease-in-out infinite;"></span>
+          Onboarding
+          <span style="font-size:10px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">8m</span>
+        </div>
+
+        <div style="flex:1;"></div>
+
+        <!-- Global Status Summary Pill (NEW) -->
+        <div style="display:flex;align-items:center;gap:8px;padding:0 12px;height:24px;margin-bottom:3px;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgb(28 28 42);font-size:10px;margin-right:8px;">
+          <span style="display:flex;align-items:center;gap:3px;color:rgb(90 143 202);">
+            <span style="width:5px;height:5px;border-radius:50%;background:rgb(90 143 202);animation:pulse-dot 1.5s ease-in-out infinite;"></span>
+            3
+          </span>
+          <span style="display:flex;align-items:center;gap:3px;color:rgb(251 191 36);">
+            <span style="width:5px;height:5px;border-radius:50%;background:rgb(251 191 36);"></span>
+            1
+          </span>
+          <span style="display:flex;align-items:center;gap:3px;color:rgb(239 68 68);">
+            <span style="width:5px;height:5px;border-radius:50%;background:rgb(239 68 68);"></span>
+            1
+          </span>
+        </div>
+
+        <!-- New tab button -->
+        <div style="display:flex;align-items:center;justify-content:center;width:28px;height:24px;margin-bottom:3px;border-radius:4px;cursor:pointer;color:rgb(90 100 120);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE 3: QUICK START (P0)                               -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="page-quickstart" class="page-content" style="display:none;">
+<div style="max-width:1200px;margin:0 auto;padding:32px 24px;">
+
+  <div class="section-label p0">P0 Critical</div>
+  <h2 style="font-size:20px;font-weight:700;color:rgb(248 250 252);margin-bottom:4px;">Quick Start — One-Click Chat Creation</h2>
+  <p style="font-size:13px;color:rgb(148 156 172);margin-bottom:24px;max-width:640px;line-height:1.6;">
+    Reduce 5-step creation to 1 click. Remember last workspace + agent + model selection. Show "quick replay" buttons for recent configs.
+  </p>
+
+  <div style="border:1px solid rgb(38 38 54);border-radius:12px;overflow:hidden;background:rgb(10 10 16);max-width:580px;margin:0 auto;">
+    <div style="padding:40px 40px 32px;display:flex;flex-direction:column;align-items:center;">
+
+      <!-- Logo -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:32px;">
+        <svg width="32" height="32" viewBox="0 0 352 352" fill="none"><rect width="352" height="352" rx="56" fill="#5a8fca"/><rect x="75" y="92" width="202" height="48" rx="24" fill="white"/><rect x="150" y="92" width="52" height="192" rx="26" fill="white"/></svg>
+        <div>
+          <div class="font-nunito" style="font-size:16px;font-weight:800;color:rgb(248 250 252);">OpenTeam</div>
+          <div style="font-size:11px;color:rgb(90 100 120);">Your AI Team, Always On</div>
+        </div>
+      </div>
+
+      <!-- Quick Start: Last Session (ONE CLICK) -->
+      <div style="width:100%;margin-bottom:20px;">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgb(90 100 120);margin-bottom:8px;">Quick Start</div>
+        <button style="width:100%;display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;border:1px solid rgba(90,143,202,0.2);background:rgba(90,143,202,0.06);cursor:pointer;transition:all 0.15s;text-align:left;" onmouseover="this.style.background='rgba(90,143,202,0.1)';this.style.borderColor='rgba(90,143,202,0.35)'" onmouseout="this.style.background='rgba(90,143,202,0.06)';this.style.borderColor='rgba(90,143,202,0.2)'">
+          <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#4a6fa5,#6b8fc5);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:white;flex-shrink:0;">F</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:rgb(248 250 252);">Continue with last setup</div>
+            <div style="font-size:11px;color:rgb(148 156 172);margin-top:2px;">openteam-web · Fullstack Engineer · Opus 4.6</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(90 143 202)" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+
+      <!-- Or: Custom Config (collapsed by default) -->
+      <div style="width:100%;border-top:1px solid rgb(28 28 42);padding-top:16px;">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgb(90 100 120);margin-bottom:12px;">Or configure new session</div>
+
+        <!-- Inline config row -->
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <!-- Workspace -->
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:8px;border:1px solid rgb(38 38 54);background:rgb(18 18 28);cursor:pointer;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgb(90 143 202)" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span style="font-size:12px;color:rgb(226 228 240);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">openteam-web</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="2" style="margin-left:auto;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+          <!-- Agent -->
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:8px;border:1px solid rgb(38 38 54);background:rgb(18 18 28);cursor:pointer;">
+              <div style="width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#4a6fa5,#6b8fc5);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;flex-shrink:0;">F</div>
+              <span style="font-size:12px;color:rgb(226 228 240);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Fullstack</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="2" style="margin-left:auto;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+          <!-- Model -->
+          <div style="width:130px;flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:8px;border:1px solid rgb(38 38 54);background:rgb(18 18 28);cursor:pointer;">
+              <span style="font-size:12px;color:rgb(226 228 240);">Opus 4.6</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="2" style="margin-left:auto;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <button style="width:100%;height:38px;border-radius:8px;background:rgb(90 143 202);color:white;font-size:13px;font-weight:600;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          Start Session
+        </button>
+      </div>
+
+      <!-- Keyboard Shortcut Hint -->
+      <div style="margin-top:20px;display:flex;align-items:center;gap:12px;">
+        <div style="display:flex;align-items:center;gap:4px;">
+          <kbd style="display:inline-flex;align-items:center;justify-content:center;height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">⌘</kbd>
+          <kbd style="display:inline-flex;align-items:center;justify-content:center;height:20px;min-width:20px;padding:0 4px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid rgb(38 38 54);font-size:10px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">N</kbd>
+          <span style="font-size:11px;color:rgb(90 100 120);margin-left:4px;">Quick start with last config</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE 4: SIMPLIFIED SIDEBAR (P1)                        -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="page-sidebar" class="page-content" style="display:none;">
+<div style="max-width:1200px;margin:0 auto;padding:32px 24px;">
+
+  <div class="section-label p1">P1 Important</div>
+  <h2 style="font-size:20px;font-weight:700;color:rgb(248 250 252);margin-bottom:4px;">Simplified Sidebar Navigation</h2>
+  <p style="font-size:13px;color:rgb(148 156 172);margin-bottom:24px;max-width:640px;line-height:1.6;">
+    Reduce from 6 top-level items to 3 primary items. Low-frequency entries (Workspaces, Skills, Cron Jobs) move to a "More" overflow or into Settings.
+  </p>
+
+  <div style="display:flex;gap:48px;">
+
+    <!-- Before -->
+    <div>
+      <div style="font-size:11px;font-weight:600;color:rgb(90 100 120);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Before — 6 items, flat</div>
+      <div style="width:52px;background:rgb(16 16 24);border:1px solid rgba(255,255,255,0.04);border-radius:10px;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:2px;">
+        <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;">
+          <svg width="24" height="24" viewBox="0 0 352 352" fill="none"><rect width="352" height="352" rx="56" fill="#5a8fca"/><rect x="75" y="92" width="202" height="48" rx="24" fill="white"/><rect x="150" y="92" width="52" height="192" rx="26" fill="white"/></svg>
+        </div>
+        <div style="width:24px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);margin-bottom:6px;"></div>
+        <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgb(90 100 120);">💬</div>
+        <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgb(90 100 120);">🕐</div>
+        <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgb(90 100 120);">📁</div>
+        <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgb(90 100 120);">👥</div>
+        <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgb(90 100 120);">✨</div>
+        <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgb(90 100 120);">📅</div>
+        <div style="flex:1;"></div>
+        <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgb(90 100 120);">⚙️</div>
+      </div>
+    </div>
+
+    <!-- After -->
+    <div>
+      <div style="font-size:11px;font-weight:600;color:rgb(52 211 153);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">After — 3 primary + overflow</div>
+      <div style="width:52px;background:rgb(16 16 24);border:1px solid rgba(255,255,255,0.04);border-radius:10px;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:2px;">
+        <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;">
+          <svg width="24" height="24" viewBox="0 0 352 352" fill="none"><rect width="352" height="352" rx="56" fill="#5a8fca"/><rect x="75" y="92" width="202" height="48" rx="24" fill="white"/><rect x="150" y="92" width="52" height="192" rx="26" fill="white"/></svg>
+        </div>
+        <div style="width:24px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);margin-bottom:6px;"></div>
+
+        <!-- Primary: Dashboard -->
+        <div style="position:relative;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(90,143,202,0.15);cursor:pointer;" title="Mission Control">
+          <div style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:2.5px;height:16px;border-radius:0 2px 2px 0;background:linear-gradient(180deg,rgb(130 176 222),rgb(90 143 202));"></div>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgb(130 176 222)" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </div>
+
+        <!-- Primary: Chat History -->
+        <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="History">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+
+        <!-- Primary: Team -->
+        <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Team">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3"/><path d="M7 20a5 5 0 0 1 10 0"/><circle cx="5" cy="9.5" r="2"/><path d="M1 19c0-2.5 1.8-4 4-4"/><circle cx="19" cy="9.5" r="2"/><path d="M23 19c0-2.5-1.8-4-4-4"/></svg>
+        </div>
+
+        <div style="width:24px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent);margin:4px 0;"></div>
+
+        <!-- More (overflow) -->
+        <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="More">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </div>
+
+        <div style="flex:1;"></div>
+
+        <div style="width:24px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent);margin:4px 0;"></div>
+
+        <!-- Notification with badge -->
+        <div style="position:relative;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Notifications">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="1.5" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span style="position:absolute;top:4px;right:4px;width:14px;height:14px;border-radius:50%;background:rgb(239 68 68);font-size:9px;color:white;display:flex;align-items:center;justify-content:center;font-weight:600;border:2px solid rgb(16 16 24);">2</span>
+        </div>
+
+        <!-- Settings -->
+        <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overflow popover mock -->
+    <div style="margin-top:180px;">
+      <div style="font-size:11px;font-weight:600;color:rgb(90 100 120);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Overflow menu content</div>
+      <div style="width:180px;border:1px solid rgb(38 38 54);border-radius:8px;background:rgb(24 24 36);padding:4px;box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;font-size:12px;color:rgb(226 228 240);cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(148 156 172)" stroke-width="1.5" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Workspaces
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;font-size:12px;color:rgb(226 228 240);cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(148 156 172)" stroke-width="1.5" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Skills
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;font-size:12px;color:rgb(226 228 240);cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(148 156 172)" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Cron Jobs
+        </div>
+        <div style="height:1px;background:rgb(38 38 54);margin:4px 6px;"></div>
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;font-size:12px;color:rgb(226 228 240);cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(148 156 172)" stroke-width="1.5" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          Admin
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE 5: HEARTBEAT BAR (P1)                             -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="page-heartbeat" class="page-content" style="display:none;">
+<div style="max-width:1200px;margin:0 auto;padding:32px 24px;">
+
+  <div class="section-label p1">P1 Important</div>
+  <h2 style="font-size:20px;font-weight:700;color:rgb(248 250 252);margin-bottom:4px;">Priority-Sorted Heartbeat Bar</h2>
+  <p style="font-size:13px;color:rgb(148 156 172);margin-bottom:24px;max-width:640px;line-height:1.6;">
+    Multi-agent status sorted by urgency. Error and waiting-input agents surface to the top with strong visual treatment. Collapsed state shows urgency count.
+  </p>
+
+  <div style="max-width:700px;">
+
+    <!-- Collapsed state -->
+    <div style="font-size:11px;font-weight:600;color:rgb(90 100 120);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Collapsed — Urgency visible at a glance</div>
+    <div style="border:1px solid rgb(38 38 54);border-radius:8px;overflow:hidden;margin-bottom:28px;">
+      <div style="padding:6px 12px;display:flex;align-items:center;gap:8px;background:rgb(16 16 24);">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgb(130 176 222)" stroke-width="2" style="animation:pulse-dot 1.5s ease-in-out infinite;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span style="font-size:12px;font-weight:600;color:rgb(248 250 252);">4 agents working</span>
+
+        <!-- Urgency indicators INLINE -->
+        <span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(239,68,68,0.1);color:rgb(239 68 68);font-weight:600;margin-left:4px;">
+          <span style="width:5px;height:5px;border-radius:50%;background:rgb(239 68 68);"></span>
+          1 error
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(251,191,36,0.1);color:rgb(251 191 36);font-weight:600;">
+          <span style="width:5px;height:5px;border-radius:50%;background:rgb(251 191 36);"></span>
+          1 waiting
+        </span>
+
+        <span style="flex:1;"></span>
+        <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">34.2K out</span>
+        <span style="font-size:11px;color:rgb(167 139 250);font-family:'JetBrains Mono',monospace;font-weight:600;">5m 22s</span>
+        <button style="display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;border:1px solid rgb(38 38 54);background:rgba(255,255,255,0.03);color:rgb(90 100 120);font-size:10px;cursor:pointer;font-family:'JetBrains Mono',monospace;">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+          esc
+        </button>
+      </div>
+    </div>
+
+    <!-- Expanded state -->
+    <div style="font-size:11px;font-weight:600;color:rgb(52 211 153);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Expanded — Sorted by urgency (error → waiting → working)</div>
+    <div style="border:1px solid rgb(38 38 54);border-radius:8px;overflow:hidden;">
+      <div style="padding:6px 12px;display:flex;align-items:center;gap:8px;background:rgb(16 16 24);border-bottom:1px solid rgb(28 28 42);">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgb(130 176 222)" stroke-width="2" style="animation:pulse-dot 1.5s ease-in-out infinite;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span style="font-size:12px;font-weight:600;color:rgb(248 250 252);">4 agents working</span>
+        <span style="flex:1;"></span>
+        <span style="font-size:11px;color:rgb(167 139 250);font-family:'JetBrains Mono',monospace;font-weight:600;">5m 22s</span>
+        <button style="display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:5px;border:1px solid rgb(38 38 54);background:rgba(255,255,255,0.03);color:rgb(90 100 120);font-size:10px;cursor:pointer;font-family:'JetBrains Mono',monospace;">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+          esc
+        </button>
+      </div>
+
+      <div style="padding:4px 8px 6px;display:flex;flex-direction:column;gap:2px;">
+        <!-- Error agent — TOP, red background -->
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.1);cursor:pointer;">
+          <div style="width:20px;height:20px;border-radius:5px;background:linear-gradient(135deg,#8b5cf6,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;">S</div>
+          <span style="font-size:12px;color:rgb(248 250 252);font-weight:500;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Shield</span>
+          <span style="width:5px;height:5px;border-radius:50%;background:rgb(239 68 68);flex-shrink:0;"></span>
+          <span style="font-size:12px;color:rgb(239 68 68);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Error: Permission denied</span>
+          <span style="flex:1;"></span>
+          <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">12m 8s</span>
+        </div>
+
+        <!-- Waiting agent — second, yellow -->
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;background:rgba(251,191,36,0.04);border:1px solid rgba(251,191,36,0.08);cursor:pointer;">
+          <div style="width:20px;height:20px;border-radius:5px;background:linear-gradient(135deg,#4a6fa5,#6b8fc5);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;">F</div>
+          <span style="font-size:12px;color:rgb(248 250 252);font-weight:500;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Fullstack</span>
+          <span style="width:5px;height:5px;border-radius:50%;background:rgb(251 191 36);flex-shrink:0;"></span>
+          <span style="font-size:12px;color:rgb(251 191 36);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Waiting: "JWT or session?"</span>
+          <span style="flex:1;"></span>
+          <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">4m 23s</span>
+        </div>
+
+        <!-- Working agent — normal -->
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+          <div style="width:20px;height:20px;border-radius:5px;background:linear-gradient(135deg,#059669,#34d399);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;">D</div>
+          <span style="font-size:12px;color:rgb(148 156 172);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Designer</span>
+          <span style="width:5px;height:5px;border-radius:50%;background:rgb(90 143 202);animation:pulse-dot 1.5s ease-in-out infinite;flex-shrink:0;"></span>
+          <span style="font-size:12px;color:rgb(130 176 222);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Edit SettingsPage.tsx</span>
+          <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">14/21</span>
+          <span style="flex:1;"></span>
+          <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">2m 41s</span>
+        </div>
+
+        <!-- Working agent — normal -->
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+          <div style="width:20px;height:20px;border-radius:5px;background:linear-gradient(135deg,#d97706,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;">R</div>
+          <span style="font-size:12px;color:rgb(148 156 172);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Reviewer</span>
+          <span style="width:5px;height:5px;border-radius:50%;background:rgb(90 143 202);animation:pulse-dot 1.5s ease-in-out infinite;flex-shrink:0;"></span>
+          <span style="font-size:12px;color:rgb(130 176 222);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Reviewing code changes</span>
+          <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">3/8</span>
+          <span style="flex:1;"></span>
+          <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">1m 12s</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE 6: CHAT HISTORY (P1)                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="page-history" class="page-content" style="display:none;">
+<div style="max-width:1200px;margin:0 auto;padding:32px 24px;">
+
+  <div class="section-label p1">P1 Important</div>
+  <h2 style="font-size:20px;font-weight:700;color:rgb(248 250 252);margin-bottom:4px;">Enhanced Chat History</h2>
+  <p style="font-size:13px;color:rgb(148 156 172);margin-bottom:24px;max-width:640px;line-height:1.6;">
+    Richer chat cards with result summaries, file changes, and cost. Batch actions for the "return and review" workflow. Time grouping for context.
+  </p>
+
+  <div style="max-width:780px;">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <span style="font-size:14px;font-weight:700;color:rgb(248 250 252);">Chat History</span>
+      <span style="flex:1;"></span>
+      <!-- Batch Actions (NEW) -->
+      <button style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid rgb(38 38 54);background:transparent;color:rgb(148 156 172);cursor:pointer;">Mark All Read</button>
+      <button style="font-size:11px;padding:4px 12px;border-radius:6px;border:1px solid rgb(38 38 54);background:transparent;color:rgb(148 156 172);cursor:pointer;">Close Completed</button>
+    </div>
+
+    <!-- Time group: Today -->
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgb(90 100 120);margin-bottom:8px;padding-left:4px;">Today</div>
+
+    <!-- Rich Chat Card -->
+    <div style="border:1px solid rgb(38 38 54);border-radius:10px;padding:14px 16px;margin-bottom:6px;cursor:pointer;transition:background 0.15s;background:rgb(16 16 24);" onmouseover="this.style.background='rgb(20 20 30)'" onmouseout="this.style.background='rgb(16 16 24)'">
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#4a6fa5,#6b8fc5);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;margin-top:2px;">F</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span style="font-size:13px;font-weight:600;color:rgb(248 250 252);">Implement user auth flow</span>
+            <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(52,211,153,0.12);color:rgb(52 211 153);font-weight:500;">Completed</span>
+          </div>
+          <!-- Result summary (NEW) -->
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+            <span style="font-size:11px;color:rgb(148 156 172);">openteam-web</span>
+            <span style="color:rgb(38 38 54);">·</span>
+            <span style="font-size:11px;color:rgb(148 156 172);">Fullstack Engineer</span>
+            <span style="color:rgb(38 38 54);">·</span>
+            <span style="font-size:11px;color:rgb(148 156 172);">Opus 4.6</span>
+          </div>
+          <!-- File changes pill row (NEW) -->
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(52,211,153,0.08);color:rgb(52 211 153);font-family:'JetBrains Mono',monospace;">
+              <span style="color:rgb(52 211 153);">+3</span> files
+            </span>
+            <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.03);color:rgb(148 156 172);font-family:'JetBrains Mono',monospace;">
+              42 tools
+            </span>
+            <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.03);color:rgb(148 156 172);font-family:'JetBrains Mono',monospace;">
+              128K in / 12K out
+            </span>
+            <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.03);color:rgb(148 156 172);font-family:'JetBrains Mono',monospace;">
+              $0.34
+            </span>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:11px;color:rgb(90 100 120);">32 min ago</div>
+          <div style="font-size:10px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;margin-top:2px;">8m 14s</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Another card: Running -->
+    <div style="border:1px solid rgba(90,143,202,0.15);border-radius:10px;padding:14px 16px;margin-bottom:6px;cursor:pointer;transition:background 0.15s;background:rgba(90,143,202,0.03);" onmouseover="this.style.background='rgba(90,143,202,0.05)'" onmouseout="this.style.background='rgba(90,143,202,0.03)'">
+      <div style="display:flex;align-items:flex-start;gap:12px;">
+        <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#059669,#34d399);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;flex-shrink:0;margin-top:2px;">D</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span style="font-size:13px;font-weight:600;color:rgb(248 250 252);">Redesign settings page</span>
+            <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:4px;background:rgba(90,143,202,0.12);color:rgb(130 176 222);font-weight:500;">
+              <span style="width:5px;height:5px;border-radius:50%;background:rgb(90 143 202);animation:pulse-dot 1.5s ease-in-out infinite;"></span>
+              Running
+            </span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:11px;color:rgb(148 156 172);">openteam-web · Designer · Sonnet 4.6</span>
+          </div>
+          <!-- Live progress -->
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+            <div style="flex:1;height:3px;border-radius:2px;background:rgb(38 38 54);overflow:hidden;">
+              <div style="width:67%;height:100%;border-radius:2px;background:linear-gradient(90deg,rgb(90 143 202),rgb(130 176 222));"></div>
+            </div>
+            <span style="font-size:10px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">14/21</span>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:11px;color:rgb(130 176 222);font-family:'JetBrains Mono',monospace;font-weight:600;">2m 41s</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Time group: Yesterday -->
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgb(90 100 120);margin-bottom:8px;margin-top:20px;padding-left:4px;">Yesterday</div>
+
+    <div style="border:1px solid rgb(28 28 42);border-radius:10px;padding:14px 16px;margin-bottom:6px;cursor:pointer;background:rgb(14 14 20);">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(52 211 153)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span style="font-size:13px;color:rgb(226 228 240);flex:1;">Add i18n support for agent names</span>
+        <span style="font-size:10px;color:rgb(52 211 153);font-family:'JetBrains Mono',monospace;">+7 files</span>
+        <span style="font-size:11px;color:rgb(90 100 120);">$0.52</span>
+      </div>
+    </div>
+    <div style="border:1px solid rgb(28 28 42);border-radius:10px;padding:14px 16px;margin-bottom:6px;cursor:pointer;background:rgb(14 14 20);">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(52 211 153)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span style="font-size:13px;color:rgb(226 228 240);flex:1;">Fix terminal resize flickering on macOS</span>
+        <span style="font-size:10px;color:rgb(52 211 153);font-family:'JetBrains Mono',monospace;">+2 files</span>
+        <span style="font-size:11px;color:rgb(90 100 120);">$0.18</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE 7: AGENT PICKER (P2)                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="page-agents" class="page-content" style="display:none;">
+<div style="max-width:1200px;margin:0 auto;padding:32px 24px;">
+
+  <div class="section-label p2">P2 Enhancement</div>
+  <h2 style="font-size:20px;font-weight:700;color:rgb(248 250 252);margin-bottom:4px;">Enhanced Agent Picker</h2>
+  <p style="font-size:13px;color:rgb(148 156 172);margin-bottom:24px;max-width:640px;line-height:1.6;">
+    Searchable, frequency-sorted, with capability tags. Replaces the horizontal scroll chip list. Shows recently used agents prominently.
+  </p>
+
+  <div style="max-width:520px;">
+    <!-- Agent Picker -->
+    <div style="border:1px solid rgb(38 38 54);border-radius:10px;background:rgb(16 16 24);overflow:hidden;">
+      <!-- Search -->
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid rgb(28 28 42);">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgb(90 100 120)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Search agents..." style="flex:1;background:transparent;border:none;outline:none;color:rgb(226 228 240);font-size:13px;font-family:inherit;">
+      </div>
+
+      <!-- Frequently Used -->
+      <div style="padding:10px 14px 6px;">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:rgb(90 100 120);margin-bottom:8px;">Frequently Used</div>
+
+        <!-- Agent item: selected -->
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:rgba(90,143,202,0.08);border:1px solid rgba(90,143,202,0.2);margin-bottom:4px;cursor:pointer;">
+          <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#4a6fa5,#6b8fc5);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">F</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;color:rgb(248 250 252);">Fullstack Engineer</div>
+            <div style="font-size:11px;color:rgb(148 156 172);margin-top:1px;">Code, debug, review, deploy</div>
+          </div>
+          <div style="display:flex;gap:4px;flex-shrink:0;">
+            <span style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(90,143,202,0.1);color:rgb(130 176 222);">Claude</span>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(90 143 202)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+
+        <!-- Agent item -->
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+          <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#059669,#34d399);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">D</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;color:rgb(226 228 240);">UI Designer</div>
+            <div style="font-size:11px;color:rgb(148 156 172);margin-top:1px;">Design, prototype, review UI</div>
+          </div>
+          <div style="display:flex;gap:4px;flex-shrink:0;">
+            <span style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(52,211,153,0.1);color:rgb(52 211 153);">Claude</span>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+          <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#8b5cf6,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">S</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;color:rgb(226 228 240);">Shield</div>
+            <div style="font-size:11px;color:rgb(148 156 172);margin-top:1px;">Security audit, vulnerability scan</div>
+          </div>
+          <div style="display:flex;gap:4px;flex-shrink:0;">
+            <span style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(167,139,250,0.1);color:rgb(167 139 250);">Claude</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- All Agents -->
+      <div style="padding:6px 14px 10px;border-top:1px solid rgb(28 28 42);">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:rgb(90 100 120);margin-bottom:8px;">All Agents</div>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+          <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#d97706,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">R</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;color:rgb(226 228 240);">Reviewer</div>
+            <div style="font-size:11px;color:rgb(148 156 172);margin-top:1px;">Code review, quality check</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:4px;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+          <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#dc2626,#f87171);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;">T</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:500;color:rgb(226 228 240);">Test Engineer</div>
+            <div style="font-size:11px;color:rgb(148 156 172);margin-top:1px;">Write tests, coverage analysis</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PAGE 8: COMPLETION CEREMONY (P2)                       -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div id="page-completion" class="page-content" style="display:none;">
+<div style="max-width:1200px;margin:0 auto;padding:32px 24px;">
+
+  <div class="section-label p2">P2 Enhancement</div>
+  <h2 style="font-size:20px;font-weight:700;color:rgb(248 250 252);margin-bottom:4px;">Enhanced Completion Summary</h2>
+  <p style="font-size:13px;color:rgb(148 156 172);margin-bottom:24px;max-width:640px;line-height:1.6;">
+    Richer completion ceremony with file change preview and actionable next steps. The summary should make users feel the value of what the agent accomplished.
+  </p>
+
+  <div style="max-width:640px;">
+
+    <!-- Completion Card -->
+    <div style="border:1px solid rgba(52,211,153,0.15);border-radius:12px;overflow:hidden;background:rgb(10 10 16);">
+
+      <!-- Header -->
+      <div style="padding:14px 18px;border-bottom:1px solid rgb(28 28 42);display:flex;align-items:center;gap:10px;background:rgba(52,211,153,0.03);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(52 211 153)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span style="font-size:14px;font-weight:600;color:rgb(248 250 252);">Task Completed</span>
+        <span style="flex:1;"></span>
+        <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">8m 14s</span>
+      </div>
+
+      <!-- Agent Contributions -->
+      <div style="padding:14px 18px;border-bottom:1px solid rgb(28 28 42);">
+        <!-- Agent 1 -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,#4a6fa5,#6b8fc5);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;">F</div>
+          <span style="font-size:13px;font-weight:500;color:rgb(248 250 252);width:100px;">Fullstack</span>
+          <span style="font-size:12px;color:rgb(148 156 172);">Created 3 files, modified 2 existing ones. 42 tool calls.</span>
+          <span style="flex:1;"></span>
+          <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">6m 12s</span>
+        </div>
+        <!-- Agent 2 -->
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,#d97706,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:white;flex-shrink:0;">R</div>
+          <span style="font-size:13px;font-weight:500;color:rgb(248 250 252);width:100px;">Reviewer</span>
+          <span style="font-size:12px;color:rgb(148 156 172);">Reviewed all changes. 8 tool calls. No issues found.</span>
+          <span style="flex:1;"></span>
+          <span style="font-size:11px;color:rgb(90 100 120);font-family:'JetBrains Mono',monospace;">2m 2s</span>
+        </div>
+      </div>
+
+      <!-- File Changes (NEW) -->
+      <div style="padding:14px 18px;border-bottom:1px solid rgb(28 28 42);">
+        <div style="font-size:11px;font-weight:600;color:rgb(90 100 120);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Changes</div>
+
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:4px;font-size:12px;font-family:'JetBrains Mono',monospace;">
+            <span style="color:rgb(52 211 153);font-size:10px;font-weight:600;width:12px;">+</span>
+            <span style="color:rgb(226 228 240);">web/pages/AuthPage.tsx</span>
+            <span style="color:rgb(52 211 153);font-size:10px;margin-left:auto;">new</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:4px;font-size:12px;font-family:'JetBrains Mono',monospace;">
+            <span style="color:rgb(52 211 153);font-size:10px;font-weight:600;width:12px;">+</span>
+            <span style="color:rgb(226 228 240);">web/hooks/useAuth.ts</span>
+            <span style="color:rgb(52 211 153);font-size:10px;margin-left:auto;">new</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:4px;font-size:12px;font-family:'JetBrains Mono',monospace;">
+            <span style="color:rgb(52 211 153);font-size:10px;font-weight:600;width:12px;">+</span>
+            <span style="color:rgb(226 228 240);">server/routes/auth.ts</span>
+            <span style="color:rgb(52 211 153);font-size:10px;margin-left:auto;">new</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:4px;font-size:12px;font-family:'JetBrains Mono',monospace;">
+            <span style="color:rgb(251 191 36);font-size:10px;font-weight:600;width:12px;">~</span>
+            <span style="color:rgb(226 228 240);">web/App.tsx</span>
+            <span style="color:rgb(251 191 36);font-size:10px;margin-left:auto;">+12 −2</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:4px;font-size:12px;font-family:'JetBrains Mono',monospace;">
+            <span style="color:rgb(251 191 36);font-size:10px;font-weight:600;width:12px;">~</span>
+            <span style="color:rgb(226 228 240);">server/index.ts</span>
+            <span style="color:rgb(251 191 36);font-size:10px;margin-left:auto;">+8 −0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cost & Stats -->
+      <div style="padding:10px 18px;display:flex;align-items:center;gap:16px;font-size:11px;color:rgb(148 156 172);font-family:'JetBrains Mono',monospace;">
+        <span style="display:inline-flex;align-items:center;gap:4px;">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+          50 tool calls
+        </span>
+        <span>128K in / 12.4K out</span>
+        <span>42K cache</span>
+        <span style="color:rgb(248 250 252);font-weight:600;">$0.34</span>
+      </div>
+
+      <!-- Actions (NEW) -->
+      <div style="padding:10px 18px 14px;display:flex;align-items:center;gap:8px;border-top:1px solid rgb(28 28 42);">
+        <button style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:7px;background:rgb(90 143 202);color:white;font-size:12px;font-weight:600;border:none;cursor:pointer;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Review Changes
+        </button>
+        <button style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:7px;background:transparent;border:1px solid rgb(38 38 54);color:rgb(226 228 240);font-size:12px;font-weight:500;cursor:pointer;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+          Copy Summary
+        </button>
+        <span style="flex:1;"></span>
+        <button style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:7px;background:transparent;border:1px solid rgb(38 38 54);color:rgb(148 156 172);font-size:12px;font-weight:500;cursor:pointer;">
+          Create PR
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- JavaScript: Page Switching                             -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<script>
+function showPage(id) {
+  document.querySelectorAll('.page-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.page-nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + id).style.display = 'block';
+  event.target.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+
+</body>
+</html>

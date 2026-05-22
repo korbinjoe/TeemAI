@@ -1,0 +1,138 @@
+{
+  "nav": {
+    "home": "ホーム",
+    "dashboard": "ダッシュボード",
+    "workspaces": "ワークスペース",
+    "myTeam": "AIチーム",
+    "skills": "スキル",
+    "settings": "設定",
+    "cronJobs": "スケジュールタスク",
+    "chatRoom": "チャットルーム",
+    "chatHistory": "チャット履歴",
+    "notifications": "通知",
+    "backToHome": "ホームに戻る",
+    "profile": "プロフィール",
+    "logout": "ログアウト",
+    "logoutConfirm": "ログアウトしますか？再度ログインが必要になります。",
+    "admin": "データベース管理"
+  },
+  "theme": {
+    "toggleLight": "ライトモードに切り替え",
+    "toggleDark": "ダークモードに切り替え",
+    "lightMode": "ライトモード",
+    "darkMode": "ダークモード"
+  },
+  "language": {
+    "toggle": "言語を切り替え",
+    "zh": "中文",
+    "en": "English",
+    "ja": "日本語",
+    "ko": "한국어",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português"
+  },
+  "action": {
+    "confirm": "確認",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "save": "保存",
+    "refresh": "更新",
+    "search": "検索",
+    "create": "作成",
+    "edit": "編集",
+    "apply": "適用",
+    "close": "閉じる",
+    "rename": "名前変更",
+    "loading": "読み込み中...",
+    "new": "新規"
+  },
+  "status": {
+    "running": "実行中",
+    "idle": "待機中",
+    "stopped": "停止",
+    "completed": "完了",
+    "merged": "マージ済み",
+    "error": "エラー",
+    "connected": "接続済み",
+    "connecting": "接続中...",
+    "initializing": "初期化中...",
+    "reconnecting": "再接続中..."
+  },
+  "role": {
+    "lead": "リーダー",
+    "expert": "エキスパート"
+  },
+  "current": "現在",
+  "source": {
+    "builtin": "公式",
+    "custom": "カスタム"
+  },
+  "time": {
+    "justNow": "たった今",
+    "minutesAgo": "{{count}}分前",
+    "hoursAgo": "{{count}}時間前",
+    "daysAgo": "{{count}}日前"
+  },
+  "dialog": {
+    "confirmDelete": "削除の確認",
+    "cannotUndo": "この操作は取り消せません。"
+  },
+  "envCheck": {
+    "nodeNotFound": "Node.jsが検出されません。AIエージェント機能が制限されます。Node.jsをインストールして再起動してください。",
+    "installLink": "今すぐインストール"
+  },
+  "admin": {
+    "title": "データベース管理",
+    "rows": "{{count}} 行",
+    "tables": "テーブル",
+    "selectTable": "テーブルを選択して表示",
+    "clickToExpand": "クリックして全内容を表示",
+    "emptyTable": "空のテーブル",
+    "pagination": "{{page}} / {{total}} ページ",
+    "copy": "コピー"
+  },
+  "auth": {
+    "blacklisted": "アカウント無効",
+    "blacklistedDesc": "アカウントが無効になっています。管理者にお問い合わせください。",
+    "serviceClosed": "メンテナンス中",
+    "serviceClosedDesc": "OpenTeamはメンテナンス中です。しばらくしてから再度お試しください。",
+    "accessDenied": "アクセス拒否",
+    "accessDeniedDesc": "アカウントにOpenTeamへのアクセス権がありません。管理者にお問い合わせください。",
+    "missingParams": "必要なパラメータが不足しています（token / workid）",
+    "savingLogin": "ログイン状態を保存中…",
+    "loginSuccess": "ログイン成功",
+    "loginSuccessDesc": "トークンを保存しました。このウィンドウを閉じてください。",
+    "loginFailed": "ログイン失敗",
+    "saveFailed": "保存に失敗しました"
+  },
+  "error": {
+    "renderError": "ページ表示エラー",
+    "createFailed": "チャット作成に失敗しました。再試行してください",
+    "unexpectedHint": "予期しないエラーが発生しました。ページを更新してください。",
+    "goHome": "ホームへ戻る",
+    "reload": "ページを更新"
+  },
+  "clearAll": {
+    "confirmClick": "もう一度クリックして確認",
+    "dismissAll": "すべて無視"
+  },
+  "permission": {
+    "allowOnce": "今回のみ許可",
+    "allowAlways": "常に許可",
+    "rejectOnce": "今回のみ拒否",
+    "rejectAlways": "常に拒否",
+    "requestTitle": "権限リクエスト"
+  },
+  "chatTab": {
+    "errorTitle": "タスクエラー、クリックで確認",
+    "completedTitle": "タスク完了、クリックで確認",
+    "error": "タスクエラー、クリックして確認",
+    "completed": "タスク完了、クリックして確認",
+    "needConfirm": "確認が必要",
+    "close": "閉じる",
+    "closeOthers": "他のタブを閉じる",
+    "closeRight": "右側のタブを閉じる"
+  }
+}

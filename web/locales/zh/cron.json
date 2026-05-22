@@ -1,0 +1,74 @@
+{
+  "title": "定时任务",
+  "newTask": "新建任务",
+  "editTask": "编辑任务",
+  "deleteTask": "删除任务",
+  "deleteConfirm": "确定删除「{{name}}」？",
+  "runNow": "立即执行",
+  "runNowConfirm": "立即执行「{{name}}」？",
+  "enable": "启用",
+  "disable": "禁用",
+  "form": {
+    "name": "任务名称",
+    "namePlaceholder": "如：每日代码审查",
+    "workspace": "工作目录",
+    "agent": "Agent（可选）",
+    "model": "模型（可选）",
+    "trigger": "调度方式",
+    "triggerCron": "Cron 表达式",
+    "triggerOnce": "一次性",
+    "triggerInterval": "固定间隔",
+    "cronExpression": "Cron 表达式",
+    "cronPlaceholder": "如 0 9 * * 1-5",
+    "cronHelp": "分 时 日 月 周",
+    "timezone": "时区",
+    "nextRun": "下次执行：{{time}}",
+    "invalidCron": "无效的 Cron 表达式",
+    "scheduledTime": "执行时间",
+    "interval": "间隔",
+    "intervalUnit": "单位",
+    "minutes": "分钟",
+    "hours": "小时",
+    "days": "天",
+    "prompt": "初始 Prompt",
+    "promptPlaceholder": "任务启动时发送给 Agent 的消息...",
+    "retryOnFailure": "失败重试",
+    "maxRetries": "最大重试次数"
+  },
+  "status": {
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "running": "执行中",
+    "success": "成功",
+    "failed": "失败"
+  },
+  "executions": "执行历史",
+  "noExecutions": "暂无执行记录",
+  "lastRun": "上次执行",
+  "nextRun": "下次执行",
+  "neverRun": "未执行过",
+  "empty": {
+    "title": "还没有定时任务",
+    "description": "创建你的第一个定时任务，让 Agent 自动工作"
+  },
+  "toast": {
+    "created": "任务「{{name}}」已创建",
+    "updated": "任务「{{name}}」已更新",
+    "deleted": "任务「{{name}}」已删除",
+    "triggered": "任务「{{name}}」已触发"
+  },
+  "nl": {
+    "title": "创建定时任务",
+    "description": "用自然语言描述你想创建的定时任务",
+    "placeholder": "如：每天早上9点帮我审查 my-app 的 PR",
+    "send": "智能解析",
+    "parsing": "理解中...",
+    "skipToManual": "手动填写",
+    "or": "或者",
+    "error": {
+      "parseFailed": "智能解析失败，已切换到手动填写",
+      "noCredentials": "请先配置 OpenTeam Token 以启用 AI 功能",
+      "networkError": "网络错误，已切换到手动填写"
+    }
+  }
+}

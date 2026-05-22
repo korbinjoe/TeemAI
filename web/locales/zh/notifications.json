@@ -1,0 +1,18 @@
+{
+  "title": "消息中心",
+  "markAllRead": "全部已读",
+  "clearRead": "清除已读",
+  "allCaughtUp": "暂无新通知",
+  "empty": "还没有通知",
+  "tabs": {
+    "all": "全部",
+    "unread": "未读"
+  },
+  "category": {
+    "cron_success": "任务完成",
+    "cron_failed": "任务失败",
+    "system": "系统通知"
+  },
+  "viewChat": "查看对话",
+  "justNow": "刚刚"
+}

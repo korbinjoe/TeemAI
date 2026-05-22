@@ -1,0 +1,166 @@
+{
+  "title": "Settings",
+  "apiConfig": "API Configuration",
+  "apiKeyPlaceholder": "sk-ant-… (not required if using OAuth login)",
+  "showPassword": "Show",
+  "hidePassword": "Hide",
+  "showPasswordLabel": "Show password",
+  "hidePasswordLabel": "Hide password",
+  "workingDir": "Working Directory",
+  "defaultWorkingDir": "Default Working Directory",
+  "appearance": "Appearance",
+  "brandTheme": "Brand Theme",
+  "brandThemeDesc": "Choose the brand accent color",
+  "lightMode": "Light Mode",
+  "lightModeDesc": "Switch to light theme",
+  "switchToLight": "Switch to light theme",
+  "toggleLightMode": "Toggle light mode",
+  "language": "Language",
+  "featureToggles": "Feature Toggles",
+  "autoSave": "Auto Save",
+  "autoSaveDesc": "Automatically save files when modified",
+  "autoSaveToggle": "Auto save toggle",
+  "enableNotifications": "Enable Notifications",
+  "enableNotificationsDesc": "Show notification when tasks complete",
+  "enableNotificationsToggle": "Notifications toggle",
+  "agentCapabilities": "Agent Capabilities",
+  "toolsParamHint": "Tool set can be adjusted via <code>--tools</code> parameter",
+  "saveSettings": "Save Settings",
+  "agentList": {
+    "title": "Agents ({{count}})",
+    "fetchFailed": "Failed to fetch agent list",
+    "applied": "Agent selected",
+    "selectHint": "Select an agent to view details",
+    "current": "Current",
+    "apply": "Apply",
+    "subAgents": "Sub-Agents",
+    "systemPrompt": "System Prompt",
+    "rawDefinition": "Raw Definition"
+  },
+  "languageCurrent": "Current: {{lang}}",
+  "agentConfig": {
+    "comingSoon": "Agent config management coming soon",
+    "currentManaged": "Currently managed via ai-assets/agents/ directory"
+  },
+  "multiAgent": {
+    "loadWorkspaceFailed": "Failed to load workspace",
+    "initWorkspace": "Initialize",
+    "workspaceInitialized": "Workspace initialized",
+    "initFailed": "Initialization failed",
+    "initWorkspaceFailed": "Failed to initialize workspace",
+    "loadTasksFailed": "Failed to load tasks",
+    "loadSessionsFailed": "Failed to load agent sessions",
+    "scheduleDone": "Scheduling complete",
+    "scheduleFailed": "Scheduling failed",
+    "triggerScheduleFailed": "Failed to trigger scheduling",
+    "triggerSchedule": "Trigger Schedule",
+    "scheduling": "Scheduling...",
+    "loading": "Loading...",
+    "noTasks": "No tasks",
+    "noSessions": "No sessions",
+    "workspaceNotInit": "Workspace not initialized. Click \"Initialize\".",
+    "leadAgent": "Lead",
+    "experts": "Experts",
+    "agentSessions": "Agent Sessions",
+    "tableHeaders": {
+      "id": "ID",
+      "title": "Title",
+      "type": "Type",
+      "status": "Status",
+      "priority": "Priority",
+      "assignedTo": "Assigned To",
+      "dependencies": "Dependencies",
+      "agent": "Agent",
+      "name": "Name",
+      "currentTask": "Current Task",
+      "completedFailed": "Done/Failed"
+    }
+  },
+  "update": {
+    "title": "Update Manager",
+    "currentVersion": "Current: v{{version}}",
+    "confirmRollback": "Are you sure you want to rollback to v{{version}}?",
+    "tabs": {
+      "overview": "Overview",
+      "releases": "Releases",
+      "devices": "Devices",
+      "alerts": "Alerts",
+      "storage": "Storage"
+    },
+    "metrics": {
+      "activeVersion": "Active Version",
+      "noRelease": "No release",
+      "onlineDevices": "Online Devices",
+      "versionCount": "{{count}} versions",
+      "adoptionRate": "Adoption Rate",
+      "adoptionSub": "Target version share",
+      "recentErrors": "Recent Errors",
+      "recentErrorsSub": "Past 1 hour"
+    },
+    "release": {
+      "currentRelease": "Current Release: v{{version}}",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "adjustRollout": "Adjust Rollout",
+      "rollbackTo": "Rollback to v{{version}}",
+      "rollbackToThis": "Rollback to this version",
+      "releaseTime": "Release Time: ",
+      "minShell": "Min Shell: ",
+      "rolloutPercent": "Rollout: ",
+      "noRecords": "No release records",
+      "active": "Active"
+    },
+    "devices": {
+      "noDevices": "No devices reported",
+      "headers": {
+        "deviceId": "Device ID",
+        "type": "Type",
+        "currentVersion": "Current Version",
+        "shellVersion": "Shell Version",
+        "platform": "Platform",
+        "lastSeen": "Last Seen"
+      }
+    },
+    "alerts": {
+      "noAlerts": "No alerts"
+    },
+    "storage": {
+      "loading": "Loading...",
+      "versionCount": "Stored Versions",
+      "totalSize": "Total Size",
+      "allVersions": "All versions",
+      "versionList": "Version List",
+      "perVersion": "Per-version Storage"
+    },
+    "strategy": {
+      "full": "Full",
+      "gradual": "Gradual",
+      "canary": "Canary",
+      "pinned": "Pinned"
+    },
+    "versionDistribution": "Version Distribution",
+    "time": {
+      "justNow": "Just now",
+      "minutesAgo": "{{count}} min ago",
+      "hoursAgo": "{{count}} hr ago"
+    }
+  },
+  "updateSettings": {
+    "loading": "Loading update info...",
+    "installed": "Installed: {{versions}}",
+    "noInstalled": "No installed versions",
+    "checking": "Checking...",
+    "checkUpdate": "Check for updates",
+    "upToDate": "Already up to date",
+    "upToDateDesc": "You are running the latest version",
+    "newVersion": "New version v{{version}} available",
+    "checkFailed": "Check failed",
+    "cannotConnect": "Cannot connect to update service",
+    "checkFailed2": "Check for updates failed",
+    "confirmRollback": "Are you sure you want to rollback to v{{version}}? Takes effect after restart.",
+    "rollbackTitle": "Version Rollback",
+    "rollbackDesc": "Roll back to the previously installed version, takes effect after restart",
+    "rollback": "Rollback",
+    "activeRelease": "Server active release:"
+  }
+}

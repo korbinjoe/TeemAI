@@ -1,0 +1,282 @@
+{
+  "newChat": "Neuer Chat",
+  "editTitle": "Chat-Titel bearbeiten",
+  "clickEditTitle": "Klicken zum Bearbeiten des Titels",
+  "emptyStateHint": "Geben Sie unten eine Nachricht ein, um eine Unterhaltung zu starten",
+  "emptyStateMentionHint": "Tippen Sie @, um einen Agenten zu erwähnen, oder klicken Sie oben auf einen Avatar",
+  "inputPlaceholder": "Claude fragen...",
+  "inputDisabled": "Verbindung wird hergestellt...",
+  "history": {
+    "title": "Chatverlauf",
+    "searchPlaceholder": "Chats suchen...",
+    "filterAll": "Alle",
+    "filterRunning": "Läuft",
+    "filterStopped": "Gestoppt",
+    "noRecords": "Keine Chateinträge",
+    "noMatch": "Keine passenden Chats",
+    "deleteTitle": "Löschen bestätigen",
+    "deleteDesc": "Chat \"{{title}}\" löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "openChat": "Chat öffnen {{title}}"
+  },
+  "tools": {
+    "Read": "Datei lesen",
+    "Edit": "Datei bearbeiten",
+    "Write": "Datei schreiben",
+    "Glob": "Dateien suchen",
+    "Bash": "Befehl ausführen",
+    "WebFetch": "Web abrufen",
+    "WebSearch": "Websuche",
+    "Grep": "Inhalt suchen",
+    "Agent": "Unteraufgabe zuweisen",
+    "TaskCreate": "Aufgabe erstellen",
+    "TaskUpdate": "Aufgabe aktualisieren",
+    "TaskList": "Aufgabenliste",
+    "NotebookEdit": "Notebook bearbeiten",
+    "wait_for_expert": "Warte auf Experte",
+    "start_expert": "Experte starten",
+    "stop_expert": "Experte stoppen",
+    "send_to_expert": "Nachricht senden",
+    "list_experts": "Experten auflisten",
+    "stop_all_experts": "Alle stoppen",
+    "check_inbox": "Posteingang prüfen",
+    "waitExpert": "Auf Experten warten",
+    "startExpert": "Experten starten",
+    "stopExpert": "Experten stoppen",
+    "sendMessage": "Nachricht senden",
+    "listExperts": "Experten auflisten",
+    "stopAll": "Alle stoppen",
+    "checkInbox": "Posteingang prüfen"
+  },
+  "activity": {
+    "title": "Aktivität",
+    "defaultLead": "Leiter",
+    "phase": {
+      "idle": "Inaktiv",
+      "thinking": "Denkt nach",
+      "tool_running": "Arbeitet",
+      "responding": "Antwortet",
+      "completed": "Abgeschlossen",
+      "error": "Fehler",
+      "waiting_input": "Wartet auf Eingabe",
+      "waiting_confirmation": "Wartet auf Bestätigung",
+      "initializing": "Startet"
+    },
+    "toolAction": {
+      "Read": "Liest",
+      "Edit": "Bearbeitet",
+      "Write": "Schreibt",
+      "Glob": "Sucht",
+      "Bash": "Führt aus",
+      "WebFetch": "Ruft ab",
+      "WebSearch": "Sucht",
+      "Grep": "Sucht",
+      "Agent": "Weist zu",
+      "TaskCreate": "Plant",
+      "TaskUpdate": "Aktualisiert",
+      "TaskList": "Überprüft"
+    },
+    "showMore": "{{count}} weitere",
+    "fileOp": {
+      "create": "Erstellen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "read": "Lesen"
+    },
+    "log": {
+      "completedTools": "{{count}} Operationen abgeschlossen",
+      "error": "Ausführung fehlgeschlagen"
+    }
+  },
+  "mention": {
+    "title": "Agent erwähnen",
+    "filesSection": "Dateien",
+    "agentsSection": "Agenten",
+    "noMatches": "Keine Treffer",
+    "searching": "Suche..."
+  },
+  "agentSwitcher": {
+    "placeholder": "Agents suchen...",
+    "footer": "↑↓ Navigieren  ↵ Auswählen  esc Schließen"
+  },
+  "message": {
+    "executionError": "Ausführungsfehler",
+    "executionResult": "Ausführungsergebnis",
+    "completed": "Abgeschlossen",
+    "toolRunning": "Tool wird ausgeführt...",
+    "responding": "Antwortet...",
+    "thinking": "Denkt nach...",
+    "processing": "Verarbeitung...",
+    "expandDetail": "{{name}} Antwortdetails erweitern",
+    "expandTool": "Tool {{name}} Details erweitern",
+    "duration": "Dauer",
+    "inputTokens": "Eingabe",
+    "outputTokens": "Ausgabe",
+    "turns": "{{count}} Runden",
+    "waitingConfirmation": "Warte auf Bestätigung",
+    "initializing": "Wird gestartet",
+    "clickToExpand": "Klicken zum Erweitern",
+    "local": "Lokal"
+  },
+  "gitStatus": {
+    "files": "Dateien",
+    "ahead": "voraus",
+    "viewChanges": "Änderungen anzeigen"
+  },
+  "changes": {
+    "files": "Dateien",
+    "commits": "Commits",
+    "noCommits": "Keine Commits",
+    "selectFile": "Datei auswählen, um Diff anzuzeigen",
+    "loading": "Wird geladen...",
+    "readOnly": "Nur Lesen",
+    "editable": "Bearbeitbar",
+    "unsaved": "Ungespeichert",
+    "save": "Speichern",
+    "saved": "{{file}} gespeichert",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "editLocked": "Agent ist aktiv, Änderungen gesichert",
+    "editRestore": "Gesicherte Änderungen wiederherstellen?",
+    "restore": "Wiederherstellen",
+    "discard": "Verwerfen",
+    "fullScreen": "Vollbild-Review",
+    "merge": "In {{branch}} zusammenführen",
+    "openInIde": "In IDE öffnen",
+    "discardChanges": "Änderungen verwerfen"
+  },
+  "turnChanges": {
+    "title": "Dateiänderungen",
+    "created": "Erstellt",
+    "modified": "Geändert",
+    "filesChanged": "{{count}} Dateien geändert",
+    "viewChanges": "Änderungen anzeigen"
+  },
+  "expertResumeExpired": "Die Sitzung von Experte {{name}} ist abgelaufen und kann nicht wiederhergestellt werden",
+  "expertResumeCwdNotFound": "Das Arbeitsverzeichnis von Experte {{name}} existiert nicht mehr, Sitzung kann nicht wiederhergestellt werden ({{message}})",
+  "input": {
+    "queuedCount": "{{count}} in Warteschlange · automatischer Versand nach aktuellem Task",
+    "taskInProgress": "Aufgabe läuft · Enter zum Einreihen",
+    "agentSwitchTitle": "{{name}} · {{shortcut}} zum Wechseln",
+    "local": "Lokal",
+    "queueTooltip": "In Warteschlange einreihen (automatischer Versand nach aktuellem Task)",
+    "queueDisabled": "Nachricht eingeben zum Einreihen"
+  },
+  "expandPanel": "Nachrichtenpanel erweitern",
+  "collapsePanel": "Nachrichtenpanel einklappen",
+  "terminal": {
+    "closeTerminal": "Terminal schließen",
+    "tabMode": "Tab-Modus",
+    "splitMode": "Split-Modus",
+    "reopenLabel": "Wieder öffnen ({{count}})",
+    "reopenTooltip": "Geschlossene Terminals wieder öffnen",
+    "openAll": "Alle öffnen",
+    "reconnecting": "Verbindung unterbrochen, wird wiederhergestellt...",
+    "emptyHint": "Nach dem Senden einer Nachricht werden Agent-Terminals hier angezeigt",
+    "hiddenCount": "{{count}} Terminals geschlossen"
+  },
+  "whiteboard": {
+    "goal": "Ziel",
+    "openQuestion": "Offene Fragen",
+    "handoff": "Übergaben",
+    "constraint": "Einschränkungen",
+    "decision": "Entscheidungen",
+    "progress": "Fortschritt",
+    "artifact": "Artefakte",
+    "archive": "Archivieren",
+    "archiveEntry": "Diesen Eintrag archivieren",
+    "selectChat": "Bitte wählen Sie zuerst einen Chat",
+    "warRoom": "Kriegsraum",
+    "archived": "Archiviert {{count}}",
+    "viewLabel": "Kriegsraum-Ansicht",
+    "listView": "Liste",
+    "timelineView": "Zeitachse",
+    "listViewLabel": "Listenansicht",
+    "timelineViewLabel": "Zeitachsenansicht",
+    "refreshLabel": "Aktualisieren",
+    "refreshWarRoom": "Kriegsraum aktualisieren",
+    "emptyState": "Noch keine Einträge. Einträge werden hier angezeigt, wenn Agents Ziele / Entscheidungen / Artefakte schreiben.",
+    "currentGoal": "Aktuelles Ziel",
+    "timeAgo": {
+      "seconds": "vor {{count}}s",
+      "minutes": "vor {{count}}m",
+      "hours": "vor {{count}}h",
+      "days": "vor {{count}}T"
+    },
+    "type": {
+      "goal": "Ziel",
+      "decision": "Entscheidung",
+      "output": "Ergebnis",
+      "progress": "Fortschritt",
+      "pending": "Ausstehend",
+      "constraint": "Einschränkung",
+      "handoff": "Übergabe",
+      "artifact": "Artefakt",
+      "open_question": "Offene Frage"
+    }
+  },
+  "planApproval": {
+    "title": "Plan bereit, Ausführung genehmigen?",
+    "rejectPlaceholder": "Änderungshinweise eingeben (optional)...",
+    "revise": "Überarbeiten",
+    "submitFeedback": "Feedback senden",
+    "approve": "Genehmigen",
+    "approved": "Genehmigt",
+    "feedbackSubmitted": "Änderungsfeedback gesendet"
+  },
+  "completion": {
+    "title": "Aufgabe abgeschlossen",
+    "toolCalls": "Aufrufe",
+    "taskDone": "Aufgabe abgeschlossen",
+    "toolCallsDone": "{{count}} Tool-Aufrufe abgeschlossen",
+    "reviewOk": "Review abgeschlossen, alles OK",
+    "done": "Fertig",
+    "engineerDetailed": "{{count}} Operationen abgeschlossen, Code steht",
+    "engineerBrief": "{{count}} Operationen, fertig",
+    "reviewDetailed": "{{count}} Schritte geprüft, Qualität gesichert",
+    "reviewBrief": "{{count}} Prüfungen abgeschlossen",
+    "designDetailed": "{{count}} Details verfeinert, UI verbessert",
+    "designBrief": "{{count}} Optimierungen abgeschlossen",
+    "casualDefault": "{{count}} Operationen durchgeführt",
+    "formalDefault": "{{count}} Operationen abgeschlossen"
+  },
+  "heartbeat": {
+    "interruptHint": "Esc drücken oder klicken zum Unterbrechen",
+    "interrupt": "Unterbrechen",
+    "expandAgentList": "Agent-Liste erweitern",
+    "collapseAgentList": "Agent-Liste einklappen",
+    "activeCount": "{{count}} Agents arbeiten",
+    "interruptAllHint": "Esc drücken oder klicken um alle zu unterbrechen",
+    "interruptAll": "Alle unterbrechen"
+  },
+  "askQuestion": {
+    "customPlaceholder": "Benutzerdefinierte Antwort eingeben...",
+    "selectPreset": "Voreingestellte Option wählen",
+    "customInput": "Benutzerdefinierte Eingabe",
+    "confirm": "Bestätigen",
+    "submitted": "Antwort gesendet"
+  },
+  "expertProgress": {
+    "completed": "{{name}} abgeschlossen",
+    "waiting": "Warte auf {{name}}"
+  },
+  "chatHeader": {
+    "local": "Lokal"
+  },
+  "reconnection": {
+    "reconnecting": "Verbindung unterbrochen, Wiederverbindung...",
+    "reconnected": "Wiederverbunden"
+  },
+  "fileOp": {
+    "create": "Erstellen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "read": "Lesen",
+    "executing": "Ausführen"
+  },
+  "phase": {
+    "initializing": "Initialisierung",
+    "thinking": "Denkt nach",
+    "responding": "Antwortet",
+    "toolRunning": "Tools laufen",
+    "tool_running": "Tool wird ausgeführt"
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "title": "設定",
+  "apiConfig": "API設定",
+  "apiKeyPlaceholder": "sk-ant-…（OAuthログインの場合は不要）",
+  "showPassword": "表示",
+  "hidePassword": "非表示",
+  "showPasswordLabel": "パスワードを表示",
+  "hidePasswordLabel": "パスワードを非表示",
+  "workingDir": "作業ディレクトリ",
+  "defaultWorkingDir": "デフォルト作業ディレクトリ",
+  "appearance": "外観",
+  "brandTheme": "ブランドテーマ",
+  "brandThemeDesc": "ブランドのアクセントカラーを選択",
+  "lightMode": "ライトモード",
+  "lightModeDesc": "ライトテーマに切り替え",
+  "switchToLight": "ライトテーマに切り替え",
+  "toggleLightMode": "ライトモードを切り替え",
+  "language": "言語",
+  "featureToggles": "機能切り替え",
+  "autoSave": "自動保存",
+  "autoSaveDesc": "ファイル変更時に自動保存",
+  "autoSaveToggle": "自動保存切り替え",
+  "enableNotifications": "通知を有効化",
+  "enableNotificationsDesc": "タスク完了時に通知を表示",
+  "enableNotificationsToggle": "通知切り替え",
+  "agentCapabilities": "エージェント機能",
+  "toolsParamHint": "ツールセットは<code>--tools</code>パラメータで調整できます",
+  "saveSettings": "設定を保存",
+  "agentList": {
+    "title": "エージェント ({{count}})",
+    "fetchFailed": "エージェント一覧の取得に失敗しました",
+    "applied": "エージェントを選択しました",
+    "selectHint": "エージェントを選択して詳細を表示",
+    "current": "現在",
+    "apply": "適用",
+    "subAgents": "サブエージェント",
+    "systemPrompt": "システムプロンプト",
+    "rawDefinition": "定義データ"
+  },
+  "languageCurrent": "現在: {{lang}}",
+  "agentConfig": {
+    "comingSoon": "エージェント設定管理は近日公開予定",
+    "currentManaged": "現在はai-assets/agents/ディレクトリで管理されています"
+  },
+  "multiAgent": {
+    "loadWorkspaceFailed": "ワークスペースの読み込みに失敗しました",
+    "initWorkspace": "初期化",
+    "workspaceInitialized": "ワークスペースが初期化されました",
+    "initFailed": "初期化に失敗しました",
+    "initWorkspaceFailed": "ワークスペースの初期化に失敗しました",
+    "loadTasksFailed": "タスク一覧の読み込みに失敗しました",
+    "loadSessionsFailed": "エージェントセッションの読み込みに失敗しました",
+    "scheduleDone": "スケジューリング完了",
+    "scheduleFailed": "スケジューリング失敗",
+    "triggerScheduleFailed": "スケジューリングのトリガーに失敗しました",
+    "triggerSchedule": "スケジュールをトリガー",
+    "scheduling": "スケジューリング中...",
+    "loading": "読み込み中...",
+    "noTasks": "タスクなし",
+    "noSessions": "セッションなし",
+    "workspaceNotInit": "ワークスペースが初期化されていません。「初期化」をクリックしてください。",
+    "leadAgent": "リーダー",
+    "experts": "エキスパート",
+    "agentSessions": "エージェントセッション",
+    "tableHeaders": {
+      "id": "ID",
+      "title": "タイトル",
+      "type": "タイプ",
+      "status": "ステータス",
+      "priority": "優先度",
+      "assignedTo": "担当者",
+      "dependencies": "依存関係",
+      "agent": "エージェント",
+      "name": "名前",
+      "currentTask": "現在のタスク",
+      "completedFailed": "完了/失敗"
+    }
+  },
+  "update": {
+    "title": "更新管理",
+    "currentVersion": "現在: v{{version}}",
+    "confirmRollback": "v{{version}}にロールバックしますか？",
+    "tabs": {
+      "overview": "概要",
+      "releases": "リリース履歴",
+      "devices": "デバイス",
+      "alerts": "アラート",
+      "storage": "ストレージ"
+    },
+    "metrics": {
+      "activeVersion": "アクティブバージョン",
+      "noRelease": "リリースなし",
+      "onlineDevices": "オンラインデバイス",
+      "versionCount": "{{count}} バージョン",
+      "adoptionRate": "採用率",
+      "adoptionSub": "ターゲットバージョン比率",
+      "recentErrors": "最近のエラー",
+      "recentErrorsSub": "過去1時間"
+    },
+    "release": {
+      "currentRelease": "現在のリリース: v{{version}}",
+      "confirm": "確認",
+      "cancel": "キャンセル",
+      "adjustRollout": "ロールアウト調整",
+      "rollbackTo": "v{{version}}にロールバック",
+      "rollbackToThis": "このバージョンにロールバック",
+      "releaseTime": "リリース日時: ",
+      "minShell": "最低Shell: ",
+      "rolloutPercent": "ロールアウト率: ",
+      "noRecords": "リリース記録なし",
+      "active": "アクティブ"
+    },
+    "devices": {
+      "noDevices": "デバイス報告なし",
+      "headers": {
+        "deviceId": "デバイスID",
+        "type": "タイプ",
+        "currentVersion": "現在のバージョン",
+        "shellVersion": "Shellバージョン",
+        "platform": "プラットフォーム",
+        "lastSeen": "最終接続"
+      }
+    },
+    "alerts": {
+      "noAlerts": "アラートなし"
+    },
+    "storage": {
+      "loading": "読み込み中...",
+      "versionCount": "保存バージョン数",
+      "totalSize": "合計サイズ",
+      "allVersions": "全バージョン",
+      "versionList": "バージョン一覧",
+      "perVersion": "バージョン別ストレージ"
+    },
+    "strategy": {
+      "full": "全量",
+      "gradual": "グラデュアル",
+      "canary": "カナリア",
+      "pinned": "固定"
+    },
+    "versionDistribution": "バージョン分布",
+    "time": {
+      "justNow": "たった今",
+      "minutesAgo": "{{count}}分前",
+      "hoursAgo": "{{count}}時間前"
+    }
+  },
+  "updateSettings": {
+    "loading": "更新情報を読み込み中...",
+    "installed": "インストール済み: {{versions}}",
+    "noInstalled": "インストール済みバージョンなし",
+    "checking": "確認中...",
+    "checkUpdate": "更新を確認",
+    "upToDate": "最新です",
+    "upToDateDesc": "現在のバージョンが最新です",
+    "newVersion": "新バージョン v{{version}} が利用可能",
+    "checkFailed": "確認失敗",
+    "cannotConnect": "更新サービスに接続できません",
+    "checkFailed2": "更新確認に失敗しました",
+    "confirmRollback": "v{{version}}にロールバックしますか？再起動後に有効になります。",
+    "rollbackTitle": "バージョンロールバック",
+    "rollbackDesc": "前のインストール済みバージョンに戻します。再起動後に有効",
+    "rollback": "ロールバック",
+    "activeRelease": "サーバーアクティブリリース:"
+  }
+}

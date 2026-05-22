@@ -1,0 +1,18 @@
+{
+  "title": "Benachrichtigungen",
+  "markAllRead": "Alle als gelesen markieren",
+  "clearRead": "Gelesene löschen",
+  "allCaughtUp": "Alles aktuell",
+  "empty": "Noch keine Benachrichtigungen",
+  "tabs": {
+    "all": "Alle",
+    "unread": "Ungelesen"
+  },
+  "category": {
+    "cron_success": "Aufgabe abgeschlossen",
+    "cron_failed": "Aufgabe fehlgeschlagen",
+    "system": "System"
+  },
+  "viewChat": "Chat ansehen",
+  "justNow": "Gerade eben"
+}

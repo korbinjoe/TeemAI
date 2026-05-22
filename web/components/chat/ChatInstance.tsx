@@ -1,0 +1,490 @@
+/**
+ * ChatInstance —  Chat  UI
+ *
+ *  ChatPage  chatId / workspaceId  props useParams
+ *  ChatTabContainer  display:none
+ */
+
+import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import type { Message, AgentActivity } from '../../types/chat'
+import { groupMessages } from './messages/MessageGroup'
+import ChatHeader from './ChatHeader'
+import ChatBody from './ChatBody'
+import MessageToolbar from './messages/MessageToolbar'
+import InputArea, { type InputAreaHandle } from './input/InputArea'
+import QueuedMessagesBar from './input/QueuedMessagesBar'
+import AgentSwitcherModal from './modals/AgentSwitcherModal'
+import GitStatusBar from './indicators/GitStatusBar'
+import WorktreePanel from '../worktree/WorktreePanel'
+import GlobalHeartbeatBar from './indicators/GlobalHeartbeatBar'
+import PermissionModal from './modals/PermissionModal'
+import PlanCard from './messages/PlanCard'
+import useMultiRepoGitStatus from '../../hooks/useMultiRepoGitStatus'
+import { useChatScroll } from '../../hooks/useChatScroll'
+import { useExpertActivities } from '../../hooks/useExpertActivities'
+import { useAgents } from '../../hooks/useAgents'
+import { useChatWebSocket } from '../../hooks/useChatWebSocket'
+import { useChatActions } from '../../hooks/useChatActions'
+import { useChatTabs } from '../../contexts/ChatTabContext'
+import DirPickerDialog from '../home/DirPickerDialog'
+import { useDirPicker } from '../../hooks/useDirPicker'
+import { API_BASE, authFetch } from '@/config/api'
+import { getModelsForProvider } from '@/lib/models'
+
+const ROOT_STYLE: React.CSSProperties = { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }
+const MAIN_CONTENT_STYLE: React.CSSProperties = { flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }
+const LOADING_STYLE: React.CSSProperties = { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgb(var(--text-muted))' }
+const DIVIDER_BAR_STYLE: React.CSSProperties = { width: 4, flexShrink: 0, position: 'relative', zIndex: 20 }
+const RightPanel = lazy(() => import('../ide/RightPanel'))
+
+/**
+ * Claude Code  slash commands  — CLI  fallback
+ * CLI  system.init  slash_commands
+ * CLI  commands.filter(c => c.userInvocable !== false).map(c => c.name)
+ */
+const DEFAULT_SLASH_COMMANDS = [
+  'add-dir', 'agents', 'btw', 'branch', 'chrome', 'clear', 'color',
+  'compact', 'config', 'context', 'copy', 'cost', 'desktop', 'diff',
+  'doctor', 'effort', 'exit', 'export', 'extra-usage', 'fast',
+  'feedback', 'help', 'hooks', 'ide', 'init', 'insights',
+  'install-github-app', 'install-slack-app', 'keybindings', 'login',
+  'logout', 'mcp', 'memory', 'mobile', 'model', 'passes',
+  'permissions', 'plan', 'plugin', 'powerup', 'pr-comments',
+  'privacy-settings', 'release-notes', 'reload-plugins',
+  'remote-control', 'remote-env', 'rename', 'resume', 'review',
+  'rewind', 'sandbox', 'schedule', 'security-review', 'skills',
+  'stats', 'status', 'statusline', 'stickers', 'tasks',
+  'terminal-setup', 'theme', 'upgrade', 'usage', 'vim', 'voice',
+]
+export interface ChatInstanceProps {
+  chatId: string
+  workspaceId: string
+  isActive: boolean
+  isNewChat?: boolean
+  initAgentId?: string | null
+  initialMessage?: string | null
+}
+
+const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAgentId = null, initialMessage = null }: ChatInstanceProps) => {
+  const msgSeqRef = useRef(0)
+  const uid = useCallback((prefix: string) => `${prefix}-${Date.now()}-${++msgSeqRef.current}`, [])
+
+  const { t } = useTranslation(['chat', 'common'])
+  const navigate = useNavigate()
+  const { updateTabTitle, updateTabStatus } = useChatTabs()
+  // ── Hooks ──
+  const {
+    availableAgents, setAvailableAgents,
+    selectedAgentId, targetAgentId, setTargetAgentId,
+    handleSetSelectedAgentId, currentAgentName,
+    agentNames, agentPersonalities,
+  } = useAgents()
+
+  const {
+    expertActivities, setExpertActivities,
+    currentMergedActivity,
+  } = useExpertActivities()
+
+  const [messages, setMessages] = useState<Message[]>([])
+  const [groupActivities, setGroupActivities] = useState<Record<string, AgentActivity>>({})
+  const [input, setInput] = useState('')
+  const [terminalWidth, setTerminalWidth] = useState(58)
+  const [chatCollapsed, setChatCollapsed] = useState(false)
+  const [isResizing, setIsResizing] = useState(false)
+  const [filterAgentId, setFilterAgentId] = useState<string | null>(null)
+
+  const messagesRef = useRef(messages)
+  messagesRef.current = messages
+  const inputAreaRef = useRef<InputAreaHandle>(null)
+  const [agentSwitcherOpen, setAgentSwitcherOpen] = useState(false)
+
+  const addMessage = useCallback((msg: Message) => {
+    setMessages((prev) => [...prev, msg])
+  }, [])
+
+  const onInitError = useCallback(() => navigate('/'), [navigate])
+
+  const {
+    wsClient, connected, currentSessionId,
+    workspaceName,
+    chatTitle, setChatTitle, currentWorkingDirectory, cwdReady,
+    setLoading, thinking,
+    allWorktreeSessions, wsRepositories,
+    agentSlashCommands,
+    chatModel, setChatModel,
+    agentPlans, agentModes, agentAvailableCommands, agentSessionInfo,
+    permissionRequests, dismissPermissionRequest,
+  } = useChatWebSocket({
+    workspaceId, chatId, isNewChat, initAgentId, initialMessage,
+    addMessage, uid, t,
+    setExpertActivities, setMessages,
+    selectedAgentId, availableAgents, handleSetSelectedAgentId, setAvailableAgents,
+    isActive,
+    onInitError,
+  })
+
+  const dirPickerHistory = useMemo(() => currentWorkingDirectory ? [currentWorkingDirectory] : [], [currentWorkingDirectory])
+  const dirPicker = useDirPicker(dirPickerHistory)
+
+  const currentSlashCommands = useMemo(() => {
+    if (!targetAgentId) return DEFAULT_SLASH_COMMANDS
+    return agentAvailableCommands[targetAgentId] ?? agentSlashCommands[targetAgentId] ?? DEFAULT_SLASH_COMMANDS
+  }, [targetAgentId, agentSlashCommands, agentAvailableCommands])
+
+  const currentMode = targetAgentId ? agentModes[targetAgentId] : undefined
+  const currentPlan = targetAgentId ? agentPlans[targetAgentId] : undefined
+  const currentSessionInfo = targetAgentId ? agentSessionInfo[targetAgentId] : undefined
+  const activePermissionRequest = permissionRequests[0] ?? null
+
+  const wasConnectedRef = useRef(false)
+  if (connected) wasConnectedRef.current = true
+  const reconnecting = !connected && wasConnectedRef.current
+
+  const [showReconnected, setShowReconnected] = useState(false)
+  const prevReconnectingRef = useRef(false)
+  useEffect(() => {
+    if (prevReconnectingRef.current && connected) {
+      setShowReconnected(true)
+      const timer = setTimeout(() => setShowReconnected(false), 2000)
+      return () => clearTimeout(timer)
+    }
+    prevReconnectingRef.current = reconnecting
+  }, [connected, reconnecting])
+
+  useEffect(() => {
+    if (chatTitle) updateTabTitle(chatId, chatTitle)
+  }, [chatTitle, chatId, updateTabTitle])
+
+  useEffect(() => {
+    if (currentSessionInfo?.title && !chatTitle) {
+      setChatTitle(currentSessionInfo.title)
+    }
+  }, [currentSessionInfo?.title, chatTitle, setChatTitle])
+
+  const {
+    virtuosoRef, onAtBottomChange, followOutput,
+    newMessageCount, handleScrollToBottom,
+  } = useChatScroll(messages)
+
+  const { statusMap: multiGitStatus, aggregate: gitAggregate, optimisticUpdate: multiOptimisticUpdate } = useMultiRepoGitStatus({
+    worktreeSessions: allWorktreeSessions,
+    agentActivity: currentMergedActivity,
+    repositories: wsRepositories,
+    chatId,
+  })
+  const primaryGitStatus = (wsRepositories.length > 0
+    ? multiGitStatus.get(wsRepositories[0].path)
+    : multiGitStatus.values().next().value) ?? null
+
+  useEffect(() => {
+    updateTabStatus(chatId, { changedFiles: gitAggregate.totalChangedFiles })
+  }, [chatId, gitAggregate.totalChangedFiles, updateTabStatus])
+
+  const [changesTabRequest, setChangesTabRequest] = useState(0)
+  const handleViewChanges = useCallback(() => {
+    setChangesTabRequest((n) => n + 1)
+  }, [])
+
+  const groups = useMemo(() => groupMessages(messages), [messages])
+  const activeAgentIds = useMemo(
+    () => [...new Set(messages.filter((m) => m.role === 'agent' && m.agentId).map((m) => m.agentId!))],
+    [messages],
+  )
+  const lastUserGroupId = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') return `group-${messages[i].id}`
+    }
+    const firstAgent = messages.find((m) => m.role !== 'user')
+    return firstAgent ? `group-orphan-${firstAgent.id}` : null
+  }, [messages])
+
+  const setGroupActivity = useCallback((groupId: string, activity: AgentActivity) => {
+    setGroupActivities((prev) => {
+      const existing = prev[groupId]
+      if (
+        existing &&
+        existing.phase === activity.phase &&
+        existing.background === activity.background &&
+        existing.currentTool === activity.currentTool &&
+        existing.toolCount === activity.toolCount &&
+        existing.toolCompleted === activity.toolCompleted &&
+        existing.hasText === activity.hasText &&
+        existing.cost === activity.cost &&
+        existing.tokens?.output === activity.tokens?.output
+      ) {
+        return prev
+      }
+      return { ...prev, [groupId]: activity }
+    })
+  }, [])
+
+  // AutoSend initialMessage
+  const initialMessageAddedRef = useRef(false)
+  useEffect(() => {
+    if (!initialMessage || initialMessageAddedRef.current) return
+    if (!connected || !cwdReady) return
+    initialMessageAddedRef.current = true
+    addMessage({ id: uid('usr'), role: 'user', content: initialMessage, timestamp: Date.now(), type: 'text' })
+  }, [initialMessage, connected, cwdReady, addMessage, uid])
+
+  // snapshot activity → groupActivity
+  const prevLastGroupIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (lastUserGroupId && prevLastGroupIdRef.current && lastUserGroupId !== prevLastGroupIdRef.current) {
+      const prevId = prevLastGroupIdRef.current
+      setGroupActivities((prev) => {
+        const prevActivity = prev[prevId]
+        if (prevActivity && !['completed', 'waiting_input', 'error'].includes(prevActivity.phase)) {
+          return { ...prev, [prevId]: { ...prevActivity, phase: 'completed' } }
+        }
+        return prev
+      })
+    }
+    prevLastGroupIdRef.current = lastUserGroupId
+  }, [lastUserGroupId])
+
+  useEffect(() => {
+    if (!currentMergedActivity) return
+    if (lastUserGroupId) setGroupActivity(lastUserGroupId, currentMergedActivity)
+  }, [currentMergedActivity, lastUserGroupId, setGroupActivity])
+
+  useEffect(() => {
+    if (!isActive) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('devpanel:toggle'))
+        return
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault()
+        setAgentSwitcherOpen((v) => !v)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isActive])
+
+  const handleAddDirPick = useCallback((path: string) => {
+    dirPicker.setDirModalOpen(false)
+    setInput('')
+    const message = `/add-dir ${path}`
+    const targetAgent = availableAgents.find((a) => a.name === targetAgentId || a.id === targetAgentId)
+    const agentId = targetAgent?.id || targetAgentId || availableAgents[0]?.id
+    if (!agentId) return
+    addMessage({ id: uid('usr'), role: 'user', content: message, timestamp: Date.now(), type: 'text' })
+    handleScrollToBottom()
+    wsClient.send('expert:direct-input', {
+      chatId, agentId, message, autoStart: true,
+      cwd: currentWorkingDirectory,
+      repositories: wsRepositories.map((r) => ({ path: r.path })),
+      cols: 80, rows: 24,
+    })
+  }, [availableAgents, targetAgentId, chatId, currentWorkingDirectory, wsRepositories, wsClient, dirPicker, addMessage, uid, handleScrollToBottom])
+
+  const {
+    queuedMessages,
+    handleSend, handleAnswerQuestion, handleInterrupt,
+    removeQueuedMessage, clearQueue,
+  } = useChatActions({
+    chatId, wsClient, currentSessionId, currentWorkingDirectory, wsRepositories,
+    availableAgents, targetAgentId, expertActivities, currentMergedActivity,
+    messages, input, setInput, addMessage, uid, handleScrollToBottom,
+    setExpertActivities, setTargetAgentId, setLoading, chatTitle, setChatTitle,
+    openDirPicker: dirPicker.openDirPicker,
+  })
+
+  const handleResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    const container = e.currentTarget.parentElement?.parentElement
+    if (!container) return
+    const containerWidth = container.getBoundingClientRect().width
+    const startX = e.clientX
+    const startWidth = terminalWidth
+    const onMove = (ev: MouseEvent) => {
+      const deltaPercent = ((ev.clientX - startX) / containerWidth) * 100
+      setTerminalWidth(Math.max(25, Math.min(80, startWidth - deltaPercent)))
+    }
+    setIsResizing(true)
+    const onUp = () => { setIsResizing(false); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+
+  const handleModelChange = useCallback((newModel: string) => {
+    setChatModel(newModel)
+    if (chatId) {
+      authFetch(`${API_BASE}/api/chats/${chatId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: newModel }),
+      }).catch((err: unknown) => console.warn('model update failed', err))
+    }
+  }, [chatId, setChatModel])
+
+  const handleFilterAgentChange = useCallback((agentId: string | null) => {
+    setFilterAgentId(agentId)
+    if (!agentId) return
+    setTargetAgentId(agentId)
+  }, [])
+
+  const currentAgent = availableAgents.find((a) => a.name === targetAgentId || a.id === targetAgentId)
+  const availableModels = useMemo(
+    () => getModelsForProvider(currentAgent?.provider),
+    [currentAgent?.provider],
+  )
+
+  const canSend = connected && !!currentSessionId && cwdReady
+
+  const chatPanelStyle = useMemo<React.CSSProperties>(() => ({
+    width: chatCollapsed ? 0 : `${100 - terminalWidth}%`,
+    display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden',
+    transition: isResizing ? 'none' : 'width 0.2s ease',
+  }), [chatCollapsed, terminalWidth, isResizing])
+  const terminalPanelStyle = useMemo<React.CSSProperties>(() => ({
+    width: chatCollapsed ? '100%' : `${terminalWidth}%`,
+    height: '100%', minWidth: 0, overflow: 'hidden',
+    transition: isResizing ? 'none' : 'width 0.2s ease',
+  }), [chatCollapsed, terminalWidth, isResizing])
+
+  return (
+    <div style={ROOT_STYLE}>
+      {/* Main content */}
+      <div style={MAIN_CONTENT_STYLE}>
+        <div style={chatPanelStyle}>
+          <ChatHeader
+              workspaceName={workspaceName} workspaceId={workspaceId} chatId={chatId}
+              chatTitle={chatTitle} setChatTitle={setChatTitle}
+              connected={connected} currentMode={currentMode}
+          />
+          {!cwdReady ? (
+            <div style={LOADING_STYLE}>Loading workspace...</div>
+          ) : (<>
+          {allWorktreeSessions.length > 0 && <WorktreePanel sessions={allWorktreeSessions} repositories={wsRepositories} />}
+          {messages.length > 0 && (
+            <MessageToolbar filterAgentId={filterAgentId} onFilterAgentChange={handleFilterAgentChange} agentNames={agentNames} agentPersonalities={agentPersonalities} expertActivities={expertActivities} activeAgentIds={activeAgentIds} />
+          )}
+          <ChatBody
+            messages={messages} groups={groups} filterAgentId={filterAgentId}
+            currentMergedActivity={currentMergedActivity} groupActivities={groupActivities}
+            expertActivities={expertActivities} agentNames={agentNames} agentPersonalities={agentPersonalities}
+            thinking={thinking} currentAgentName={currentAgentName}
+            connected={connected} currentSessionId={currentSessionId}
+            reconnecting={reconnecting} showReconnected={showReconnected}
+            newMessageCount={newMessageCount}
+            virtuosoRef={virtuosoRef}
+            onAtBottomChange={onAtBottomChange}
+            followOutput={followOutput}
+            handleScrollToBottom={handleScrollToBottom}
+            handleAnswerQuestion={handleAnswerQuestion}
+            targetAgentId={targetAgentId}
+          />
+          {currentPlan && currentPlan.entries.length > 0 && (
+            <PlanCard entries={currentPlan.entries} />
+          )}
+          <GlobalHeartbeatBar expertActivities={expertActivities} agentNames={agentNames} agentPersonalities={agentPersonalities}
+            onInterrupt={handleInterrupt}
+            onAgentClick={(agentId) => { setTargetAgentId(agentId); inputAreaRef.current?.focus() }} />
+          {primaryGitStatus && (
+            <GitStatusBar gitStatus={primaryGitStatus} aggregate={multiGitStatus.size > 1 ? gitAggregate : undefined} onViewChanges={handleViewChanges} repositories={wsRepositories} multiGitStatus={multiGitStatus} />
+          )}
+          <QueuedMessagesBar queue={queuedMessages} onRemove={removeQueuedMessage} onClear={clearQueue} />
+          <InputArea ref={inputAreaRef} value={input} onChange={setInput} onSend={handleSend}
+            onInterrupt={handleInterrupt}
+            disabled={!canSend} activity={currentMergedActivity} slashCommands={currentSlashCommands}
+            model={chatModel} onModelChange={handleModelChange} availableModels={availableModels}
+            agents={availableAgents} expertActivities={expertActivities} targetAgentId={targetAgentId}
+            onTargetChange={(agent) => setTargetAgentId(agent.id ?? agent.name)}
+            cwd={currentWorkingDirectory}
+            queueSize={queuedMessages.length}
+            onOpenAgentSwitcher={() => setAgentSwitcherOpen(true)}
+            isActive={isActive} />
+          </>)}
+        </div>
+
+        <div style={DIVIDER_BAR_STYLE}>
+          <div
+            onMouseDown={chatCollapsed ? undefined : handleResizeMouseDown}
+            style={{ width: '100%', height: '100%', background: 'rgb(var(--border-color))', cursor: chatCollapsed ? 'default' : 'col-resize', transition: 'background 0.15s' }}
+            onMouseEnter={(e) => { if (!chatCollapsed) e.currentTarget.style.background = 'rgb(var(--accent-brand))' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgb(var(--border-color))' }}
+          />
+          <button
+            onClick={() => setChatCollapsed((v) => !v)}
+            tabIndex={0}
+            aria-label={chatCollapsed ? t('chat:expandPanel') : t('chat:collapsePanel')}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-5 h-8 rounded-full border border-border-subtle bg-bg-primary text-text-secondary cursor-pointer transition-colors duration-150 hover:bg-bg-secondary hover:text-text-primary"
+          >
+            {chatCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          </button>
+        </div>
+
+        <div style={terminalPanelStyle}>
+          <Suspense fallback={<div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgb(var(--text-muted))', fontSize: 12 }}>Loading...</div>}>
+            <RightPanel
+              chatId={chatId}
+              gitStatus={primaryGitStatus}
+              multiGitStatus={multiGitStatus}
+              onMultiOptimisticUpdate={multiOptimisticUpdate}
+              agentActive={!!currentMergedActivity && !['completed', 'waiting_input', 'error', 'initializing'].includes(currentMergedActivity.phase)}
+              connected={connected}
+              workingDirectory={currentWorkingDirectory}
+              repositories={wsRepositories}
+              worktreePath={allWorktreeSessions[0]?.worktreePath}
+              changesTabRequest={changesTabRequest}
+            />
+          </Suspense>
+        </div>
+      </div>
+
+      {isActive && (
+        <AgentSwitcherModal
+          open={agentSwitcherOpen}
+          agents={availableAgents}
+          activities={expertActivities}
+          currentAgentId={targetAgentId}
+          onSelect={(agent) => setTargetAgentId(agent.id ?? agent.name)}
+          onClose={() => {
+            setAgentSwitcherOpen(false)
+            inputAreaRef.current?.focus()
+          }}
+        />
+      )}
+
+      <DirPickerDialog
+        open={dirPicker.dirModalOpen}
+        onOpenChange={dirPicker.setDirModalOpen}
+        browsePath={dirPicker.browsePath}
+        homeDir={dirPicker.homeDir}
+        dirs={dirPicker.dirs}
+        loadingDirs={dirPicker.loadingDirs}
+        dirSearch={dirPicker.dirSearch}
+        onDirSearchChange={dirPicker.setDirSearch}
+        searchResults={dirPicker.searchResults}
+        searchLoading={dirPicker.searchLoading}
+        newFolderMode={dirPicker.newFolderMode}
+        onNewFolderModeChange={dirPicker.setNewFolderMode}
+        newFolderName={dirPicker.newFolderName}
+        onNewFolderNameChange={dirPicker.setNewFolderName}
+        newFolderError={dirPicker.newFolderError}
+        onNewFolderErrorChange={dirPicker.setNewFolderError}
+        pickingForCreateWs={false}
+        onLoadDirs={dirPicker.loadDirs}
+        onPickAndLaunch={handleAddDirPick}
+        onCreateFolder={() => dirPicker.handleCreateFolder(handleAddDirPick)}
+      />
+
+      {isActive && (
+        <PermissionModal
+          request={activePermissionRequest}
+          onResolved={dismissPermissionRequest}
+        />
+      )}
+    </div>
+  )
+}
+
+export default ChatInstance

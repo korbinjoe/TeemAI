@@ -1,0 +1,166 @@
+{
+  "title": "设置",
+  "apiConfig": "API 配置",
+  "apiKeyPlaceholder": "sk-ant-…（当前使用 OAuth 登录则无需填写）",
+  "showPassword": "显示",
+  "hidePassword": "隐藏",
+  "showPasswordLabel": "显示密码",
+  "hidePasswordLabel": "隐藏密码",
+  "workingDir": "工作目录",
+  "defaultWorkingDir": "默认工作目录",
+  "appearance": "外观",
+  "brandTheme": "品牌配色",
+  "brandThemeDesc": "选择应用的品牌主色调",
+  "lightMode": "浅色模式",
+  "lightModeDesc": "切换为浅色主题",
+  "switchToLight": "切换为浅色主题",
+  "toggleLightMode": "切换浅色模式",
+  "language": "语言 / Language",
+  "featureToggles": "功能开关",
+  "autoSave": "自动保存",
+  "autoSaveDesc": "修改文件时自动保存",
+  "autoSaveToggle": "自动保存开关",
+  "enableNotifications": "启用通知",
+  "enableNotificationsDesc": "任务完成时显示通知",
+  "enableNotificationsToggle": "启用通知开关",
+  "agentCapabilities": "数字员工能力",
+  "toolsParamHint": "工具集合可通过 <code>--tools</code> 参数调整",
+  "saveSettings": "保存设置",
+  "agentList": {
+    "title": "数字员工 ({{count}})",
+    "fetchFailed": "获取数字员工列表失败",
+    "applied": "已选择该数字员工",
+    "selectHint": "选择一位数字员工查看详情",
+    "current": "当前",
+    "apply": "选用",
+    "subAgents": "子数字员工",
+    "systemPrompt": "系统提示词",
+    "rawDefinition": "原始定义"
+  },
+  "languageCurrent": "当前：{{lang}}",
+  "agentConfig": {
+    "comingSoon": "Agent 配置管理即将推出",
+    "currentManaged": "当前 Agent 通过 ai-assets/agents/ 目录管理"
+  },
+  "multiAgent": {
+    "loadWorkspaceFailed": "加载 Workspace 失败",
+    "initWorkspace": "初始化",
+    "workspaceInitialized": "Workspace 已初始化",
+    "initFailed": "初始化失败",
+    "initWorkspaceFailed": "初始化 Workspace 失败",
+    "loadTasksFailed": "加载任务列表失败",
+    "loadSessionsFailed": "加载数字员工会话失败",
+    "scheduleDone": "调度完成",
+    "scheduleFailed": "调度失败",
+    "triggerScheduleFailed": "触发调度失败",
+    "triggerSchedule": "触发调度",
+    "scheduling": "调度中…",
+    "loading": "加载中…",
+    "noTasks": "暂无任务",
+    "noSessions": "暂无会话",
+    "workspaceNotInit": "Workspace 未初始化，请点击\"初始化\"。",
+    "leadAgent": "负责人",
+    "experts": "专家",
+    "agentSessions": "数字员工会话",
+    "tableHeaders": {
+      "id": "ID",
+      "title": "标题",
+      "type": "类型",
+      "status": "状态",
+      "priority": "优先级",
+      "assignedTo": "指派给",
+      "dependencies": "依赖",
+      "agent": "数字员工",
+      "name": "名称",
+      "currentTask": "当前任务",
+      "completedFailed": "完成/失败"
+    }
+  },
+  "update": {
+    "title": "更新管理",
+    "currentVersion": "当前: v{{version}}",
+    "confirmRollback": "确定要回滚到 v{{version}}？",
+    "tabs": {
+      "overview": "概览",
+      "releases": "发布记录",
+      "devices": "设备",
+      "alerts": "告警",
+      "storage": "存储"
+    },
+    "metrics": {
+      "activeVersion": "活跃版本",
+      "noRelease": "无发布",
+      "onlineDevices": "在线设备",
+      "versionCount": "{{count}} 个版本",
+      "adoptionRate": "采纳率",
+      "adoptionSub": "目标版本占比",
+      "recentErrors": "最近错误",
+      "recentErrorsSub": "过去 1 小时"
+    },
+    "release": {
+      "currentRelease": "当前发布: v{{version}}",
+      "confirm": "确认",
+      "cancel": "取消",
+      "adjustRollout": "调整灰度",
+      "rollbackTo": "回滚到 v{{version}}",
+      "rollbackToThis": "回滚到此版本",
+      "releaseTime": "发布时间: ",
+      "minShell": "最低 Shell: ",
+      "rolloutPercent": "灰度比例: ",
+      "noRecords": "暂无发布记录",
+      "active": "活跃"
+    },
+    "devices": {
+      "noDevices": "暂无设备上报",
+      "headers": {
+        "deviceId": "设备 ID",
+        "type": "类型",
+        "currentVersion": "当前版本",
+        "shellVersion": "Shell 版本",
+        "platform": "平台",
+        "lastSeen": "最后上线"
+      }
+    },
+    "alerts": {
+      "noAlerts": "暂无告警"
+    },
+    "storage": {
+      "loading": "加载中...",
+      "versionCount": "存储版本数",
+      "totalSize": "总存储大小",
+      "allVersions": "所有版本",
+      "versionList": "版本列表",
+      "perVersion": "各版本存储"
+    },
+    "strategy": {
+      "full": "全量",
+      "gradual": "灰度",
+      "canary": "金丝雀",
+      "pinned": "锁定"
+    },
+    "versionDistribution": "版本分布",
+    "time": {
+      "justNow": "刚刚",
+      "minutesAgo": "{{count}} 分钟前",
+      "hoursAgo": "{{count}} 小时前"
+    }
+  },
+  "updateSettings": {
+    "loading": "加载更新信息...",
+    "installed": "已安装: {{versions}}",
+    "noInstalled": "暂无已安装版本",
+    "checking": "检查中...",
+    "checkUpdate": "检查更新",
+    "upToDate": "已是最新版本",
+    "upToDateDesc": "当前运行的版本是最新的",
+    "newVersion": "发现新版本 v{{version}}",
+    "checkFailed": "检查失败",
+    "cannotConnect": "无法连接更新服务",
+    "checkFailed2": "检查更新失败",
+    "confirmRollback": "确定要回滚到 v{{version}}？重启后生效。",
+    "rollbackTitle": "版本回滚",
+    "rollbackDesc": "回退到上一个已安装版本，重启后生效",
+    "rollback": "回滚",
+    "activeRelease": "服务端活跃发布:"
+  }
+}

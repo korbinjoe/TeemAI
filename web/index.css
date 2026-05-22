@@ -1,0 +1,543 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Terminal Font Preheat ──────────────────────────── */
+/* Declare local() font to trigger browser font enumeration at page load,
+   preventing initial delay in TerminalInstance.doOpen() document.fonts.ready */
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: local('JetBrains Mono'), local('JetBrainsMono-Regular');
+  font-display: swap;
+}
+
+/* ─── Base tokens (non-brand) ─────────────────────────── */
+/* Colors use space-separated RGB channels for Tailwind opacity modifier support */
+:root {
+  --bg-primary:       10 10 16;
+  --bg-secondary:     16 16 24;
+  --bg-tertiary:      22 22 32;
+  --bg-hover:         30 30 42;
+  --bg-tab-bar:       14 14 22;
+  --bg-selected:      36 36 50;
+  --bg-input:         18 18 28;
+  --bg-elevated:      24 24 36;
+
+  --text-primary:     226 228 240;
+  --text-secondary:   148 156 172;
+  --text-emphasis:    248 250 252;
+  --text-muted:       90 100 120;
+
+  --accent-green:     52 211 153;
+  --accent-yellow:    251 191 36;
+  --accent-red:       239 68 68;
+  --accent-orange:    245 158 11;
+  --accent-purple:    167 139 250;
+
+  --border-color:     38 38 54;
+  --border-subtle:    28 28 42;
+
+  --bg-hover-subtle:  255 255 255;
+  --bg-hover-subtle-alpha: 0.04;
+  --bg-hover-muted:   255 255 255;
+  --bg-hover-muted-alpha: 0.07;
+
+  --scrollbar-thumb:  rgba(255,255,255,0.06);
+  --scrollbar-hover:  rgba(255,255,255,0.12);
+  --code-bg:          rgba(99,102,241,0.08);
+  --pre-bg:           rgba(0,0,0,0.4);
+
+  --radius-sm:        6px;
+  --radius-md:        10px;
+  --radius-lg:        14px;
+
+  /* Default brand = Jiqing */
+  --accent-brand:       90 143 202;
+  --accent-brand-light: 130 176 222;
+  --accent-brand-deep:  62 114 172;
+}
+
+:root.light {
+  --bg-primary:       250 250 252;
+  --bg-secondary:     244 244 248;
+  --bg-tertiary:      238 238 244;
+  --bg-hover:         232 232 240;
+  --bg-tab-bar:       244 244 248;
+  --bg-selected:      228 228 238;
+  --bg-input:         255 255 255;
+  --bg-elevated:      255 255 255;
+
+  --text-primary:     30 30 46;
+  --text-secondary:   82 82 108;
+  --text-emphasis:    15 15 30;
+  --text-muted:       120 120 140;
+
+  --accent-green:     22 163 74;
+  --accent-yellow:    202 138 4;
+  --accent-red:       220 38 38;
+  --accent-orange:    215 120 20;
+  --accent-purple:    124 58 237;
+
+  --border-color:     226 226 236;
+  --border-subtle:    236 236 244;
+
+  --bg-hover-subtle:  0 0 0;
+  --bg-hover-subtle-alpha: 0.03;
+  --bg-hover-muted:   0 0 0;
+  --bg-hover-muted-alpha: 0.06;
+
+  --scrollbar-thumb:  rgba(0,0,0,0.1);
+  --scrollbar-hover:  rgba(0,0,0,0.18);
+  --code-bg:          rgba(99,102,241,0.06);
+  --pre-bg:           rgba(0,0,0,0.03);
+
+  --accent-brand:       52 100 152;
+  --accent-brand-light: 90 143 202;
+  --accent-brand-deep:  38 78 128;
+}
+
+/* ─── Brand Color Themes · Chinese Traditional Colors ── */
+
+/* A. Jiqing — clear sky after rain (default) */
+:root[data-color-theme="jiqing"] {
+  --accent-brand:       90 143 202;
+  --accent-brand-light: 130 176 222;
+  --accent-brand-deep:  62 114 172;
+}
+:root.light[data-color-theme="jiqing"] {
+  --accent-brand:       52 100 152;
+  --accent-brand-light: 90 143 202;
+  --accent-brand-deep:  38 78 128;
+}
+
+/* B. Yanzhi — rouge red */
+:root[data-color-theme="yanzhi"] {
+  --accent-brand:       196 90 108;
+  --accent-brand-light: 222 138 151;
+  --accent-brand-deep:  168 62 82;
+}
+:root.light[data-color-theme="yanzhi"] {
+  --accent-brand:       156 52 72;
+  --accent-brand-light: 196 90 108;
+  --accent-brand-deep:  128 36 56;
+}
+
+/* C. Xiangye — golden leaf */
+:root[data-color-theme="xiangye"] {
+  --accent-brand:       232 190 76;
+  --accent-brand-light: 242 214 132;
+  --accent-brand-deep:  208 162 48;
+}
+:root.light[data-color-theme="xiangye"] {
+  --accent-brand:       184 142 28;
+  --accent-brand-light: 208 162 48;
+  --accent-brand-deep:  152 116 16;
+}
+
+/* D. Qingci — celadon green */
+:root[data-color-theme="qingci"] {
+  --accent-brand:       116 192 168;
+  --accent-brand-light: 156 216 196;
+  --accent-brand-deep:  82 164 138;
+}
+:root.light[data-color-theme="qingci"] {
+  --accent-brand:       58 138 112;
+  --accent-brand-light: 82 164 138;
+  --accent-brand-deep:  42 112 88;
+}
+
+/* E. Zhusha — cinnabar red */
+:root[data-color-theme="zhusha"] {
+  --accent-brand:       226 88 62;
+  --accent-brand-light: 240 132 108;
+  --accent-brand-deep:  196 66 42;
+}
+:root.light[data-color-theme="zhusha"] {
+  --accent-brand:       176 56 34;
+  --accent-brand-light: 196 66 42;
+  --accent-brand-deep:  148 42 24;
+}
+
+/* F. Ouhe — lotus purple */
+:root[data-color-theme="ouhe"] {
+  --accent-brand:       178 148 206;
+  --accent-brand-light: 204 182 226;
+  --accent-brand-deep:  148 114 184;
+}
+:root.light[data-color-theme="ouhe"] {
+  --accent-brand:       118 82 158;
+  --accent-brand-light: 148 114 184;
+  --accent-brand-deep:  96 62 136;
+}
+
+/* G. Shiqing — mineral blue */
+:root[data-color-theme="shiqing"] {
+  --accent-brand:       68 148 178;
+  --accent-brand-light: 108 180 204;
+  --accent-brand-deep:  42 120 152;
+}
+:root.light[data-color-theme="shiqing"] {
+  --accent-brand:       32 102 132;
+  --accent-brand-light: 42 120 152;
+  --accent-brand-deep:  22 82 110;
+}
+
+/* H. Qiuxiang — autumn olive */
+:root[data-color-theme="qiuxiang"] {
+  --accent-brand:       186 166 62;
+  --accent-brand-light: 212 196 108;
+  --accent-brand-deep:  156 138 36;
+}
+:root.light[data-color-theme="qiuxiang"] {
+  --accent-brand:       132 114 22;
+  --accent-brand-light: 156 138 36;
+  --accent-brand-deep:  108 92 12;
+}
+
+/* I. Yanxia — sunset mist */
+:root[data-color-theme="yanxia"] {
+  --accent-brand:       222 126 158;
+  --accent-brand-light: 238 168 192;
+  --accent-brand-deep:  198 96 130;
+}
+:root.light[data-color-theme="yanxia"] {
+  --accent-brand:       172 68 104;
+  --accent-brand-light: 198 96 130;
+  --accent-brand-deep:  142 48 82;
+}
+
+/* J. Yaqing — crow teal */
+:root[data-color-theme="yaqing"] {
+  --accent-brand:       108 142 148;
+  --accent-brand-light: 148 178 184;
+  --accent-brand-deep:  78 112 120;
+}
+:root.light[data-color-theme="yaqing"] {
+  --accent-brand:       58 88 96;
+  --accent-brand-light: 78 112 120;
+  --accent-brand-deep:  42 68 76;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse-dot { 0%,80%,100%{opacity:.25} 40%{opacity:.9} }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+@keyframes breathe { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: 0.75; } }
+@keyframes pulse-fast { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+@keyframes pulse-attention { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85); } }
+
+/* Agent Avatar micro-animations */
+@keyframes avatar-wobble { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-2px); } 75% { transform: translateX(2px); } }
+@keyframes avatar-pulse-glow { 0%,100% { box-shadow: 0 0 0 0 rgba(var(--accent-brand), 0.3); } 50% { box-shadow: 0 0 8px 3px rgba(var(--accent-brand), 0.15); } }
+@keyframes avatar-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-3px); } 40% { transform: translateX(3px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
+@keyframes avatar-bounce { 0% { transform: translateY(0); } 30% { transform: translateY(-6px); } 50% { transform: translateY(0); } 70% { transform: translateY(-3px); } 100% { transform: translateY(0); } }
+
+/* ─── Form Components ────────────────────────────────────── */
+@layer components {
+  .form-input {
+    @apply w-full rounded-lg border border-white/[0.06] bg-bg-input px-3 py-2
+           text-xs text-text-primary placeholder:text-text-muted
+           outline-none transition-colors focus:border-accent-brand/50 focus:bg-bg-elevated;
+  }
+}
+
+/* Sidebar Task Indicator animations */
+@keyframes icon-shake { 0%,100%{transform:translateX(0)} 15%{transform:translateX(-2.5px)} 30%{transform:translateX(2.5px)} 45%{transform:translateX(-2.5px)} 60%{transform:translateX(2.5px)} 75%{transform:translateX(-1px)} 90%{transform:translateX(1px)} }
+@keyframes icon-bounce { 0%,100%{transform:translateY(0)} 40%{transform:translateY(-4px)} 60%{transform:translateY(-1px)} }
+@keyframes badge-ping { 0%{transform:scale(1);opacity:0.75} 75%,100%{transform:scale(2.2);opacity:0} }
+
+/* ─── Utility Classes ──────────────────────────────────────── */
+.animate-spin { animation: spin 1s linear infinite; }
+.animate-fade-in { animation: fadeIn 0.2s ease; }
+.animate-pulse-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+.animate-pulse-slow { animation: pulse 1.5s ease-in-out infinite; }
+.animate-breathe { animation: breathe 3s ease-in-out infinite; }
+.animate-pulse-fast { animation: pulse-fast 0.8s ease-in-out infinite; }
+.animate-pulse-attention { animation: pulse-attention 2s ease-in-out infinite; }
+.animate-avatar-wobble { animation: avatar-wobble 1.2s ease-in-out infinite; }
+.animate-avatar-pulse { animation: avatar-pulse-glow 2s ease-in-out infinite; }
+.animate-avatar-shake { animation: avatar-shake 0.5s ease-in-out infinite; }
+.animate-avatar-bounce { animation: avatar-bounce 0.6s ease-out; }
+.animate-icon-shake { animation: icon-shake 0.6s ease-in-out infinite; }
+.animate-icon-bounce { animation: icon-bounce 1s ease-in-out infinite; }
+.animate-badge-ping { animation: badge-ping 1.2s cubic-bezier(0,0,0.2,1) infinite; }
+.-webkit-app-region-drag { -webkit-app-region: drag; }
+.-webkit-app-region-no-drag { -webkit-app-region: no-drag; }
+
+/* ─── Glass Card (Cursor-style elevated surfaces) ──── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-lg);
+}
+.glass-card-hover:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(90, 143, 202, 0.2);
+  box-shadow: 0 0 20px rgba(90, 143, 202, 0.06);
+}
+
+/* ─── Gradient text utility ──────────────────────────── */
+.text-gradient-brand {
+  background: linear-gradient(135deg, #82b0de, #5a8fca, #82b0de);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* Chrome-style active tab: inverse border-radius via radial-gradient */
+.chrome-tab-active {
+  position: relative;
+}
+.chrome-tab-active::before,
+.chrome-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 6px;
+  height: 6px;
+  pointer-events: none;
+  z-index: 10;
+}
+.chrome-tab-active::before {
+  left: -6px;
+  background: radial-gradient(circle 6px at top left, transparent 5.5px, rgb(var(--bg-primary)) 6px);
+}
+.chrome-tab-active::after {
+  right: -6px;
+  background: radial-gradient(circle 6px at top right, transparent 5.5px, rgb(var(--bg-primary)) 6px);
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  background: rgb(var(--bg-primary));
+  color: rgb(var(--text-primary));
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: rgb(var(--accent-brand) / 0.3);
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--accent-brand));
+  outline-offset: 2px;
+}
+::-moz-focus-inner { border: 0; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+
+.xterm { height: 100%; }
+.xterm .xterm-viewport { overflow-y: scroll; cursor: default; position: absolute; inset: 0; }
+
+/* ─── Chat Markdown ──────────────────────────────────────── */
+.chat-markdown {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: rgb(var(--text-primary));
+}
+.chat-markdown p            { margin: 0 0 10px; }
+.chat-markdown p:last-child { margin-bottom: 0; }
+
+.chat-markdown code {
+  background: var(--code-bg);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  color: rgb(var(--accent-brand-light));
+}
+.chat-markdown pre {
+  background: var(--pre-bg);
+  border: 1px solid rgb(var(--border-color));
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  overflow: auto;
+  margin: 12px 0;
+}
+.chat-markdown pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: rgb(var(--text-primary));
+  font-size: 12px;
+}
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3 {
+  color: rgb(var(--text-emphasis));
+  margin: 16px 0 8px;
+  font-weight: 600;
+}
+.chat-markdown h1 { font-size: 15px; }
+.chat-markdown h2 { font-size: 13.5px; }
+.chat-markdown h3 { font-size: 12.5px; }
+.chat-markdown ul,
+.chat-markdown ol  { padding-left: 20px; margin: 8px 0; }
+.chat-markdown li  { margin: 4px 0; }
+.chat-markdown blockquote {
+  border-left: 2px solid rgb(var(--accent-brand));
+  padding-left: 14px;
+  color: rgb(var(--text-secondary));
+  margin: 10px 0;
+}
+.chat-markdown hr              { border: none; border-top: 1px solid rgb(var(--border-color)); margin: 12px 0; }
+.chat-markdown table           { border-collapse: collapse; width: 100%; margin: 12px 0; }
+.chat-markdown th,
+.chat-markdown td              { border: 1px solid rgb(var(--border-color)); padding: 8px 12px; font-size: 12px; }
+.chat-markdown th              { background: rgb(var(--bg-tertiary)); font-weight: 600; }
+.chat-markdown a               { color: rgb(var(--accent-brand-light)); text-decoration: none; }
+.chat-markdown a:hover         { text-decoration: underline; }
+.chat-markdown strong          { color: rgb(var(--text-emphasis)); font-weight: 600; }
+
+/* ─── Markdown File Preview (WebIDE) ─────────────────────── */
+.md-preview {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: rgb(var(--text-primary));
+}
+.md-preview p            { margin: 0 0 10px; }
+.md-preview p:last-child { margin-bottom: 0; }
+
+.md-preview h1,
+.md-preview h2,
+.md-preview h3,
+.md-preview h4,
+.md-preview h5,
+.md-preview h6 {
+  color: rgb(var(--text-emphasis));
+  font-weight: 600;
+  margin: 18px 0 8px;
+}
+.md-preview h1:first-child,
+.md-preview h2:first-child,
+.md-preview h3:first-child { margin-top: 0; }
+.md-preview h1 { font-size: 17px; border-bottom: 1px solid rgb(var(--border-color)); padding-bottom: 6px; }
+.md-preview h2 { font-size: 15px; border-bottom: 1px solid rgb(var(--border-subtle)); padding-bottom: 5px; }
+.md-preview h3 { font-size: 13.5px; }
+.md-preview h4 { font-size: 12.5px; }
+.md-preview h5 { font-size: 12px; }
+.md-preview h6 { font-size: 11.5px; color: rgb(var(--text-secondary)); }
+
+.md-preview code {
+  background: var(--code-bg);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  color: rgb(var(--accent-brand-light));
+}
+.md-preview pre {
+  background: var(--pre-bg);
+  border: 1px solid rgb(var(--border-color));
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  overflow: auto;
+  margin: 12px 0;
+}
+.md-preview pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: rgb(var(--text-primary));
+  font-size: 12px;
+}
+
+.md-preview ul,
+.md-preview ol  { padding-left: 20px; margin: 8px 0; }
+.md-preview li  { margin: 4px 0; }
+.md-preview li > ul,
+.md-preview li > ol { margin: 4px 0; }
+
+/* GFM task list checkboxes */
+.md-preview input[type="checkbox"] {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid rgb(var(--text-muted));
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 6px;
+  position: relative;
+  top: -1px;
+  cursor: default;
+}
+.md-preview input[type="checkbox"]:checked {
+  background: rgb(var(--accent-brand));
+  border-color: rgb(var(--accent-brand));
+}
+.md-preview input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0px;
+  width: 5px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+.md-preview blockquote {
+  border-left: 2px solid rgb(var(--accent-brand));
+  padding-left: 14px;
+  color: rgb(var(--text-secondary));
+  margin: 10px 0;
+}
+.md-preview hr {
+  border: none;
+  border-top: 1px solid rgb(var(--border-color));
+  margin: 12px 0;
+}
+
+.md-preview table           { border-collapse: collapse; width: 100%; margin: 12px 0; }
+.md-preview th,
+.md-preview td              { border: 1px solid rgb(var(--border-color)); padding: 8px 12px; font-size: 12px; }
+.md-preview th              { background: rgb(var(--bg-tertiary)); font-weight: 600; text-align: left; }
+
+.md-preview a               { color: rgb(var(--accent-brand-light)); text-decoration: none; }
+.md-preview a:hover         { text-decoration: underline; }
+.md-preview strong          { color: rgb(var(--text-emphasis)); font-weight: 600; }
+.md-preview em              { font-style: italic; }
+
+.md-preview img {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  margin: 12px 0;
+}
+
+/* ─── Monaco Search Highlight ─────────────────────────── */
+.search-highlight-match {
+  background-color: rgba(245, 158, 11, 0.35);
+  border: 1px solid rgba(245, 158, 11, 0.6);
+  border-radius: 2px;
+}
+
+/* ─── React Flow Theme ─────────────────────────────────── */
+.team-canvas .react-flow__background { background: rgb(var(--bg-primary)); }
+.team-canvas .react-flow__edge-path { stroke: rgb(var(--border-color)); stroke-width: 1.5; }
+.team-canvas .react-flow__edge-text { fill: rgb(var(--text-muted)); font-size: 12px; }
+.team-canvas .react-flow__edge-textbg { fill: rgb(var(--bg-primary)); }
+.team-canvas .react-flow__connection-path { stroke: rgb(var(--accent-brand)); stroke-width: 2; }
+.team-canvas .react-flow__attribution { display: none; }
+.team-canvas .react-flow__handle { transition: all 0.15s; }
+.team-canvas .react-flow__handle:hover { transform: scale(1.3); }
+
+/* ─── Whiteboard DAG Flow ────────────────────────────── */
+.whiteboard-dag .react-flow__background { background: transparent; }
+.whiteboard-dag .react-flow__attribution { display: none; }
+.whiteboard-dag .react-flow__minimap { border: 1px solid rgb(var(--border-subtle)); border-radius: 6px; }
+.whiteboard-dag .react-flow__edge-path { transition: stroke-width 150ms, opacity 150ms; }
+.whiteboard-dag .react-flow__pane { cursor: grab; }
+.whiteboard-dag .react-flow__pane:active { cursor: grabbing; }

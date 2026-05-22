@@ -1,0 +1,53 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+build
+
+# Server compiled JS (tsx handles TS at runtime)
+server/**/*.js
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+.cache
+
+# Worktrees
+.worktrees/
+
+# Claude Code
+.claude/
+
+# Runtime data
+.openteam/
+
+.skill-archive/
+.cursor/
+.qoder/
+.claude/

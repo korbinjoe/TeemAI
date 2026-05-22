@@ -1,0 +1,282 @@
+{
+  "newChat": "새 채팅",
+  "editTitle": "채팅 제목 편집",
+  "clickEditTitle": "클릭하여 제목 편집",
+  "emptyStateHint": "아래에 메시지를 입력하여 대화를 시작하세요",
+  "emptyStateMentionHint": "@를 입력하여 에이전트를 멘션하거나 위의 아바타를 클릭하여 선택",
+  "inputPlaceholder": "Claude에게 물어보기...",
+  "inputDisabled": "연결 중...",
+  "history": {
+    "title": "채팅 기록",
+    "searchPlaceholder": "채팅 검색...",
+    "filterAll": "전체",
+    "filterRunning": "실행 중",
+    "filterStopped": "중지됨",
+    "noRecords": "채팅 기록 없음",
+    "noMatch": "일치하는 채팅 없음",
+    "deleteTitle": "삭제 확인",
+    "deleteDesc": "채팅 \"{{title}}\"을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "openChat": "채팅 열기 {{title}}"
+  },
+  "tools": {
+    "Read": "파일 읽기",
+    "Edit": "파일 편집",
+    "Write": "파일 쓰기",
+    "Glob": "파일 검색",
+    "Bash": "명령 실행",
+    "WebFetch": "웹 가져오기",
+    "WebSearch": "웹 검색",
+    "Grep": "내용 검색",
+    "Agent": "하위 작업 배정",
+    "TaskCreate": "작업 생성",
+    "TaskUpdate": "작업 업데이트",
+    "TaskList": "작업 목록",
+    "NotebookEdit": "노트북 편집",
+    "wait_for_expert": "전문가 대기",
+    "start_expert": "전문가 시작",
+    "stop_expert": "전문가 중지",
+    "send_to_expert": "메시지 전송",
+    "list_experts": "전문가 목록",
+    "stop_all_experts": "전체 중지",
+    "check_inbox": "수신함 확인",
+    "waitExpert": "전문가 대기",
+    "startExpert": "전문가 시작",
+    "stopExpert": "전문가 중지",
+    "sendMessage": "메시지 보내기",
+    "listExperts": "전문가 목록",
+    "stopAll": "모두 중지",
+    "checkInbox": "수신함 확인"
+  },
+  "activity": {
+    "title": "활동",
+    "defaultLead": "리더",
+    "phase": {
+      "idle": "대기 중",
+      "thinking": "생각 중",
+      "tool_running": "작업 중",
+      "responding": "응답 중",
+      "completed": "완료",
+      "error": "오류",
+      "waiting_input": "입력 대기",
+      "waiting_confirmation": "확인 대기",
+      "initializing": "시작 중"
+    },
+    "toolAction": {
+      "Read": "읽는 중",
+      "Edit": "편집 중",
+      "Write": "쓰는 중",
+      "Glob": "검색 중",
+      "Bash": "실행 중",
+      "WebFetch": "가져오는 중",
+      "WebSearch": "검색 중",
+      "Grep": "검색 중",
+      "Agent": "배정 중",
+      "TaskCreate": "계획 중",
+      "TaskUpdate": "업데이트 중",
+      "TaskList": "검토 중"
+    },
+    "showMore": "{{count}}개 더",
+    "fileOp": {
+      "create": "생성",
+      "edit": "편집",
+      "delete": "삭제",
+      "read": "읽기"
+    },
+    "log": {
+      "completedTools": "{{count}}개 작업 완료",
+      "error": "실행 실패"
+    }
+  },
+  "mention": {
+    "title": "에이전트 멘션",
+    "filesSection": "파일",
+    "agentsSection": "에이전트",
+    "noMatches": "일치 없음",
+    "searching": "검색 중..."
+  },
+  "agentSwitcher": {
+    "placeholder": "Agent 검색...",
+    "footer": "↑↓ 탐색  ↵ 선택  esc 닫기"
+  },
+  "message": {
+    "executionError": "실행 오류",
+    "executionResult": "실행 결과",
+    "completed": "완료",
+    "toolRunning": "도구 실행 중...",
+    "responding": "응답 중...",
+    "thinking": "생각 중...",
+    "processing": "처리 중...",
+    "expandDetail": "{{name}} 응답 상세 펼치기",
+    "expandTool": "도구 {{name}} 상세 펼치기",
+    "duration": "소요 시간",
+    "inputTokens": "입력",
+    "outputTokens": "출력",
+    "turns": "{{count}}턴",
+    "waitingConfirmation": "확인 대기 중",
+    "initializing": "시작 중",
+    "clickToExpand": "클릭하여 펼치기",
+    "local": "로컬"
+  },
+  "gitStatus": {
+    "files": "파일",
+    "ahead": "앞서감",
+    "viewChanges": "변경 사항 보기"
+  },
+  "changes": {
+    "files": "파일",
+    "commits": "커밋",
+    "noCommits": "커밋 없음",
+    "selectFile": "파일을 선택하여 차이 보기",
+    "loading": "로딩 중...",
+    "readOnly": "읽기 전용",
+    "editable": "편집 가능",
+    "unsaved": "미저장",
+    "save": "저장",
+    "saved": "{{file}} 저장됨",
+    "saveFailed": "저장 실패",
+    "editLocked": "에이전트 활성 중, 편집이 보관됨",
+    "editRestore": "보관된 편집을 복원하시겠습니까?",
+    "restore": "복원",
+    "discard": "폐기",
+    "fullScreen": "전체 화면 리뷰",
+    "merge": "{{branch}}에 병합",
+    "openInIde": "IDE에서 열기",
+    "discardChanges": "변경 사항 폐기"
+  },
+  "turnChanges": {
+    "title": "파일 변경",
+    "created": "생성됨",
+    "modified": "수정됨",
+    "filesChanged": "{{count}}개 파일 변경됨",
+    "viewChanges": "변경 사항 보기"
+  },
+  "expertResumeExpired": "전문가 {{name}}의 세션이 만료되어 복원할 수 없습니다",
+  "expertResumeCwdNotFound": "전문가 {{name}}의 작업 디렉토리가 더 이상 존재하지 않아 세션을 복원할 수 없습니다 ({{message}})",
+  "input": {
+    "queuedCount": "{{count}}건 대기 · 현재 작업 완료 후 자동 전송",
+    "taskInProgress": "작업 진행 중 · Enter로 대기열에 추가",
+    "agentSwitchTitle": "{{name}} · {{shortcut}} 전환",
+    "local": "로컬",
+    "queueTooltip": "대기열에 추가 (현재 작업 완료 후 자동 전송)",
+    "queueDisabled": "메시지를 입력하여 대기열에 추가"
+  },
+  "expandPanel": "메시지 패널 펼치기",
+  "collapsePanel": "메시지 패널 접기",
+  "terminal": {
+    "closeTerminal": "터미널 닫기",
+    "tabMode": "탭 모드",
+    "splitMode": "분할 모드",
+    "reopenLabel": "다시 열기 ({{count}})",
+    "reopenTooltip": "닫힌 터미널 다시 열기",
+    "openAll": "모두 열기",
+    "reconnecting": "연결이 끊어졌습니다. 재연결 중...",
+    "emptyHint": "메시지를 보내면 Agent 터미널이 여기에 표시됩니다",
+    "hiddenCount": "{{count}}개 터미널 닫힘"
+  },
+  "whiteboard": {
+    "goal": "목표",
+    "openQuestion": "미답변",
+    "handoff": "인수인계",
+    "constraint": "제약",
+    "decision": "결정",
+    "progress": "진행",
+    "artifact": "산출물",
+    "archive": "보관",
+    "archiveEntry": "이 항목 보관",
+    "selectChat": "먼저 채팅을 선택하세요",
+    "warRoom": "작전실",
+    "archived": "보관됨 {{count}}",
+    "viewLabel": "작전실 뷰",
+    "listView": "목록",
+    "timelineView": "타임라인",
+    "listViewLabel": "목록 뷰",
+    "timelineViewLabel": "타임라인 뷰",
+    "refreshLabel": "새로고침",
+    "refreshWarRoom": "작전실 새로고침",
+    "emptyState": "아직 항목이 없습니다. Agent가 goal / decision / artifact를 작성하면 여기에 표시됩니다.",
+    "currentGoal": "현재 목표",
+    "timeAgo": {
+      "seconds": "{{count}}초 전",
+      "minutes": "{{count}}분 전",
+      "hours": "{{count}}시간 전",
+      "days": "{{count}}일 전"
+    },
+    "type": {
+      "goal": "목표",
+      "decision": "결정",
+      "output": "산출물",
+      "progress": "진행",
+      "pending": "답변 대기",
+      "constraint": "제약",
+      "handoff": "인계",
+      "artifact": "산출물",
+      "open_question": "미해결"
+    }
+  },
+  "planApproval": {
+    "title": "계획이 준비되었습니다. 실행을 승인하시겠습니까?",
+    "rejectPlaceholder": "수정 의견 입력 (선택사항)...",
+    "revise": "수정",
+    "submitFeedback": "의견 제출",
+    "approve": "승인",
+    "approved": "승인됨",
+    "feedbackSubmitted": "수정 의견이 제출됨"
+  },
+  "completion": {
+    "title": "작업 완료",
+    "toolCalls": "회 호출",
+    "taskDone": "작업을 완료했습니다",
+    "toolCallsDone": "{{count}}회 도구 호출 완료",
+    "reviewOk": "검토 완료, 모두 정상",
+    "done": "완료",
+    "engineerDetailed": "{{count}}개 작업 처리, 코드 배치 완료",
+    "engineerBrief": "{{count}}개 작업 완료",
+    "reviewDetailed": "{{count}}개 항목 검사, 품질 확인됨",
+    "reviewBrief": "{{count}}개 검사 완료",
+    "designDetailed": "{{count}}개 세부사항 개선, UI 향상",
+    "designBrief": "{{count}}개 최적화 완료",
+    "casualDefault": "{{count}}개 작업 수행",
+    "formalDefault": "{{count}}회 작업 완료"
+  },
+  "heartbeat": {
+    "interruptHint": "Esc 또는 클릭으로 중단",
+    "interrupt": "중단",
+    "expandAgentList": "Agent 목록 펼치기",
+    "collapseAgentList": "Agent 목록 접기",
+    "activeCount": "{{count}}개 Agent 작업 중",
+    "interruptAllHint": "Esc 또는 클릭으로 전체 중단",
+    "interruptAll": "전체 중단"
+  },
+  "askQuestion": {
+    "customPlaceholder": "사용자 정의 답변 입력...",
+    "selectPreset": "프리셋 옵션 선택",
+    "customInput": "사용자 정의 입력",
+    "confirm": "확인",
+    "submitted": "답변이 제출되었습니다"
+  },
+  "expertProgress": {
+    "completed": "{{name}} 완료",
+    "waiting": "{{name}} 대기 중"
+  },
+  "chatHeader": {
+    "local": "로컬"
+  },
+  "reconnection": {
+    "reconnecting": "연결이 끊겼습니다. 재연결 중...",
+    "reconnected": "재연결됨"
+  },
+  "fileOp": {
+    "create": "생성",
+    "edit": "편집",
+    "delete": "삭제",
+    "read": "읽기",
+    "executing": "실행 중"
+  },
+  "phase": {
+    "initializing": "시작 중",
+    "thinking": "생각 중",
+    "responding": "응답 중",
+    "toolRunning": "도구 실행 중",
+    "tool_running": "도구 실행 중"
+  }
+}

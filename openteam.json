@@ -1,0 +1,115 @@
+{
+  "system": "./ai-assets/system",
+
+  "agents": {
+    "defaults": {
+      "model": "claude-opus-4-6",
+      "provider": "claude",
+      "mcpServers": {
+        "playwright": {
+          "transport": "stdio",
+          "command": "npx",
+          "args": ["@playwright/mcp", "--headless"]
+        }
+      }
+    },
+    "list": [
+      {
+        "id": "lead",
+        "name": "Team Coordinator",
+        "description": "Task orchestration and scheduling. Does not execute tasks directly — responsible for requirement analysis, task decomposition, expert dispatch, progress tracking, and result aggregation.",
+        "workspace": "./ai-assets/agents/lead",
+        "role": "lead",
+        "skills": ["expert-dispatcher", "whiteboard"],
+        "allowedTools": [
+          "Read", "Glob", "Grep", "Bash", "AskUserQuestion",
+          "TaskCreate", "TaskUpdate", "TaskList", "TaskGet"
+        ],
+        "subAgentNames": [
+          "fullstack-product-engineer",
+          "ui-designer",
+          "devops-engineer",
+          "code-reviewer",
+          "architect",
+          "sensei",
+          "image-creator"
+        ]
+      },
+      {
+        "id": "fullstack-product-engineer",
+        "name": "Fullstack Product Engineer",
+        "description": "End-to-end delivery from requirement analysis and technical design to frontend/backend development.",
+        "workspace": "./ai-assets/agents/fullstack-product-engineer",
+        "role": "expert",
+        "skills": ["frontend-expert", "api-integrator", "whiteboard"],
+        "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
+        "heartbeat": {
+          "every": "30m",
+          "prompt": "Read HEARTBEAT.md and follow it strictly. If nothing needs attention, reply HEARTBEAT_OK."
+        },
+        "boot": { "enabled": true }
+      },
+      {
+        "id": "code-reviewer",
+        "name": "Code Review Expert",
+        "description": "Code review, quality analysis, best practice recommendations, and security vulnerability detection. Supports Java, Go, Python, Node.js, React, and TypeScript.",
+        "workspace": "./ai-assets/agents/code-reviewer",
+        "role": "expert",
+        "provider": "claude",
+        "skills": [
+          "code-reviewer-react",
+          "code-reviewer-typescript",
+          "code-reviewer-nodejs",
+          "code-reviewer-java",
+          "code-reviewer-go",
+          "code-reviewer-python"
+        ]
+      },
+      {
+        "id": "ui-designer",
+        "name": "Visual Design Expert",
+        "description": "Integrated UI design and implementation expert with professional aesthetic judgment. Handles design decisions, code implementation, browser preview verification, and iterative delivery of high-quality UI through screenshot review.",
+        "workspace": "./ai-assets/agents/ui-designer",
+        "role": "expert",
+        "skills": ["ui-reviewer", "ui-designer", "dev-server"]
+      },
+      {
+        "id": "devops-engineer",
+        "name": "DevOps Expert",
+        "description": "Cloud deployment and CI/CD expert for modern platforms (Vercel, Netlify, GitHub Actions). Handles deployments, preview environments, domain configuration, build pipelines, and infrastructure monitoring.",
+        "workspace": "./ai-assets/agents/devops-engineer",
+        "role": "expert",
+        "allowedTools": ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        "heartbeat": {
+          "every": "1h",
+          "prompt": "Read HEARTBEAT.md and follow it strictly. If nothing needs attention, reply HEARTBEAT_OK."
+        },
+        "boot": { "enabled": true }
+      },
+      {
+        "id": "architect",
+        "name": "Architecture Review Expert",
+        "description": "Reviews projects from an architectural perspective, covering layering, module boundaries, dependency governance, data flow, and evolvability. Outputs structured review reports and architecture decision recommendations.",
+        "workspace": "./ai-assets/agents/architect",
+        "role": "expert",
+        "skills": ["architecture-review"]
+      },
+      {
+        "id": "sensei",
+        "name": "Growth Coach",
+        "description": "The mentor and brain of the agent team. Creates new agents, drives the evolution system (AgentDNA / EvolutionLog), optimizes prompts, evaluates team performance, and distills best practices.",
+        "workspace": "./ai-assets/agents/sensei",
+        "role": "expert"
+      },
+      {
+        "id": "image-creator",
+        "name": "Image Creator",
+        "description": "Professional AI artist using Gemini models to generate high-quality images from text descriptions. Excels at understanding complex drawing requirements, optimizing prompts, and producing polished artwork.",
+        "workspace": "./ai-assets/agents/image-creator",
+        "role": "expert",
+        "skills": ["image-generator"],
+        "allowedTools": ["Read", "Bash"]
+      }
+    ]
+  }
+}

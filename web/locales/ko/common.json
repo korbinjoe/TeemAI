@@ -1,0 +1,138 @@
+{
+  "nav": {
+    "home": "홈",
+    "dashboard": "대시보드",
+    "workspaces": "워크스페이스",
+    "myTeam": "AI 팀",
+    "skills": "스킬",
+    "settings": "설정",
+    "cronJobs": "예약 작업",
+    "chatRoom": "채팅룸",
+    "chatHistory": "채팅 기록",
+    "notifications": "알림",
+    "backToHome": "홈으로 돌아가기",
+    "profile": "프로필",
+    "logout": "로그아웃",
+    "logoutConfirm": "로그아웃하시겠습니까? 다시 로그인해야 합니다.",
+    "admin": "데이터베이스 관리"
+  },
+  "theme": {
+    "toggleLight": "라이트 모드로 전환",
+    "toggleDark": "다크 모드로 전환",
+    "lightMode": "라이트 모드",
+    "darkMode": "다크 모드"
+  },
+  "language": {
+    "toggle": "언어 전환",
+    "zh": "中文",
+    "en": "English",
+    "ja": "日本語",
+    "ko": "한국어",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português"
+  },
+  "action": {
+    "confirm": "확인",
+    "cancel": "취소",
+    "delete": "삭제",
+    "save": "저장",
+    "refresh": "새로고침",
+    "search": "검색",
+    "create": "생성",
+    "edit": "편집",
+    "apply": "적용",
+    "close": "닫기",
+    "rename": "이름 변경",
+    "loading": "로딩 중...",
+    "new": "새로 만들기"
+  },
+  "status": {
+    "running": "실행 중",
+    "idle": "대기 중",
+    "stopped": "중지됨",
+    "completed": "완료됨",
+    "merged": "병합됨",
+    "error": "오류",
+    "connected": "연결됨",
+    "connecting": "연결 중...",
+    "initializing": "초기화 중...",
+    "reconnecting": "재연결 중..."
+  },
+  "role": {
+    "lead": "리더",
+    "expert": "전문가"
+  },
+  "current": "현재",
+  "source": {
+    "builtin": "공식",
+    "custom": "사용자 정의"
+  },
+  "time": {
+    "justNow": "방금",
+    "minutesAgo": "{{count}}분 전",
+    "hoursAgo": "{{count}}시간 전",
+    "daysAgo": "{{count}}일 전"
+  },
+  "dialog": {
+    "confirmDelete": "삭제 확인",
+    "cannotUndo": "이 작업은 되돌릴 수 없습니다."
+  },
+  "envCheck": {
+    "nodeNotFound": "Node.js가 감지되지 않았습니다. AI 에이전트 기능이 제한됩니다. Node.js를 설치하고 다시 시작하세요.",
+    "installLink": "지금 설치"
+  },
+  "admin": {
+    "title": "데이터베이스 관리",
+    "rows": "{{count}} 행",
+    "tables": "테이블",
+    "selectTable": "테이블을 선택하여 보기",
+    "clickToExpand": "클릭하여 전체 내용 보기",
+    "emptyTable": "빈 테이블",
+    "pagination": "{{page}} / {{total}} 페이지",
+    "copy": "복사"
+  },
+  "auth": {
+    "blacklisted": "계정 비활성화",
+    "blacklistedDesc": "계정이 비활성화되었습니다. 관리자에게 문의하세요.",
+    "serviceClosed": "시스템 점검 중",
+    "serviceClosedDesc": "OpenTeam 서비스 점검 중입니다. 나중에 다시 시도하세요.",
+    "accessDenied": "접근 권한 없음",
+    "accessDeniedDesc": "계정에 OpenTeam 접근 권한이 없습니다. 관리자에게 문의하세요.",
+    "missingParams": "필수 매개변수가 누락되었습니다 (token / workid)",
+    "savingLogin": "로그인 상태 저장 중…",
+    "loginSuccess": "로그인 성공",
+    "loginSuccessDesc": "토큰이 저장되었습니다. 이 창을 닫아도 됩니다.",
+    "loginFailed": "로그인 실패",
+    "saveFailed": "저장 실패"
+  },
+  "error": {
+    "renderError": "페이지 렌더링 오류",
+    "createFailed": "채팅 생성 실패, 다시 시도해주세요",
+    "unexpectedHint": "예기치 않은 오류가 발생했습니다. 페이지를 새로고침해 주세요.",
+    "goHome": "홈으로 돌아가기",
+    "reload": "페이지 새로고침"
+  },
+  "clearAll": {
+    "confirmClick": "다시 클릭하여 확인",
+    "dismissAll": "모두 무시"
+  },
+  "permission": {
+    "allowOnce": "이번만 허용",
+    "allowAlways": "항상 허용",
+    "rejectOnce": "이번만 거부",
+    "rejectAlways": "항상 거부",
+    "requestTitle": "권한 요청"
+  },
+  "chatTab": {
+    "errorTitle": "작업 오류, 클릭하여 확인",
+    "completedTitle": "작업 완료, 클릭하여 확인",
+    "error": "작업 오류, 클릭하여 확인",
+    "completed": "작업 완료, 클릭하여 확인",
+    "needConfirm": "확인 필요",
+    "close": "닫기",
+    "closeOthers": "다른 탭 닫기",
+    "closeRight": "오른쪽 탭 닫기"
+  }
+}

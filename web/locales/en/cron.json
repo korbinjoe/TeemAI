@@ -1,0 +1,74 @@
+{
+  "title": "Scheduled Tasks",
+  "newTask": "New Task",
+  "editTask": "Edit Task",
+  "deleteTask": "Delete Task",
+  "deleteConfirm": "Are you sure to delete \"{{name}}\"?",
+  "runNow": "Run Now",
+  "runNowConfirm": "Run \"{{name}}\" immediately?",
+  "enable": "Enable",
+  "disable": "Disable",
+  "form": {
+    "name": "Task Name",
+    "namePlaceholder": "e.g. Daily code review",
+    "workspace": "Workspace",
+    "agent": "Agent (optional)",
+    "model": "Model (optional)",
+    "trigger": "Schedule",
+    "triggerCron": "Cron Expression",
+    "triggerOnce": "One-shot",
+    "triggerInterval": "Interval",
+    "cronExpression": "Cron Expression",
+    "cronPlaceholder": "e.g. 0 9 * * 1-5",
+    "cronHelp": "Minute Hour Day Month Weekday",
+    "timezone": "Timezone",
+    "nextRun": "Next run: {{time}}",
+    "invalidCron": "Invalid cron expression",
+    "scheduledTime": "Scheduled Time",
+    "interval": "Interval",
+    "intervalUnit": "Unit",
+    "minutes": "minutes",
+    "hours": "hours",
+    "days": "days",
+    "prompt": "Initial Prompt",
+    "promptPlaceholder": "The message sent to the agent when the task starts...",
+    "retryOnFailure": "Retry on failure",
+    "maxRetries": "Max retries"
+  },
+  "status": {
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "running": "Running",
+    "success": "Success",
+    "failed": "Failed"
+  },
+  "executions": "Execution History",
+  "noExecutions": "No executions yet",
+  "lastRun": "Last run",
+  "nextRun": "Next run",
+  "neverRun": "Never",
+  "empty": {
+    "title": "No scheduled tasks",
+    "description": "Create your first scheduled task to let Agent work automatically"
+  },
+  "toast": {
+    "created": "Task \"{{name}}\" created",
+    "updated": "Task \"{{name}}\" updated",
+    "deleted": "Task \"{{name}}\" deleted",
+    "triggered": "Task \"{{name}}\" triggered"
+  },
+  "nl": {
+    "title": "Create Scheduled Task",
+    "description": "Describe the scheduled task in natural language",
+    "placeholder": "e.g. Review my-app PRs every morning at 9am",
+    "send": "Parse",
+    "parsing": "Parsing...",
+    "skipToManual": "Manual mode",
+    "or": "or",
+    "error": {
+      "parseFailed": "Smart parsing failed, switched to manual mode",
+      "noCredentials": "Please configure ANTHROPIC_API_KEY to enable AI features",
+      "networkError": "Network error, switched to manual mode"
+    }
+  }
+}

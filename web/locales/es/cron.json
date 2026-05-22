@@ -1,0 +1,74 @@
+{
+  "title": "Tareas programadas",
+  "newTask": "Nueva tarea",
+  "editTask": "Editar tarea",
+  "deleteTask": "Eliminar tarea",
+  "deleteConfirm": "¿Estás seguro de eliminar \"{{name}}\"?",
+  "runNow": "Ejecutar ahora",
+  "runNowConfirm": "¿Ejecutar \"{{name}}\" inmediatamente?",
+  "enable": "Habilitar",
+  "disable": "Deshabilitar",
+  "form": {
+    "name": "Nombre de la tarea",
+    "namePlaceholder": "ej. Revisión de código diaria",
+    "workspace": "Espacio de trabajo",
+    "agent": "Agente (opcional)",
+    "model": "Modelo (opcional)",
+    "trigger": "Programación",
+    "triggerCron": "Expresión Cron",
+    "triggerOnce": "Una sola vez",
+    "triggerInterval": "Intervalo",
+    "cronExpression": "Expresión Cron",
+    "cronPlaceholder": "ej. 0 9 * * 1-5",
+    "cronHelp": "Minuto Hora Día Mes Día de semana",
+    "timezone": "Zona horaria",
+    "nextRun": "Próxima ejecución: {{time}}",
+    "invalidCron": "Expresión cron no válida",
+    "scheduledTime": "Hora programada",
+    "interval": "Intervalo",
+    "intervalUnit": "Unidad",
+    "minutes": "minutos",
+    "hours": "horas",
+    "days": "días",
+    "prompt": "Prompt inicial",
+    "promptPlaceholder": "El mensaje enviado al agente al iniciar la tarea...",
+    "retryOnFailure": "Reintentar en caso de fallo",
+    "maxRetries": "Máximo de reintentos"
+  },
+  "status": {
+    "enabled": "Habilitado",
+    "disabled": "Deshabilitado",
+    "running": "En ejecución",
+    "success": "Éxito",
+    "failed": "Fallido"
+  },
+  "executions": "Historial de ejecución",
+  "noExecutions": "Sin ejecuciones aún",
+  "lastRun": "Última ejecución",
+  "nextRun": "Próxima ejecución",
+  "neverRun": "Nunca",
+  "empty": {
+    "title": "Sin tareas programadas",
+    "description": "Crea tu primera tarea programada para que el agente trabaje automáticamente"
+  },
+  "toast": {
+    "created": "Tarea \"{{name}}\" creada",
+    "updated": "Tarea \"{{name}}\" actualizada",
+    "deleted": "Tarea \"{{name}}\" eliminada",
+    "triggered": "Tarea \"{{name}}\" activada"
+  },
+  "nl": {
+    "title": "Crear tarea programada",
+    "description": "Describe la tarea programada en lenguaje natural",
+    "placeholder": "ej. Revisar PRs de my-app cada mañana a las 9am",
+    "send": "Analizar",
+    "parsing": "Analizando...",
+    "skipToManual": "Modo manual",
+    "or": "o",
+    "error": {
+      "parseFailed": "Análisis inteligente fallido, cambio a modo manual",
+      "noCredentials": "Configura ANTHROPIC_API_KEY para habilitar funciones de IA",
+      "networkError": "Error de red, cambio a modo manual"
+    }
+  }
+}

@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenTeam — Agent Workspace Interactive Prototype</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Nunito:wght@700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0a0a10;
+  --bg-secondary: #0e0e16;
+  --bg-tertiary: #16161a;
+  --bg-hover: #1e1e2a;
+  --bg-selected: #242432;
+  --border: #262636;
+  --border-subtle: #1c1c2a;
+  --text-primary: #e2e4f0;
+  --text-secondary: #949cac;
+  --text-muted: #5a6478;
+  --accent: #5a8fca;
+  --accent-light: #82b0de;
+  --green: #34d399;
+  --yellow: #fbbf24;
+  --red: #ef4444;
+  --purple: #a78bfa;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg-primary); color:var(--text-primary); overflow:hidden; height:100vh; }
+.font-mono { font-family:'JetBrains Mono',monospace; }
+.font-nunito { font-family:'Nunito',sans-serif; }
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.06); border-radius:3px; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.dot-pulse { animation: pulse 1.5s ease-in-out infinite; }
+.session-item { transition: background 0.1s; }
+.session-item:hover { background: rgba(255,255,255,0.04); }
+.session-item.active { background: rgba(90,143,202,0.08); }
+.ide-tab { transition: background 0.1s; cursor:pointer; }
+.ide-tab:hover { background: rgba(255,255,255,0.04); }
+.ide-tab.active { background: rgba(90,143,202,0.08); color: var(--accent-light); font-weight:500; }
+.layout-btn { transition: background 0.1s; cursor:pointer; }
+.layout-btn:hover { background: rgba(255,255,255,0.06); }
+.layout-btn.active { background: rgba(90,143,202,0.15); }
+.cmd-palette { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:flex-start; justify-content:center; padding-top:20vh; z-index:100; }
+.cmd-palette.open { display:flex; }
+.bottom-icon { width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-muted); transition:all 0.1s; }
+.bottom-icon:hover { background:rgba(255,255,255,0.04); color:var(--text-secondary); }
+.terminal-section { transition: height 0.2s ease; overflow:hidden; }
+.resize-handle { cursor:col-resize; transition:background 0.15s; }
+.resize-handle:hover { background:var(--accent) !important; }
+</style>
+</head>
+<body>
+<div id="app" style="display:flex;height:100vh;"></div>
+
+<script>
+const TASKS = [
+  { id:'task-auth', name:'Implement user auth flow', workspace:'openteam-web', status:'waiting',
+    goal:'Build login/register with session management, pass security review before merge.',
+    dispatch:'lead', // 'lead' = auto-dispatched by Lead, 'user' = manually created
+    lead:'fullstack', // which agent is the lead/initiator
+    agents: [
+      { id:'fullstack', agent:'Fullstack', status:'waiting', action:'Asking: "JWT or session auth?"', time:'4m', role:'lead', dispatch:'user' },
+      { id:'reviewer', agent:'Reviewer', status:'running', action:'Reviewing auth changes', time:'1m', role:'worker', dispatch:'auto', handoffFrom:'fullstack' },
+      { id:'shield', agent:'Shield', status:'error', action:'Permission denied: daemon.json', time:'12m', role:'worker', dispatch:'auto', handoffFrom:'fullstack' },
+    ],
+    timeline: [
+      { t:'14:20', event:'User created task', type:'user' },
+      { t:'14:20', event:'Fullstack started implementation', type:'start' },
+      { t:'14:28', event:'Fullstack → Reviewer (handoff: review auth code)', type:'handoff' },
+      { t:'14:28', event:'Fullstack → Shield (handoff: security audit)', type:'handoff' },
+      { t:'14:30', event:'Shield hit permission error', type:'error' },
+      { t:'14:32', event:'Fullstack asking user: JWT or session?', type:'waiting' },
+    ]},
+  { id:'task-settings', name:'Redesign settings page', workspace:'openteam-web', status:'running',
+    goal:'Modernize settings UI with tabbed layout. Single agent task.',
+    dispatch:'user',
+    agents: [
+      { id:'designer', agent:'Designer', status:'running', action:'Edit SettingsPage.tsx', time:'2m', role:'lead', dispatch:'user' },
+    ],
+    timeline: [
+      { t:'14:32', event:'User created task', type:'user' },
+      { t:'14:32', event:'Designer started', type:'start' },
+    ]},
+  { id:'task-db', name:'DB migration v42', workspace:'openteam-server', status:'done',
+    goal:'Apply schema migration for new user fields.',
+    dispatch:'user',
+    agents: [
+      { id:'db', agent:'Fullstack', status:'done', action:'Completed', time:'25m', role:'lead', dispatch:'user' },
+    ],
+    timeline: [
+      { t:'13:55', event:'Completed', type:'done' },
+    ]},
+  { id:'task-ws', name:'WebSocket reconnect fix', workspace:'openteam-server', status:'done',
+    goal:'Fix WebSocket drops on network change with exponential backoff.',
+    dispatch:'user',
+    agents: [
+      { id:'ws', agent:'Designer', status:'done', action:'Completed', time:'18m', role:'lead', dispatch:'user' },
+    ],
+    timeline: [
+      { t:'14:10', event:'Completed', type:'done' },
+    ]},
+]
+const AGENTS = TASKS.flatMap(t => t.agents.map(a => ({...a, taskId:t.id, taskName:t.name, workspace:t.workspace})))
+const PINNED = [
+  { id:'pin1', name:'API rate limiter setup', age:'12d' },
+  { id:'pin2', name:'Settings page redesign', age:'3d' },
+]
+const IDE_TABS = ['Files','Changes','War Room','Browser']
+const CHAT_LOGS = {
+  designer: [
+    {type:'start', text:'Agent Designer started at 14:32'},
+    {type:'msg', text:"I'll redesign the settings page with a cleaner layout using tabbed sections."},
+    {type:'tool', text:'Read web/pages/SettingsPage.tsx', meta:'428 lines'},
+    {type:'tool', text:'Read web/components/settings/', meta:'6 files'},
+    {type:'done', text:'Write web/pages/SettingsPage.tsx', meta:'+84 -156'},
+    {type:'msg', text:'Restructured into 4 tabbed sections. Removed nested accordion for flat sections.'},
+    {type:'tool', text:'Write web/components/settings/SettingsTabs.tsx', meta:'new'},
+    {type:'tool', text:'Write web/components/settings/AgentSettingsTab.tsx', meta:'new'},
+    {type:'progress', text:'Working on AppearanceTab...'},
+  ],
+  fullstack: [
+    {type:'start', text:'Agent Fullstack started at 14:28'},
+    {type:'msg', text:"I'll implement the user authentication flow with login, register, and session management."},
+    {type:'done', text:'Write server/routes/auth.ts', meta:'new'},
+    {type:'done', text:'Write web/hooks/useAuth.ts', meta:'new'},
+    {type:'waiting', text:'Should I use JWT or session-based auth?'},
+  ],
+  shield: [
+    {type:'start', text:'Agent Shield started at 14:20'},
+    {type:'tool', text:'Read Dockerfile', meta:'42 lines'},
+    {type:'done', text:'Scanned docker-compose.yml', meta:'ok'},
+    {type:'error', text:'Permission denied: /etc/docker/daemon.json'},
+  ],
+  reviewer: [
+    {type:'start', text:'Agent Reviewer started at 14:33'},
+    {type:'tool', text:'Read server/routes/auth.ts', meta:'128 lines'},
+    {type:'tool', text:'Read web/hooks/useAuth.ts', meta:'64 lines'},
+    {type:'tool', text:'Grep "password" in src/', meta:'3 matches'},
+    {type:'progress', text:'Analyzing security patterns...'},
+  ],
+  db: [{type:'start', text:'Completed'},{type:'done', text:'Migration v42 applied successfully', meta:'3 tables'}],
+  ws: [{type:'start', text:'Completed'},{type:'done', text:'WebSocket auto-reconnect with exponential backoff', meta:'+42 -8'}],
+}
+
+let state = {
+  selectedAgent: 'designer',
+  activeIdeTab: 'Changes',
+  layoutMode: 'split', // 'single' | 'split' | 'quad'
+  terminalOpen: true,
+  cmdPaletteOpen: false,
+  panelCollapsed: false,
+  expandedTasks: { 'task-auth': true, 'task-settings': true },
+  viewMode: 'agent', // 'agent' | 'task-overview'
+  selectedTask: null, // task id when in task-overview mode
+  addAgentOpen: false, // agent picker overlay open
+  addAgentTaskId: null, // which task we're adding to
+  taskChatTarget: 0, // index of target agent in task chat input
+}
+
+const AVAILABLE_AGENTS = [
+  { type:'fullstack', name:'Fullstack Engineer', desc:'Full-stack development, API design, database work', icon:'F' },
+  { type:'designer', name:'UI Designer', desc:'UI/UX design, component styling, visual review', icon:'D' },
+  { type:'reviewer', name:'Code Reviewer', desc:'Code review, security audit, best practices', icon:'R' },
+  { type:'shield', name:'Security Auditor', desc:'Security scanning, vulnerability detection, hardening', icon:'S' },
+  { type:'devops', name:'DevOps Engineer', desc:'CI/CD, Docker, deployment, infrastructure', icon:'O' },
+  { type:'tester', name:'Test Engineer', desc:'Test writing, coverage analysis, QA', icon:'T' },
+]
+
+function statusColor(s) {
+  return s==='error'?'var(--red)':s==='waiting'?'var(--yellow)':s==='running'?'var(--accent)':'var(--text-muted)'
+}
+
+function taskStatusColor(task) {
+  if(task.agents.some(a=>a.status==='error')) return 'var(--red)'
+  if(task.agents.some(a=>a.status==='waiting')) return 'var(--yellow)'
+  if(task.agents.some(a=>a.status==='running')) return 'var(--accent)'
+  return 'var(--text-muted)'
+}
+
+function renderSessionList() {
+  let html = ''
+  // Pinned
+  html += `<div style="padding:8px 8px 4px;display:flex;align-items:center;gap:5px;">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>
+    <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Pinned</span></div>`
+  PINNED.forEach(p => {
+    html += `<div class="session-item" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;margin-bottom:1px;cursor:pointer;" onclick="selectAgent('${p.id}')">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>
+      <span style="font-size:12px;color:var(--text-primary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.name}</span>
+      <span class="font-mono" style="font-size:10px;color:var(--text-muted);">${p.age}</span></div>`
+  })
+  // Task groups — active tasks first, done tasks at bottom
+  const active = TASKS.filter(t => t.status !== 'done')
+  const done = TASKS.filter(t => t.status === 'done')
+  // Active tasks header
+  html += `<div style="padding:12px 8px 4px;display:flex;align-items:center;gap:5px;">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Active Tasks</span>
+    <span class="font-mono" style="font-size:9px;color:var(--text-muted);margin-left:auto;">${active.length}</span></div>`
+  active.forEach(task => {
+    const isTaskSelected = (state.viewMode==='task-overview' && state.selectedTask===task.id) || task.agents.some(a => a.id === state.selectedAgent)
+    const agentCount = task.agents.length
+    const expanded = state.expandedTasks?.[task.id] !== false
+    html += `<div style="margin-bottom:2px;">
+      <div class="session-item ${isTaskSelected?'active':''}" style="display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:6px;cursor:pointer;">
+        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2.5" stroke-linecap="round" style="transform:rotate(${expanded?'90':'0'}deg);transition:transform 0.15s;flex-shrink:0;cursor:pointer;" onclick="event.stopPropagation();toggleTask('${task.id}')"><polyline points="9 18 15 12 9 6"/></svg>
+        <span style="width:7px;height:7px;border-radius:50%;background:${taskStatusColor(task)};flex-shrink:0;${task.agents.some(a=>a.status==='running')?'animation:pulse 1.5s ease-in-out infinite;':''}"></span>
+        <span style="font-size:12px;font-weight:500;color:var(--text-primary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" onclick="openTaskOverview('${task.id}')">${task.name}</span>
+        ${agentCount > 1 ? `<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(90,143,202,0.1);color:var(--accent-light);font-weight:600;">${agentCount}</span>` : ''}
+      </div>`
+    if(expanded) {
+      task.agents.forEach((a, idx) => {
+        const sel = state.selectedAgent===a.id && state.viewMode==='agent'
+        const isAutoDispatch = a.dispatch === 'auto'
+        const hasHandoff = a.handoffFrom
+        html += `<div class="session-item ${sel?'active':''}" style="display:flex;align-items:center;gap:6px;padding:5px 10px 5px ${isAutoDispatch?'38px':'32px'};border-radius:5px;cursor:pointer;position:relative;" onclick="selectAgent('${a.id}')">
+          ${isAutoDispatch ? `<span style="position:absolute;left:24px;top:0;bottom:0;width:1px;background:var(--border);"></span>` : ''}
+          ${hasHandoff ? `<span style="font-size:8px;color:var(--text-muted);margin-right:-2px;">↳</span>` : ''}
+          <span style="width:6px;height:6px;border-radius:50%;background:${statusColor(a.status)};flex-shrink:0;${a.status==='running'?'animation:pulse 1.5s ease-in-out infinite;':''}"></span>
+          <span style="font-size:11px;color:${sel?'var(--accent-light)':'var(--text-secondary)'};${sel?'font-weight:500;':''}flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.agent}</span>
+          ${a.role==='lead' ? `<span style="font-size:8px;padding:0 4px;border-radius:2px;background:rgba(167,139,250,0.1);color:var(--purple);font-weight:600;">LEAD</span>` : ''}
+          ${isAutoDispatch ? `<span style="font-size:8px;padding:0 4px;border-radius:2px;background:rgba(52,211,153,0.08);color:var(--green);">auto</span>` : ''}
+          <span class="font-mono" style="font-size:9px;color:var(--text-muted);">${a.time}</span></div>`
+      })
+      // "+ Add Agent" row at bottom of agent list
+      html += `<div class="session-item" style="display:flex;align-items:center;gap:6px;padding:4px 10px 4px 32px;border-radius:5px;cursor:pointer;" onclick="event.stopPropagation();openAddAgent('${task.id}')">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span style="font-size:10px;color:var(--text-muted);">Add Agent</span></div>`
+    }
+    html += `</div>`
+  })
+  // Done tasks
+  if(done.length) {
+    html += `<div style="padding:12px 8px 4px;display:flex;align-items:center;gap:5px;">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+      <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);">Completed</span></div>`
+    done.forEach(task => {
+      html += `<div class="session-item" style="display:flex;align-items:center;gap:7px;padding:5px 10px;border-radius:5px;cursor:pointer;opacity:0.6;" onclick="selectAgent('${task.agents[0]?.id}')">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--text-muted);flex-shrink:0;"></span>
+        <span style="font-size:11px;color:var(--text-secondary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${task.name}</span>
+        <span class="font-mono" style="font-size:9px;color:var(--text-muted);">${task.agents.length > 1 ? task.agents.length + ' agents' : task.agents[0]?.agent}</span></div>`
+    })
+  }
+  return html
+}
+
+function renderChat() {
+  const logs = CHAT_LOGS[state.selectedAgent] || [{type:'start',text:'No data'}]
+  let html = ''
+  logs.forEach(l => {
+    if(l.type==='start') html += `<div style="color:var(--accent);margin-bottom:4px;"><span style="color:var(--green);">●</span> <span style="color:var(--text-secondary);">${l.text}</span></div>`
+    else if(l.type==='msg') html += `<div style="color:var(--text-secondary);margin-bottom:10px;border-left:2px solid var(--border);padding-left:10px;font-family:'Inter',sans-serif;font-size:12px;">${l.text}</div>`
+    else if(l.type==='tool') html += `<div style="color:var(--text-muted);margin-bottom:3px;"><span style="color:var(--yellow);">⚡</span> ${l.text} <span style="color:var(--text-muted);">(${l.meta})</span></div>`
+    else if(l.type==='done') html += `<div style="color:var(--text-muted);margin-bottom:3px;"><span style="color:var(--green);">✓</span> ${l.text} <span style="color:var(--green);">${l.meta}</span></div>`
+    else if(l.type==='error') html += `<div style="margin-top:8px;padding:8px;border-radius:6px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.12);"><span style="color:var(--red);">✗ ${l.text}</span></div>`
+    else if(l.type==='waiting') html += `<div style="margin-top:8px;padding:8px;border-radius:6px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.12);"><span style="color:var(--yellow);">⚠ Waiting:</span> <span style="color:var(--text-primary);">"${l.text}"</span></div>`
+    else if(l.type==='progress') html += `<div style="display:flex;align-items:center;gap:6px;margin-top:8px;color:var(--accent-light);"><span class="dot-pulse" style="width:6px;height:6px;border-radius:50%;background:var(--accent);"></span><span style="font-size:11px;">${l.text}</span></div>`
+  })
+  return html
+}
+
+function renderIdeContent() {
+  if(state.activeIdeTab==='Files') return `<div style="padding:12px;"><div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">WORKSPACE FILES</div>
+    <div style="font-size:11px;color:var(--text-secondary);font-family:'JetBrains Mono',monospace;line-height:2;">
+    <div>📁 web/</div><div style="padding-left:16px;">📁 components/</div><div style="padding-left:32px;">📁 settings/</div>
+    <div style="padding-left:48px;color:var(--green);">📄 SettingsTabs.tsx <span style="color:var(--text-muted);">new</span></div>
+    <div style="padding-left:48px;color:var(--green);">📄 AgentSettingsTab.tsx <span style="color:var(--text-muted);">new</span></div>
+    <div style="padding-left:16px;">📁 pages/</div>
+    <div style="padding-left:32px;color:var(--yellow);">📄 SettingsPage.tsx <span style="color:var(--text-muted);">modified</span></div>
+    <div>📁 server/</div><div style="padding-left:16px;color:var(--yellow);">📄 index.ts <span style="color:var(--text-muted);">modified</span></div></div></div>`
+  if(state.activeIdeTab==='Changes') return `<div style="padding:8px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);"><span style="font-size:11px;font-weight:600;color:var(--text-primary);">Unstaged Changes</span><span class="font-mono" style="font-size:10px;padding:1px 6px;border-radius:3px;background:rgba(52,211,153,0.1);color:var(--green);">5 files</span><span style="flex:1;"></span><button style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);cursor:pointer;">Stage All</button><button style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(90,143,202,0.3);background:rgba(90,143,202,0.08);color:var(--accent-light);cursor:pointer;">Commit</button></div>
+    <div style="padding:4px 8px;overflow-y:auto;flex:1;font-family:'JetBrains Mono',monospace;font-size:11px;">
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;background:rgba(90,143,202,0.06);margin-bottom:2px;cursor:pointer;"><span style="color:var(--green);width:12px;font-weight:600;">A</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">web/pages/SettingsPage.tsx</span><span style="color:var(--green);font-size:9px;">+84 -156</span></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;margin-bottom:2px;cursor:pointer;"><span style="color:var(--green);width:12px;font-weight:600;">A</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">web/components/settings/SettingsTabs.tsx</span><span style="color:var(--green);font-size:9px;">new</span></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;margin-bottom:2px;cursor:pointer;"><span style="color:var(--green);width:12px;font-weight:600;">A</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">web/components/settings/AgentSettingsTab.tsx</span><span style="color:var(--green);font-size:9px;">new</span></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;margin-bottom:2px;cursor:pointer;"><span style="color:var(--yellow);width:12px;font-weight:600;">M</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">web/App.tsx</span><span style="color:var(--yellow);font-size:9px;">+12 -2</span></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;margin-bottom:2px;cursor:pointer;"><span style="color:var(--yellow);width:12px;font-weight:600;">M</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">server/index.ts</span><span style="color:var(--yellow);font-size:9px;">+8 -0</span></div>
+    <div style="margin-top:8px;border:1px solid var(--border);border-radius:6px;overflow:hidden;"><div style="padding:4px 8px;background:var(--bg-tertiary);border-bottom:1px solid var(--border);font-size:10px;color:var(--text-secondary);">web/pages/SettingsPage.tsx</div><div style="padding:4px 0;font-size:10px;line-height:1.6;"><div style="padding:0 8px;background:rgba(239,68,68,0.06);color:var(--red);">- &lt;Accordion type="multiple"&gt;</div><div style="padding:0 8px;background:rgba(239,68,68,0.06);color:var(--red);">-   &lt;AccordionItem value="general"&gt;</div><div style="padding:0 8px;background:rgba(52,211,153,0.06);color:var(--green);">+ &lt;Tabs defaultValue="general"&gt;</div><div style="padding:0 8px;background:rgba(52,211,153,0.06);color:var(--green);">+   &lt;TabsList&gt;</div><div style="padding:0 8px;background:rgba(52,211,153,0.06);color:var(--green);">+     &lt;TabsTrigger value="general"&gt;</div></div></div></div>`
+  if(state.activeIdeTab==='War Room') {
+    const task = getAgentTask(state.selectedAgent)
+    const taskAgents = task ? task.agents : []
+    return `<div style="padding:12px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <div style="font-size:11px;color:var(--text-muted);flex:1;">WAR ROOM — ${task ? task.name.toUpperCase() : 'SHARED CONTEXT'}</div>
+    </div>
+    ${task && taskAgents.length > 1 ? `<div style="padding:8px 10px;border-radius:6px;background:rgba(90,143,202,0.04);border:1px solid rgba(90,143,202,0.1);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:10px;color:var(--accent-light);font-weight:600;">TEAM</span>
+      <div style="display:flex;align-items:center;gap:6px;">${taskAgents.map(a=>`<div style="display:flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;background:rgba(255,255,255,0.03);cursor:pointer;${a.id===state.selectedAgent?'border:1px solid var(--accent);':'border:1px solid transparent;'}" onclick="selectAgent('${a.id}')"><span style="width:5px;height:5px;border-radius:50%;background:${statusColor(a.status)};"></span><span style="font-size:10px;color:var(--text-secondary);">${a.agent}</span></div>`).join('')}</div>
+    </div>` : ''}
+    <div style="padding:10px;border-radius:6px;border:1px solid var(--border);margin-bottom:8px;"><div style="font-size:10px;color:var(--accent);font-weight:600;margin-bottom:4px;">DECISION</div><div style="font-size:11px;color:var(--text-primary);">Use tabbed layout instead of accordion for settings</div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">by Designer · 2m ago</div></div>
+    <div style="padding:10px;border-radius:6px;border:1px solid var(--border);margin-bottom:8px;"><div style="font-size:10px;color:var(--yellow);font-weight:600;margin-bottom:4px;">OPEN QUESTION</div><div style="font-size:11px;color:var(--text-primary);">JWT or session-based auth?</div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">by Fullstack · 4m ago</div></div>
+    <div style="padding:10px;border-radius:6px;border:1px solid rgba(239,68,68,0.15);margin-bottom:8px;"><div style="font-size:10px;color:var(--red);font-weight:600;margin-bottom:4px;">CONSTRAINT</div><div style="font-size:11px;color:var(--text-primary);">Docker daemon.json requires root access</div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">by Shield · 12m ago</div></div></div>`
+  }
+  if(state.activeIdeTab==='Browser') return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text-muted);">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    <div style="font-size:12px;">No preview running</div>
+    <div style="font-size:11px;color:var(--text-muted);">Start dev server to see live preview</div>
+    <button style="margin-top:8px;padding:6px 16px;border-radius:6px;border:1px solid rgba(90,143,202,0.3);background:rgba(90,143,202,0.08);color:var(--accent-light);font-size:11px;cursor:pointer;">Start Dev Server</button></div>`
+  return ''
+}
+
+function getAgentTask(agentId) {
+  return TASKS.find(t => t.agents.some(a => a.id === agentId))
+}
+
+function render() {
+  const agent = AGENTS.find(a=>a.id===state.selectedAgent) || AGENTS[0]
+  const currentTask = getAgentTask(state.selectedAgent)
+  const siblingAgents = currentTask ? currentTask.agents.filter(a => a.id !== state.selectedAgent) : []
+  const app = document.getElementById('app')
+  app.innerHTML = `
+  <!-- Left Panel -->
+  <div style="width:${state.panelCollapsed?'52px':'240px'};background:var(--bg-secondary);border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;flex-shrink:0;transition:width 0.2s;">
+    ${state.panelCollapsed ? `
+      <div style="padding:12px 0;display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <svg width="20" height="20" viewBox="0 0 352 352" fill="none"><rect width="352" height="352" rx="56" fill="#5a8fca"/><rect x="75" y="92" width="202" height="48" rx="24" fill="white"/><rect x="150" y="92" width="52" height="192" rx="26" fill="white"/></svg>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;overflow-y:auto;">
+        ${AGENTS.map(a=>`<div style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;${state.selectedAgent===a.id?'background:rgba(90,143,202,0.1);':''}" onclick="selectAgent('${a.id}')" title="${a.name}"><span style="width:8px;height:8px;border-radius:50%;background:${statusColor(a.status)};${a.status==='running'?'animation:pulse 1.5s ease-in-out infinite;':''}"></span></div>`).join('')}
+      </div>
+      <div style="padding:8px;display:flex;flex-direction:column;align-items:center;border-top:1px solid var(--border-subtle);">
+        <div class="bottom-icon" onclick="togglePanel()" title="Expand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg></div>
+      </div>
+    ` : `
+    <div style="padding:8px 10px;border-bottom:1px solid var(--border-subtle);">
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 10px 8px;">
+        <svg width="20" height="20" viewBox="0 0 352 352" fill="none"><rect width="352" height="352" rx="56" fill="#5a8fca"/><rect x="75" y="92" width="202" height="48" rx="24" fill="white"/><rect x="150" y="92" width="52" height="192" rx="26" fill="white"/></svg>
+        <span class="font-nunito" style="font-size:13px;font-weight:800;">OpenTeam</span>
+        <span style="flex:1;"></span>
+        <div class="bottom-icon" onclick="togglePanel()" title="Collapse" style="width:22px;height:22px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg></div>
+      </div>
+      <div class="session-item" style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;" onclick="alert('Create new task')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-primary)" stroke-width="1.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span style="font-size:13px;font-weight:500;flex:1;">New Task</span>
+        <span class="font-mono" style="font-size:11px;color:var(--text-muted);">⌘N</span>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:4px 6px;">${renderSessionList()}</div>
+    <div style="padding:6px 8px;border-top:1px solid var(--border-subtle);display:flex;align-items:center;gap:1px;">
+      <div class="bottom-icon" onclick="alert('History')" title="History"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div class="bottom-icon" onclick="alert('Agents')" title="Agents"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+      <div class="bottom-icon" onclick="alert('Workspaces')" title="Workspaces"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+      <div class="bottom-icon" onclick="alert('Skills')" title="Skills"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+      <div class="bottom-icon" onclick="alert('Cron Jobs')" title="Cron Jobs"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+      <div style="width:1px;height:14px;background:var(--border);margin:0 3px;"></div>
+      <div class="bottom-icon" onclick="alert('Toggle theme')" title="Theme"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></div>
+      <div class="bottom-icon" title="Notifications" style="position:relative;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg><span style="position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:var(--red);border:1.5px solid var(--bg-secondary);"></span></div>
+      <div class="bottom-icon" onclick="alert('Settings')" title="Settings"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9"/></svg></div>
+    </div>`}
+  </div>
+
+  <!-- Workspace Area -->
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;">
+    <!-- Toolbar -->
+    <div style="height:38px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;background:var(--bg-tertiary);">
+      ${state.viewMode==='task-overview' ? `
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span style="font-size:12px;font-weight:600;">Task Chat</span>
+        <span style="font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(167,139,250,0.1);color:var(--purple);font-weight:600;">GROUP</span>
+        <span style="font-size:11px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${TASKS.find(t=>t.id===state.selectedTask)?.name||''}</span>
+      ` : `
+        <span style="width:8px;height:8px;border-radius:50%;background:${statusColor(agent.status)};${agent.status==='running'?'animation:pulse 1.5s ease-in-out infinite;':''}"></span>
+        <span style="font-size:12px;font-weight:600;">${agent.agent}</span>
+        ${currentTask ? `<span style="font-size:10px;color:var(--text-muted);">in</span><span style="font-size:11px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border-bottom:1px dashed var(--border);" onclick="openTaskOverview('${currentTask.id}')">${currentTask.name}</span>` : ''}
+        ${siblingAgents.length > 0 ? `<div style="display:flex;align-items:center;gap:3px;margin-left:4px;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.03);border:1px solid var(--border);">${siblingAgents.map(s=>`<span style="width:6px;height:6px;border-radius:50%;background:${statusColor(s.status)};cursor:pointer;" title="${s.agent} — ${s.status}" onclick="selectAgent('${s.id}')"></span>`).join('')}<span style="font-size:9px;color:var(--text-muted);margin-left:2px;">+${siblingAgents.length}</span></div>` : ''}
+      `}
+      <span style="flex:1;"></span>
+      <div style="display:flex;align-items:center;gap:1px;padding:2px;border-radius:5px;background:rgba(255,255,255,0.03);border:1px solid var(--border);">
+        <div class="layout-btn ${state.layoutMode==='single'?'active':''}" style="width:22px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;" onclick="setLayout('single')" title="Chat only">
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="${state.layoutMode==='single'?'var(--accent-light)':'var(--text-muted)'}" stroke-width="1.5"/></svg></div>
+        <div class="layout-btn ${state.layoutMode==='split'?'active':''}" style="width:22px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;" onclick="setLayout('split')" title="Chat + IDE">
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="${state.layoutMode==='split'?'var(--accent-light)':'var(--text-muted)'}" stroke-width="1.5"/><line x1="9" y1="1" x2="9" y2="15" stroke="${state.layoutMode==='split'?'var(--accent-light)':'var(--text-muted)'}" stroke-width="1.5"/></svg></div>
+        <div class="layout-btn ${state.layoutMode==='quad'?'active':''}" style="width:22px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;" onclick="setLayout('quad')" title="Quad">
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="${state.layoutMode==='quad'?'var(--accent-light)':'var(--text-muted)'}" stroke-width="1.5"/><line x1="8" y1="1" x2="8" y2="15" stroke="${state.layoutMode==='quad'?'var(--accent-light)':'var(--text-muted)'}" stroke-width="1.5"/><line x1="1" y1="8" x2="15" y2="8" stroke="${state.layoutMode==='quad'?'var(--accent-light)':'var(--text-muted)'}" stroke-width="1.5"/></svg></div>
+      </div>
+      <span class="font-mono" style="font-size:10px;color:var(--text-muted);">⌘\\</span>
+    </div>
+
+    <!-- Content area based on layout mode -->
+    ${state.viewMode==='task-overview'
+      ? (state.layoutMode==='single' ? renderTaskOverview() : state.layoutMode==='split' ? renderTaskSplit() : renderTaskQuad())
+      : (state.layoutMode==='single' ? renderSingleLayout() : state.layoutMode==='split' ? renderSplitLayout() : renderQuadLayout())}
+
+    <!-- Status Bar -->
+    <div class="font-mono" style="height:28px;border-top:1px solid var(--border-subtle);display:flex;align-items:center;padding:0 12px;gap:12px;font-size:10px;color:var(--text-muted);background:var(--bg-tertiary);flex-shrink:0;">
+      <span style="display:inline-flex;align-items:center;gap:4px;"><span class="dot-pulse" style="width:5px;height:5px;border-radius:50%;background:var(--accent);"></span><span style="color:var(--accent-light);">2 running</span></span>
+      <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:5px;height:5px;border-radius:50%;background:var(--yellow);"></span><span style="color:var(--yellow);">1 waiting</span></span>
+      <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:5px;height:5px;border-radius:50%;background:var(--red);"></span><span style="color:var(--red);">1 error</span></span>
+      <span style="width:1px;height:12px;background:var(--border);"></span>
+      <span>feat/settings-redesign</span>
+      <span style="flex:1;"></span>
+      <span>14/21 tools</span><span style="width:1px;height:12px;background:var(--border);"></span>
+      <span>42.1K tokens</span><span style="width:1px;height:12px;background:var(--border);"></span>
+      <span style="color:var(--text-primary);">$0.42</span><span style="width:1px;height:12px;background:var(--border);"></span>
+      <span style="color:var(--purple);">12m 34s</span>
+    </div>
+  </div>
+
+  <!-- Command Palette Overlay -->
+  <div class="cmd-palette ${state.cmdPaletteOpen?'open':''}" onclick="if(event.target===this)closePalette()">
+    <div style="width:520px;border:1px solid var(--border);border-radius:12px;background:var(--bg-secondary);box-shadow:0 24px 80px rgba(0,0,0,0.6);overflow:hidden;">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="cmd-input" style="flex:1;background:transparent;border:none;outline:none;font-size:14px;color:var(--text-primary);font-family:inherit;" placeholder="Search agents, actions, navigation..." onkeydown="if(event.key==='Escape')closePalette()">
+        <kbd style="padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.04);border:1px solid var(--border);font-size:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">esc</kbd>
+      </div>
+      <div style="padding:8px;max-height:300px;overflow-y:auto;">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:8px 10px 4px;">Active Tasks</div>
+        ${TASKS.filter(t=>t.status!=='done').map(t=>`
+          <div style="padding:4px 10px 2px;"><span style="font-size:10px;color:var(--text-muted);font-weight:500;">${t.name}</span></div>
+          ${t.agents.map(a=>`<div class="session-item" style="display:flex;align-items:center;gap:10px;padding:6px 10px 6px 20px;border-radius:6px;cursor:pointer;" onclick="selectAgent('${a.id}');closePalette()">
+            <span style="width:7px;height:7px;border-radius:50%;background:${statusColor(a.status)};"></span>
+            <span style="font-size:12px;color:var(--text-primary);flex:1;">${a.agent}</span>
+            <span class="font-mono" style="font-size:10px;color:var(--text-muted);">${a.time}</span></div>`).join('')}
+        `).join('')}
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:12px 10px 4px;">Actions</div>
+        <div class="session-item" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;" onclick="alert('New Task');closePalette()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.8"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span style="font-size:12px;color:var(--text-primary);">New Task</span>
+          <span class="font-mono" style="font-size:10px;color:var(--text-muted);margin-left:auto;">⌘N</span></div>
+        <div class="session-item" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;" onclick="alert('Settings');closePalette()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/></svg>
+          <span style="font-size:12px;color:var(--text-primary);">Settings</span>
+          <span class="font-mono" style="font-size:10px;color:var(--text-muted);margin-left:auto;">⌘,</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Agent Picker Overlay -->
+  <div class="cmd-palette ${state.addAgentOpen?'open':''}" onclick="if(event.target===this)closeAddAgent()" style="align-items:flex-start;padding-top:16vh;">
+    <div style="width:480px;border:1px solid var(--border);border-radius:12px;background:var(--bg-secondary);box-shadow:0 24px 80px rgba(0,0,0,0.6);overflow:hidden;">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          <span style="font-size:13px;font-weight:600;color:var(--text-primary);">Add Agent to Task</span>
+          <span style="font-size:11px;color:var(--text-secondary);margin-left:4px;">${TASKS.find(t=>t.id===state.addAgentTaskId)?.name||''}</span>
+        </div>
+        <input id="add-agent-input" style="width:100%;background:var(--bg-primary);border:1px solid var(--border);border-radius:6px;padding:8px 12px;outline:none;font-size:12px;color:var(--text-primary);font-family:inherit;" placeholder="What should the agent do? (optional instruction)" onkeydown="if(event.key==='Escape')closeAddAgent()">
+      </div>
+      <div style="padding:8px;max-height:320px;overflow-y:auto;">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:6px 10px 4px;">Select Agent Type</div>
+        ${AVAILABLE_AGENTS.map(ag=>`
+        <div class="session-item" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;" onclick="confirmAddAgent('${ag.type}')">
+          <div style="width:28px;height:28px;border-radius:6px;background:rgba(90,143,202,0.08);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span style="font-size:10px;font-weight:700;color:var(--accent-light);">${ag.icon}</span>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;color:var(--text-primary);font-weight:500;">${ag.name}</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">${ag.desc}</div>
+          </div>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </div>`).join('')}
+      </div>
+      <div style="padding:8px 16px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+        <span style="font-size:10px;color:var(--text-muted);flex:1;">Agent will inherit task context and war room.</span>
+        <button style="padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:10px;cursor:pointer;" onclick="closeAddAgent()">Cancel</button>
+      </div>
+    </div>
+  </div>`
+}
+
+function renderTaskOverview() {
+  const task = TASKS.find(t => t.id === state.selectedTask)
+  if (!task) return '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-muted);">No task selected</div>'
+
+  const groupChatMessages = buildGroupChat(task)
+  const leadAgent = task.agents.find(a => a.role === 'lead')
+  const workerAgents = task.agents.filter(a => a.role !== 'lead')
+
+  return `<div style="flex:1;display:flex;overflow:hidden;">
+    <!-- Left: Task Info Panel -->
+    <div style="width:200px;border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;background:var(--bg-secondary);padding:12px;">
+      <!-- Goal -->
+      <div style="margin-bottom:14px;">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:6px;">Goal</div>
+        <div style="font-size:11px;color:var(--text-secondary);line-height:1.5;">${task.goal}</div>
+        <div class="font-mono" style="font-size:9px;color:var(--text-muted);margin-top:4px;">${task.workspace}</div>
+      </div>
+
+      <!-- Team Topology -->
+      <div style="margin-bottom:14px;">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:8px;">Team</div>
+        ${leadAgent ? `
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;padding:4px 6px;border-radius:5px;background:rgba(167,139,250,0.04);cursor:pointer;" onclick="selectAgent('${leadAgent.id}')">
+          <span style="width:7px;height:7px;border-radius:50%;background:${statusColor(leadAgent.status)};${leadAgent.status==='running'?'animation:pulse 1.5s ease-in-out infinite;':''}"></span>
+          <span style="font-size:10px;font-weight:500;color:var(--text-primary);flex:1;">${leadAgent.agent}</span>
+          <span style="font-size:8px;padding:0 4px;border-radius:2px;background:rgba(167,139,250,0.1);color:var(--purple);font-weight:600;">LEAD</span>
+        </div>` : ''}
+        ${workerAgents.map(a => `
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;padding:3px 6px 3px 16px;border-radius:4px;position:relative;cursor:pointer;" onclick="selectAgent('${a.id}')">
+          <span style="position:absolute;left:6px;top:0;bottom:0;width:1px;background:var(--border);"></span>
+          <span style="font-size:8px;color:var(--text-muted);">↳</span>
+          <span style="width:6px;height:6px;border-radius:50%;background:${statusColor(a.status)};${a.status==='running'?'animation:pulse 1.5s ease-in-out infinite;':''}"></span>
+          <span style="font-size:10px;color:var(--text-secondary);flex:1;">${a.agent}</span>
+          <span style="font-size:8px;color:var(--green);">${a.dispatch==='auto'?'auto':''}</span>
+        </div>`).join('')}
+        <div style="display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:4px;cursor:pointer;margin-top:4px;color:var(--text-muted);" onclick="openAddAgent('${task.id}')">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span style="font-size:9px;">Add Agent</span>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div style="margin-bottom:14px;">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);margin-bottom:8px;">Timeline</div>
+        ${task.timeline.map((ev, i) => `
+        <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;position:relative;">
+          ${i<task.timeline.length-1 ? `<div style="position:absolute;left:3px;top:9px;bottom:-3px;width:1px;background:var(--border);"></div>` : ''}
+          <span style="width:7px;height:7px;border-radius:50%;margin-top:2px;flex-shrink:0;background:${ev.type==='error'?'var(--red)':ev.type==='waiting'?'var(--yellow)':ev.type==='handoff'?'var(--accent)':ev.type==='done'?'var(--green)':'var(--text-muted)'};"></span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:9px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ev.event}</div>
+            <div class="font-mono" style="font-size:8px;color:var(--text-muted);">${ev.t}</div>
+          </div>
+        </div>`).join('')}
+      </div>
+
+      <!-- Actions -->
+      <div style="margin-top:auto;display:flex;flex-direction:column;gap:4px;">
+        <button style="width:100%;padding:5px 8px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:9px;cursor:pointer;text-align:left;" onclick="alert('Cancel task')">Cancel Task</button>
+      </div>
+    </div>
+
+    <!-- Right: Group Chat -->
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <!-- Group Chat Timeline -->
+      <div style="flex:1;overflow-y:auto;padding:14px 16px;">
+        ${groupChatMessages.map(msg => renderGroupMessage(msg)).join('')}
+      </div>
+
+      <!-- Group Chat Input — targets one agent at a time -->
+      <div style="padding:8px 12px;border-top:1px solid var(--border-subtle);display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <div style="flex:1;display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:7px;border:1px solid var(--border);background:var(--bg-tertiary);">
+          <span style="font-size:11px;color:var(--accent-light);font-weight:600;cursor:pointer;padding:1px 6px;border-radius:3px;background:rgba(90,143,202,0.08);white-space:nowrap;" onclick="cycleTargetAgent()" title="Click to switch target agent">@${task.agents[state.taskChatTarget||0]?.agent || task.agents[0]?.agent}</span>
+          <input style="flex:1;background:transparent;border:none;outline:none;font-size:12px;color:var(--text-primary);font-family:inherit;" placeholder="Message ${task.agents[state.taskChatTarget||0]?.agent || task.agents[0]?.agent}...">
+          <span class="font-mono" style="font-size:9px;color:var(--text-muted);">↵</span>
+        </div>
+        <button style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,0.2);background:rgba(239,68,68,0.06);display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Stop"><svg width="9" height="9" viewBox="0 0 24 24" fill="var(--red)"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>
+      </div>
+    </div>
+  </div>`
+}
+
+function renderTaskSplit() {
+  const task = TASKS.find(t => t.id === state.selectedTask)
+  if (!task) return ''
+  const groupChatMessages = buildGroupChat(task)
+
+  return `<div style="flex:1;display:flex;min-height:0;overflow:hidden;">
+    <!-- Left: Group Chat -->
+    <div style="width:44%;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border-subtle);">
+      <div style="flex:1;overflow-y:auto;padding:12px 14px;">
+        ${groupChatMessages.map(msg => renderGroupMessage(msg)).join('')}
+      </div>
+      <div style="padding:6px 10px;border-top:1px solid var(--border-subtle);display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <div style="flex:1;display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg-tertiary);">
+          <span style="font-size:10px;color:var(--accent-light);font-weight:600;cursor:pointer;padding:1px 5px;border-radius:3px;background:rgba(90,143,202,0.08);" onclick="cycleTargetAgent()">@${task.agents[state.taskChatTarget||0]?.agent || task.agents[0]?.agent}</span>
+          <input style="flex:1;background:transparent;border:none;outline:none;font-size:11px;color:var(--text-primary);font-family:inherit;" placeholder="Message ${task.agents[state.taskChatTarget||0]?.agent || task.agents[0]?.agent}...">
+        </div>
+        <button style="width:26px;height:26px;border-radius:5px;border:1px solid rgba(239,68,68,0.2);background:rgba(239,68,68,0.06);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="8" height="8" viewBox="0 0 24 24" fill="var(--red)"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>
+      </div>
+    </div>
+    <!-- Right: IDE Panel (same as agent split) -->
+    <div style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;">
+      <div style="height:32px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;padding:0 8px;gap:1px;flex-shrink:0;background:var(--bg-secondary);">
+        ${IDE_TABS.map(t=>`<div class="ide-tab ${state.activeIdeTab===t?'active':''}" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:5px;font-size:11px;" onclick="setIdeTab('${t}')">${t}${t==='Changes'?'<span style=\"font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(52,211,153,0.12);color:var(--green);font-weight:600;\">5</span>':''}</div>`).join('')}
+        <span style="flex:1;"></span>
+        <span class="font-mono" style="font-size:9px;color:var(--text-muted);">${task.workspace}</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+        <div style="flex:1;overflow-y:auto;">${renderIdeContent()}</div>
+        <div class="terminal-section" style="height:${state.terminalOpen?'120px':'26px'};border-top:1px solid var(--border-subtle);display:flex;flex-direction:column;flex-shrink:0;">
+          <div style="height:26px;display:flex;align-items:center;padding:0 8px;gap:6px;background:var(--bg-secondary);cursor:pointer;flex-shrink:0;" onclick="toggleTerminal()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" stroke-linecap="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            <span style="font-size:10px;font-weight:500;color:var(--text-secondary);">Terminal</span>
+            <span class="font-mono" style="font-size:9px;color:var(--text-muted);">zsh</span>
+            <span style="flex:1;"></span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" style="transform:rotate(${state.terminalOpen?'0':'180'}deg);transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          ${state.terminalOpen?`<div class="font-mono" style="flex:1;padding:6px 10px;font-size:10px;line-height:1.6;color:var(--text-secondary);overflow:hidden;background:var(--bg-primary);">
+            <div><span style="color:var(--green);">❯</span> <span style="color:var(--text-primary);">git status</span></div>
+            <div style="color:var(--text-muted);">On branch feat/user-auth</div>
+            <div style="color:var(--green);">  new file: server/routes/auth.ts</div>
+            <div style="color:var(--green);">  new file: web/hooks/useAuth.ts</div>
+            <div><span style="color:var(--green);">❯</span> <span class="dot-pulse" style="display:inline-block;width:6px;height:12px;background:var(--text-primary);"></span></div></div>`:''}
+        </div>
+      </div>
+    </div>
+  </div>`
+}
+
+function renderTaskQuad() {
+  const task = TASKS.find(t => t.id === state.selectedTask)
+  if (!task) return ''
+  const agents = task.agents.slice(0, 4)
+  return `<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--border);overflow:hidden;">
+    ${agents.map(a => `
+    <div style="background:var(--bg-primary);display:flex;flex-direction:column;overflow:hidden;">
+      ${renderTaskAgentPane(a)}
+    </div>`).join('')}
+    ${agents.length < 4 ? Array(4 - agents.length).fill(`<div style="background:var(--bg-primary);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:11px;cursor:pointer;" onclick="openAddAgent('${task.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right:6px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Agent</div>`).join('') : ''}
+  </div>`
+}
+
+function renderTaskAgentPane(a) {
+  const logs = CHAT_LOGS[a.id] || []
+  const sel = state.selectedAgent === a.id
+  return `
+    <div style="height:30px;display:flex;align-items:center;padding:0 10px;gap:6px;border-bottom:1px solid var(--border-subtle);background:var(--bg-tertiary);cursor:pointer;flex-shrink:0;${sel?'border-top:2px solid var(--accent);':''}" onclick="selectAgent('${a.id}')">
+      <span style="width:6px;height:6px;border-radius:50%;background:${statusColor(a.status)};${a.status==='running'?'animation:pulse 1.5s ease-in-out infinite;':''}"></span>
+      <span style="font-size:11px;font-weight:${sel?'600':'500'};color:${a.status==='error'?'var(--red)':a.status==='waiting'?'var(--yellow)':'var(--text-primary)'};flex:1;">${a.agent}</span>
+      ${a.role==='lead'?'<span style="font-size:7px;padding:0 3px;border-radius:2px;background:rgba(167,139,250,0.1);color:var(--purple);font-weight:700;">LEAD</span>':''}
+      <span class="font-mono" style="font-size:8px;color:var(--text-muted);">${a.time}</span>
+    </div>
+    <div class="font-mono" style="flex:1;padding:8px 10px;font-size:10px;line-height:1.7;color:var(--text-secondary);overflow-y:auto;">
+      ${logs.map(l => {
+        if(l.type==='start') return `<div style="color:var(--text-muted);margin-bottom:4px;"><span style="color:var(--green);">●</span> ${l.text}</div>`
+        if(l.type==='msg') return `<div style="color:var(--text-secondary);margin-bottom:6px;border-left:2px solid var(--border);padding-left:8px;font-size:10px;line-height:1.5;">${l.text}</div>`
+        if(l.type==='tool') return `<div style="margin-bottom:2px;"><span style="color:var(--yellow);">⚡</span> ${l.text} <span style="color:var(--text-muted);">(${l.meta})</span></div>`
+        if(l.type==='done') return `<div style="margin-bottom:2px;"><span style="color:var(--green);">✓</span> ${l.text} <span style="color:var(--green);">${l.meta||''}</span></div>`
+        if(l.type==='error') return `<div style="margin-top:4px;padding:5px 8px;border-radius:4px;background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.1);color:var(--red);font-size:9px;">✗ ${l.text}</div>`
+        if(l.type==='waiting') return `<div style="margin-top:4px;padding:5px 8px;border-radius:4px;background:rgba(251,191,36,0.05);border:1px solid rgba(251,191,36,0.1);color:var(--yellow);font-size:9px;">⚠ ${l.text}</div>`
+        if(l.type==='progress') return `<div style="display:flex;align-items:center;gap:4px;margin-top:4px;"><span class="dot-pulse" style="width:5px;height:5px;border-radius:50%;background:var(--accent);"></span><span style="color:var(--accent-light);font-size:9px;">${l.text}</span></div>`
+        return ''
+      }).join('')}
+    </div>
+    <div style="padding:5px 8px;border-top:1px solid var(--border-subtle);flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:4px;padding:5px 8px;border-radius:5px;border:1px solid var(--border);background:var(--bg-tertiary);">
+        <input style="flex:1;background:transparent;border:none;outline:none;font-size:10px;color:var(--text-primary);font-family:inherit;" placeholder="Message ${a.agent}...">
+      </div>
+    </div>`
+}
+
+function buildGroupChat(task) {
+  const messages = []
+  messages.push({ type:'system', text:`Task created: ${task.name}`, time:'14:20' })
+  task.agents.forEach(a => {
+    const logs = CHAT_LOGS[a.id] || []
+    logs.forEach(l => {
+      messages.push({ ...l, agent: a.agent, agentId: a.id, agentRole: a.role, agentStatus: a.status })
+    })
+  })
+  task.timeline.filter(t => t.type === 'handoff').forEach(h => {
+    messages.push({ type:'handoff', text: h.event, time: h.t })
+  })
+  return messages
+}
+
+function renderGroupMessage(msg) {
+  if (msg.type === 'system') {
+    return `<div style="text-align:center;margin:12px 0;"><span style="font-size:10px;color:var(--text-muted);padding:3px 10px;border-radius:4px;background:rgba(255,255,255,0.02);border:1px solid var(--border);">${msg.text}</span></div>`
+  }
+  if (msg.type === 'handoff') {
+    return `<div style="display:flex;align-items:center;gap:8px;margin:10px 0;padding:6px 10px;border-radius:6px;background:rgba(90,143,202,0.04);border:1px solid rgba(90,143,202,0.1);">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
+      <span style="font-size:10px;color:var(--accent-light);">${msg.text}</span>
+      ${msg.time ? `<span class="font-mono" style="font-size:9px;color:var(--text-muted);margin-left:auto;">${msg.time}</span>` : ''}
+    </div>`
+  }
+  if (msg.type === 'start') {
+    return `<div style="display:flex;align-items:center;gap:6px;margin:8px 0 4px;">
+      <div style="width:18px;height:18px;border-radius:4px;background:${msg.agentRole==='lead'?'rgba(167,139,250,0.1)':'rgba(90,143,202,0.08)'};display:flex;align-items:center;justify-content:center;cursor:pointer;" onclick="selectAgent('${msg.agentId}')"><span style="font-size:7px;font-weight:700;color:${msg.agentRole==='lead'?'var(--purple)':'var(--accent-light)'};">${(msg.agent||'?').charAt(0)}</span></div>
+      <span style="font-size:10px;font-weight:600;color:var(--text-secondary);cursor:pointer;" onclick="selectAgent('${msg.agentId}')">${msg.agent}</span>
+      <span style="font-size:10px;color:var(--text-muted);">joined</span>
+    </div>`
+  }
+  const avatar = `<div style="width:18px;height:18px;border-radius:4px;background:${msg.agentRole==='lead'?'rgba(167,139,250,0.1)':'rgba(90,143,202,0.08)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;margin-top:2px;" onclick="selectAgent('${msg.agentId}')"><span style="font-size:7px;font-weight:700;color:${msg.agentRole==='lead'?'var(--purple)':'var(--accent-light)'};">${(msg.agent||'?').charAt(0)}</span></div>`
+
+  if (msg.type === 'msg') {
+    return `<div style="display:flex;align-items:flex-start;gap:8px;margin:6px 0;">
+      ${avatar}
+      <div style="flex:1;"><span style="font-size:10px;font-weight:600;color:var(--text-secondary);cursor:pointer;" onclick="selectAgent('${msg.agentId}')">${msg.agent}</span><div style="font-size:11px;color:var(--text-primary);line-height:1.5;margin-top:2px;">${msg.text}</div></div>
+    </div>`
+  }
+  if (msg.type === 'tool') {
+    return `<div style="display:flex;align-items:center;gap:8px;margin:2px 0 2px 26px;font-size:10px;color:var(--text-muted);">
+      <span style="color:var(--yellow);">⚡</span>
+      <span style="color:var(--text-secondary);">${msg.agent}</span>
+      <span>${msg.text}</span>
+      <span style="color:var(--text-muted);">(${msg.meta})</span>
+    </div>`
+  }
+  if (msg.type === 'done') {
+    return `<div style="display:flex;align-items:center;gap:8px;margin:2px 0 2px 26px;font-size:10px;">
+      <span style="color:var(--green);">✓</span>
+      <span style="color:var(--text-secondary);">${msg.agent}</span>
+      <span style="color:var(--text-muted);">${msg.text}</span>
+      <span style="color:var(--green);">${msg.meta||''}</span>
+    </div>`
+  }
+  if (msg.type === 'error') {
+    return `<div style="display:flex;align-items:flex-start;gap:8px;margin:8px 0;">
+      ${avatar}
+      <div style="flex:1;padding:8px 10px;border-radius:6px;background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.12);">
+        <div style="font-size:10px;font-weight:600;color:var(--text-secondary);margin-bottom:3px;">${msg.agent}</div>
+        <div style="font-size:11px;color:var(--red);">✗ ${msg.text}</div>
+      </div>
+    </div>`
+  }
+  if (msg.type === 'waiting') {
+    return `<div style="display:flex;align-items:flex-start;gap:8px;margin:8px 0;">
+      ${avatar}
+      <div style="flex:1;padding:8px 10px;border-radius:6px;background:rgba(251,191,36,0.04);border:1px solid rgba(251,191,36,0.12);">
+        <div style="font-size:10px;font-weight:600;color:var(--text-secondary);margin-bottom:3px;">${msg.agent} <span style="font-size:9px;font-weight:400;color:var(--yellow);">needs your input</span></div>
+        <div style="font-size:11px;color:var(--text-primary);">"${msg.text}"</div>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <button style="padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:rgba(90,143,202,0.06);color:var(--accent-light);font-size:10px;cursor:pointer;">Reply</button>
+          <button style="padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:10px;cursor:pointer;" onclick="selectAgent('${msg.agentId}')">Open 1:1</button>
+        </div>
+      </div>
+    </div>`
+  }
+  if (msg.type === 'progress') {
+    return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0 4px 26px;font-size:10px;">
+      <span class="dot-pulse" style="width:5px;height:5px;border-radius:50%;background:var(--accent);"></span>
+      <span style="color:var(--text-secondary);">${msg.agent}</span>
+      <span style="color:var(--accent-light);">${msg.text}</span>
+    </div>`
+  }
+  return ''
+}
+
+function renderSingleLayout() {
+  return `<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="flex:1;overflow-y:auto;padding:16px 20px;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.7;">${renderChat()}</div>
+    <div style="padding:8px 12px;border-top:1px solid var(--border-subtle);display:flex;align-items:center;gap:6px;">
+      <div style="flex:1;display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:7px;border:1px solid var(--border);background:var(--bg-tertiary);">
+        <input style="flex:1;background:transparent;border:none;outline:none;font-size:12px;color:var(--text-primary);font-family:inherit;" placeholder="Message ${AGENTS.find(a=>a.id===state.selectedAgent)?.agent||'agent'}...">
+        <span class="font-mono" style="font-size:9px;color:var(--text-muted);">↵</span></div>
+      <button style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,0.2);background:rgba(239,68,68,0.06);display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Stop"><svg width="9" height="9" viewBox="0 0 24 24" fill="var(--red)"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>
+    </div></div>`
+}
+
+function renderSplitLayout() {
+  return `<div style="flex:1;display:flex;min-height:0;overflow:hidden;">
+    <div style="width:44%;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border-subtle);">
+      <div style="flex:1;overflow-y:auto;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.7;">${renderChat()}</div>
+      <div style="padding:8px 12px;border-top:1px solid var(--border-subtle);display:flex;align-items:center;gap:6px;">
+        <div style="flex:1;display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg-tertiary);">
+          <input style="flex:1;background:transparent;border:none;outline:none;font-size:11px;color:var(--text-primary);font-family:inherit;" placeholder="Message ${AGENTS.find(a=>a.id===state.selectedAgent)?.agent||''}...">
+        </div>
+        <button style="width:28px;height:28px;border-radius:6px;border:1px solid rgba(239,68,68,0.2);background:rgba(239,68,68,0.06);display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="9" height="9" viewBox="0 0 24 24" fill="var(--red)"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></button>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;">
+      <div style="height:32px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;padding:0 8px;gap:1px;flex-shrink:0;background:var(--bg-secondary);">
+        ${IDE_TABS.map(t=>`<div class="ide-tab ${state.activeIdeTab===t?'active':''}" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:5px;font-size:11px;" onclick="setIdeTab('${t}')">${t}${t==='Changes'?'<span style=\"font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(52,211,153,0.12);color:var(--green);font-weight:600;\">5</span>':''}</div>`).join('')}
+        <span style="flex:1;"></span>
+        <span class="font-mono" style="font-size:9px;color:var(--text-muted);">openteam-web</span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+        <div style="flex:1;overflow-y:auto;">${renderIdeContent()}</div>
+        <div class="terminal-section" style="height:${state.terminalOpen?'120px':'26px'};border-top:1px solid var(--border-subtle);display:flex;flex-direction:column;flex-shrink:0;">
+          <div style="height:26px;display:flex;align-items:center;padding:0 8px;gap:6px;background:var(--bg-secondary);cursor:pointer;flex-shrink:0;" onclick="toggleTerminal()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2" stroke-linecap="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            <span style="font-size:10px;font-weight:500;color:var(--text-secondary);">Terminal</span>
+            <span class="font-mono" style="font-size:9px;color:var(--text-muted);">zsh</span>
+            <span style="flex:1;"></span>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" style="transform:rotate(${state.terminalOpen?'0':'180'}deg);transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          ${state.terminalOpen?`<div class="font-mono" style="flex:1;padding:6px 10px;font-size:10px;line-height:1.6;color:var(--text-secondary);overflow:hidden;background:var(--bg-primary);">
+            <div><span style="color:var(--green);">❯</span> <span style="color:var(--text-primary);">git status</span></div>
+            <div style="color:var(--text-muted);">On branch feat/settings-redesign</div>
+            <div style="color:var(--red);">  modified: web/pages/SettingsPage.tsx</div>
+            <div style="color:var(--green);">  new file: web/components/settings/SettingsTabs.tsx</div>
+            <div><span style="color:var(--green);">❯</span> <span class="dot-pulse" style="display:inline-block;width:6px;height:12px;background:var(--text-primary);"></span></div></div>`:''}
+        </div>
+      </div>
+    </div>
+  </div>`
+}
+
+function renderQuadLayout() {
+  const quadAgents = AGENTS.slice(0,4)
+  return `<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1px;background:var(--border);overflow:hidden;">
+    ${quadAgents.map((a,i)=>`<div style="background:var(--bg-primary);display:flex;flex-direction:column;overflow:hidden;position:relative;${state.selectedAgent===a.id?'':''}">
+      ${state.selectedAgent===a.id?'<div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent);"></div>':''}
+      <div style="height:28px;display:flex;align-items:center;padding:0 8px;gap:5px;border-bottom:1px solid ${a.status==='error'?'rgba(239,68,68,0.15)':a.status==='waiting'?'rgba(251,191,36,0.15)':'var(--border-subtle)'};background:${a.status==='error'?'rgba(239,68,68,0.02)':a.status==='waiting'?'rgba(251,191,36,0.02)':'var(--bg-tertiary)'};cursor:pointer;" onclick="selectAgent('${a.id}')">
+        <span style="width:6px;height:6px;border-radius:50%;background:${statusColor(a.status)};${a.status==='running'?'animation:pulse 1.5s ease-in-out infinite;':''}"></span>
+        <span style="font-size:10px;font-weight:${state.selectedAgent===a.id?'600':'500'};color:${a.status==='error'?'var(--red)':a.status==='waiting'?'var(--yellow)':state.selectedAgent===a.id?'var(--accent-light)':'var(--text-primary)'};flex:1;">${a.agent}</span>
+        <span class="font-mono" style="font-size:8px;color:var(--text-muted);">⌘${i+1}</span>
+      </div>
+      <div class="font-mono" style="flex:1;padding:6px 8px;font-size:9px;line-height:1.6;color:var(--text-secondary);overflow:hidden;">
+        ${(CHAT_LOGS[a.id]||[]).slice(-4).map(l => {
+          if(l.type==='done') return `<div><span style="color:var(--green);">✓</span> ${l.text}</div>`
+          if(l.type==='tool') return `<div><span style="color:var(--yellow);">⚡</span> ${l.text}</div>`
+          if(l.type==='error') return `<div style="margin-top:4px;padding:5px;border-radius:4px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.1);color:var(--red);font-size:9px;">✗ ${l.text}</div>`
+          if(l.type==='waiting') return `<div style="margin-top:4px;padding:5px;border-radius:4px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.1);color:var(--yellow);font-size:9px;">⚠ ${l.text}</div>`
+          if(l.type==='progress') return `<div style="color:var(--accent-light);margin-top:3px;">● ${l.text}</div>`
+          return ''
+        }).join('')}
+      </div>
+    </div>`).join('')}
+  </div>`
+}
+
+// Actions
+function selectAgent(id) { state.selectedAgent = id; state.viewMode = 'agent'; render() }
+function setIdeTab(tab) { state.activeIdeTab = tab; render() }
+function setLayout(mode) { state.layoutMode = mode; render() }
+function toggleTerminal() { state.terminalOpen = !state.terminalOpen; render() }
+function togglePanel() { state.panelCollapsed = !state.panelCollapsed; render() }
+function toggleTask(taskId) { state.expandedTasks[taskId] = !state.expandedTasks[taskId]; render() }
+function openTaskOverview(taskId) { state.viewMode = 'task-overview'; state.selectedTask = taskId; render() }
+function openAddAgent(taskId) { state.addAgentOpen = true; state.addAgentTaskId = taskId; render(); setTimeout(()=>document.getElementById('add-agent-input')?.focus(),50) }
+function cycleTargetAgent() {
+  const task = TASKS.find(t => t.id === state.selectedTask)
+  if (!task) return
+  state.taskChatTarget = ((state.taskChatTarget||0) + 1) % task.agents.length
+  render()
+}
+function closeAddAgent() { state.addAgentOpen = false; state.addAgentTaskId = null; render() }
+function confirmAddAgent(agentType) {
+  const task = TASKS.find(t => t.id === state.addAgentTaskId)
+  const agentDef = AVAILABLE_AGENTS.find(a => a.type === agentType)
+  if (!task || !agentDef) return closeAddAgent()
+  const newId = agentType + '-' + Date.now()
+  const instruction = document.getElementById('add-agent-input')?.value || ''
+  task.agents.push({
+    id: newId, agent: agentDef.name.split(' ')[0], status: 'running',
+    action: instruction || 'Starting...', time: '0s',
+    role: 'worker', dispatch: 'user', handoffFrom: null
+  })
+  CHAT_LOGS[newId] = [
+    { type:'start', text:`Agent ${agentDef.name.split(' ')[0]} started just now` },
+    { type:'msg', text: instruction ? `Task: ${instruction}` : `Joined task: ${task.name}` },
+    { type:'progress', text:'Initializing...' },
+  ]
+  state.addAgentOpen = false; state.addAgentTaskId = null
+  state.selectedAgent = newId; state.viewMode = 'agent'
+  render()
+}
+function openPalette() { state.cmdPaletteOpen = true; render(); setTimeout(()=>document.getElementById('cmd-input')?.focus(),50) }
+function closePalette() { state.cmdPaletteOpen = false; render() }
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if((e.metaKey||e.ctrlKey) && e.key==='k') { e.preventDefault(); openPalette() }
+  if((e.metaKey||e.ctrlKey) && e.key==='\\') { e.preventDefault(); setLayout(state.layoutMode==='single'?'split':state.layoutMode==='split'?'quad':'single') }
+  if((e.metaKey||e.ctrlKey) && e.key>='1' && e.key<='4') { e.preventDefault(); const a=AGENTS[parseInt(e.key)-1]; if(a) selectAgent(a.id) }
+  if(e.key==='Escape' && state.cmdPaletteOpen) closePalette()
+})
+
+// Initial render
+render()
+</script>
+</body>
+</html>

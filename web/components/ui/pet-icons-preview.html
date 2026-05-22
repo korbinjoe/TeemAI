@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coding Cat · v5 Emoji Quality</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#030303;--sf:#0a0a0a;--bd:rgba(255,255,255,.06);--t1:#eee;--t2:#777;--t3:#444}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;-webkit-font-smoothing:antialiased}
+.page{max-width:920px;margin:0 auto;padding:56px 24px 80px}
+.hdr{margin-bottom:44px}
+.hdr h1{font-size:28px;font-weight:700;letter-spacing:-.03em;background:linear-gradient(135deg,#FFD080,#F5A623);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hdr p{font-size:13px;color:var(--t2);margin-top:4px}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:28px;margin-bottom:14px}
+.card-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--t2);margin-bottom:22px}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.cell{display:flex;flex-direction:column;align-items:center;padding:20px 6px 14px;border-radius:10px;background:rgba(255,255,255,.012);transition:background .2s}
+.cell:hover{background:rgba(255,255,255,.03)}
+.cell-icon{margin-bottom:12px;line-height:0}
+.tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:4px;margin-bottom:5px}
+.t-idle{background:rgba(160,160,160,.1);color:#aaa}
+.t-think{background:rgba(167,139,250,.12);color:#c4b5fd}
+.t-work{background:rgba(74,222,128,.12);color:#86efac}
+.t-block{background:rgba(251,191,36,.12);color:#fde68a}
+.t-done{background:rgba(96,165,250,.12);color:#93c5fd}
+.hint{font-size:10px;color:var(--t3);text-align:center;line-height:1.35}
+.sz-row{display:flex;align-items:center;gap:14px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.sz-row:last-child{border-bottom:none}
+.sz-lbl{font-size:11px;color:var(--t3);width:36px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums}
+.sz-icons{display:flex;gap:20px;align-items:center}
+.sb-wrap{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-end}
+.sb-col{text-align:center}
+.sb-strip{display:inline-flex;flex-direction:column;align-items:center;gap:4px;width:48px;padding:10px 6px;background:var(--bg);border-radius:10px;border:1px solid var(--bd)}
+.sb-btn{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;position:relative;cursor:pointer;transition:background .15s}
+.sb-btn:hover{background:rgba(255,255,255,.06)}
+.sb-badge{position:absolute;top:-2px;right:-2px;min-width:14px;height:14px;border-radius:7px;font-size:8px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;padding:0 3px}
+.sb-txt{font-size:10px;color:var(--t3);margin-top:8px}
+.note{margin-top:14px;padding:16px;background:var(--sf);border:1px solid var(--bd);border-radius:10px;font-size:12px;color:var(--t2);line-height:1.7}
+.note b{color:var(--t1);font-weight:600}
+
+/* ═══ ANIMATIONS ═══ */
+@keyframes a-idle{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1.5px) scale(1.02)}}
+@keyframes a-think{0%,100%{transform:rotate(0)}30%{transform:rotate(-8deg)}70%{transform:rotate(5deg)}}
+@keyframes a-work{0%,100%{transform:translateY(0)}20%{transform:translateY(-2.5px)}40%{transform:translateY(0)}65%{transform:translateY(-1.5px)}80%{transform:translateY(0)}}
+@keyframes a-block{0%,100%{transform:translateY(0) rotate(0) scale(1);opacity:1}50%{transform:translateY(1px) rotate(-2deg) scale(.98);opacity:.82}}
+@keyframes a-done{0%,60%,100%{transform:translateY(0) scale(1)}10%{transform:translateY(-6px) scale(1.08)}22%{transform:translateY(0) scale(.96)}35%{transform:translateY(-3px) scale(1.03)}48%{transform:translateY(0)}}
+@keyframes sparkle{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:1;transform:scale(1)}}
+@keyframes zfloat{0%{opacity:0;transform:translateY(0)}15%{opacity:.7}85%{opacity:.4;transform:translateY(-6px)}100%{opacity:0;transform:translateY(-10px)}}
+@keyframes blink{0%,44%,48%,100%{transform:scaleY(1)}46%{transform:scaleY(.05)}}
+
+.ai{animation:a-idle 3.5s ease-in-out infinite}
+.at{animation:a-think 2.5s ease-in-out infinite;transform-origin:center 60%}
+.aw{animation:a-work .8s ease-in-out infinite}
+.ab{animation:a-block 3s ease-in-out infinite}
+.ad{animation:a-done 2.2s ease-out infinite}
+
+.cell-icon svg{filter:drop-shadow(0 2px 8px rgba(237,170,48,.12))}
+.at svg{filter:drop-shadow(0 0 10px rgba(167,139,250,.18)) drop-shadow(0 2px 8px rgba(237,170,48,.08))}
+.aw svg{filter:drop-shadow(0 0 10px rgba(74,222,128,.18)) drop-shadow(0 2px 8px rgba(237,170,48,.08))}
+.ab svg{filter:drop-shadow(0 0 8px rgba(251,191,36,.12))}
+.ad svg{filter:drop-shadow(0 0 10px rgba(96,165,250,.18)) drop-shadow(0 2px 8px rgba(237,170,48,.08))}
+
+.s1{animation:sparkle 1.8s ease-in-out infinite}
+.s2{animation:sparkle 1.8s ease-in-out infinite .6s}
+.s3{animation:sparkle 1.8s ease-in-out infinite 1.2s}
+.z1{animation:zfloat 2.2s ease-out infinite}
+.z2{animation:zfloat 2.2s ease-out infinite .5s}
+.z3{animation:zfloat 2.2s ease-out infinite 1s}
+.eye-blink{animation:blink 4s ease-in-out infinite;transform-origin:50% 55%}
+</style>
+</head>
+<body>
+
+<!-- ═══ SHARED SVG DEFS ═══ -->
+<svg width="0" height="0" style="position:absolute;pointer-events:none">
+  <defs>
+    <!-- 3D face gradient: top-lit golden sphere -->
+    <radialGradient id="face" cx=".5" cy=".35" r=".58">
+      <stop offset="0%" stop-color="#F7D870"/>
+      <stop offset="40%" stop-color="#EDB835"/>
+      <stop offset="78%" stop-color="#D49020"/>
+      <stop offset="100%" stop-color="#C08018"/>
+    </radialGradient>
+    <!-- Face highlight overlay -->
+    <radialGradient id="faceHi" cx=".5" cy=".3" r=".4">
+      <stop offset="0%" stop-color="rgba(255,240,190,.35)"/>
+      <stop offset="100%" stop-color="rgba(255,240,190,0)"/>
+    </radialGradient>
+    <!-- Ear gradient -->
+    <linearGradient id="earG" x1=".5" y1="1" x2=".3" y2="0">
+      <stop offset="0%" stop-color="#EDBA38"/>
+      <stop offset="100%" stop-color="#D49520"/>
+    </linearGradient>
+    <!-- Iris gradient -->
+    <radialGradient id="iris" cx=".42" cy=".38" r=".52">
+      <stop offset="0%" stop-color="#6E7050"/>
+      <stop offset="100%" stop-color="#484A30"/>
+    </radialGradient>
+    <!-- Green lens tint (working state) -->
+    <radialGradient id="lensGreen" cx=".5" cy=".5" r=".5">
+      <stop offset="0%" stop-color="rgba(74,222,128,.1)"/>
+      <stop offset="100%" stop-color="rgba(74,222,128,.03)"/>
+    </radialGradient>
+  </defs>
+</svg>
+
+<div class="page">
+
+<div class="hdr">
+  <h1>Coding Cat v5</h1>
+  <p>Emoji quality · Multi-layer gradient · Layered iris · Olive frames · 5 states</p>
+</div>
+
+<!-- ═══ SHOWCASE 96px ═══ -->
+<div class="card">
+  <div class="card-h">States · 96px</div>
+  <div class="g5">
+
+    <!-- ── IDLE ── -->
+    <div class="cell">
+      <div class="cell-icon ai">
+        <svg viewBox="0 0 120 120" width="96" height="96" fill="none">
+          <!-- ears behind head -->
+          <path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M27 44 L19 16 L44 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M93 44 L101 16 L76 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/>
+          <!-- head -->
+          <ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/>
+          <!-- highlight overlay for 3D sphere -->
+          <ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/>
+          <!-- glasses frames -->
+          <circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/>
+          <circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/>
+          <path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="4" fill="none"/>
+          <!-- eyes: iris + pupil + highlights -->
+          <g class="eye-blink">
+            <circle cx="42" cy="65" r="9" fill="url(#iris)"/>
+            <circle cx="42" cy="66" r="5" fill="#2A2C1F"/>
+            <circle cx="78" cy="65" r="9" fill="url(#iris)"/>
+            <circle cx="78" cy="66" r="5" fill="#2A2C1F"/>
+          </g>
+          <circle cx="38" cy="62" r="3" fill="white" opacity=".75"/>
+          <circle cx="74" cy="62" r="3" fill="white" opacity=".75"/>
+          <circle cx="44" cy="68" r="1.2" fill="white" opacity=".3"/>
+          <circle cx="80" cy="68" r="1.2" fill="white" opacity=".3"/>
+          <!-- nose -->
+          <path d="M57 84 L60 88 L63 84Z" fill="#FF9898" stroke="#FF9898" stroke-width="2" stroke-linejoin="round"/>
+          <!-- mouth -->
+          <path d="M54 93 Q60 97 66 93" stroke="#DD8878" stroke-width="1.5" fill="none" opacity=".4" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="tag t-idle">idle</span>
+      <span class="hint">Quietly waiting<br>Occasional blink</span>
+    </div>
+
+    <!-- ── THINKING ── -->
+    <div class="cell">
+      <div class="cell-icon at">
+        <svg viewBox="0 0 120 120" width="96" height="96" fill="none">
+          <path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M27 44 L19 16 L44 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M93 44 L101 16 L76 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/>
+          <ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/>
+          <ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/>
+          <circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/>
+          <circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/>
+          <path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="4" fill="none"/>
+          <!-- eyes looking UP -->
+          <circle cx="40" cy="61" r="9" fill="url(#iris)"/>
+          <circle cx="40" cy="61" r="5" fill="#2A2C1F"/>
+          <circle cx="76" cy="61" r="9" fill="url(#iris)"/>
+          <circle cx="76" cy="61" r="5" fill="#2A2C1F"/>
+          <circle cx="37" cy="58" r="3" fill="white" opacity=".75"/>
+          <circle cx="73" cy="58" r="3" fill="white" opacity=".75"/>
+          <!-- nose -->
+          <path d="M57 84 L60 88 L63 84Z" fill="#FF9898" stroke="#FF9898" stroke-width="2" stroke-linejoin="round"/>
+          <!-- mouth (small o) -->
+          <ellipse cx="60" cy="94" rx="2.5" ry="3" stroke="#DD8878" stroke-width="1.2" fill="none" opacity=".3"/>
+          <!-- thought bubbles -->
+          <circle cx="96" cy="28" r="3" fill="#A78BFA" opacity=".55" class="s1"/>
+          <circle cx="102" cy="18" r="3.5" fill="#A78BFA" opacity=".4" class="s2"/>
+          <circle cx="109" cy="8" r="4.5" fill="#A78BFA" opacity=".3" class="s3"/>
+        </svg>
+      </div>
+      <span class="tag t-think">think</span>
+      <span class="hint">Eyes looking up<br>Thought bubbles</span>
+    </div>
+
+    <!-- ── WORKING ── -->
+    <div class="cell">
+      <div class="cell-icon aw">
+        <svg viewBox="0 0 120 120" width="96" height="96" fill="none">
+          <path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M27 44 L19 16 L44 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M93 44 L101 16 L76 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/>
+          <ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/>
+          <ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/>
+          <!-- glasses with green screen tint -->
+          <circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="url(#lensGreen)"/>
+          <circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="url(#lensGreen)"/>
+          <path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="4" fill="none"/>
+          <!-- narrowed focused eyes -->
+          <ellipse cx="42" cy="65" rx="10" ry="6" fill="url(#iris)"/>
+          <ellipse cx="42" cy="65" rx="6" ry="3.5" fill="#2A2C1F"/>
+          <ellipse cx="78" cy="65" rx="10" ry="6" fill="url(#iris)"/>
+          <ellipse cx="78" cy="65" rx="6" ry="3.5" fill="#2A2C1F"/>
+          <circle cx="38" cy="63" r="2.5" fill="white" opacity=".6"/>
+          <circle cx="74" cy="63" r="2.5" fill="white" opacity=".6"/>
+          <!-- nose -->
+          <path d="M57 84 L60 88 L63 84Z" fill="#FF9898" stroke="#FF9898" stroke-width="2" stroke-linejoin="round"/>
+          <!-- mouth (determined line) -->
+          <line x1="54" y1="93" x2="66" y2="93" stroke="#DD8878" stroke-width="1.5" opacity=".3" stroke-linecap="round"/>
+          <!-- code sparkles -->
+          <g class="s1"><path d="M10 30 L10 38 M6 34 L14 34" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" opacity=".45"/></g>
+          <g class="s2"><path d="M108 22 L108 28 M105 25 L111 25" stroke="#4ADE80" stroke-width="1.5" stroke-linecap="round" opacity=".35"/></g>
+        </svg>
+      </div>
+      <span class="tag t-work">work</span>
+      <span class="hint">Focused coding<br>Lens reflection</span>
+    </div>
+
+    <!-- ── BLOCKED ── -->
+    <div class="cell">
+      <div class="cell-icon ab">
+        <svg viewBox="0 0 120 120" width="96" height="96" fill="none">
+          <path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M27 44 L19 16 L44 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M93 44 L101 16 L76 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/>
+          <ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/>
+          <ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/>
+          <circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/>
+          <circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/>
+          <path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="4" fill="none"/>
+          <!-- droopy half-closed eyes -->
+          <path d="M30 64 Q42 74 54 64" stroke="#484A30" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <path d="M66 64 Q78 74 90 64" stroke="#484A30" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <!-- nose -->
+          <path d="M57 84 L60 88 L63 84Z" fill="#FF9898" stroke="#FF9898" stroke-width="2" stroke-linejoin="round"/>
+          <!-- mouth (wavy/uneasy) -->
+          <path d="M52 93 Q56 96 60 93 Q64 90 68 93" stroke="#DD8878" stroke-width="1.3" fill="none" opacity=".3" stroke-linecap="round"/>
+          <!-- zzZ -->
+          <text font-family="system-ui,sans-serif" font-weight="800" fill="#FBBF24">
+            <tspan x="94" y="40" font-size="10" class="z1">z</tspan>
+            <tspan x="100" y="28" font-size="8" class="z2">z</tspan>
+            <tspan x="105" y="17" font-size="6" class="z3">z</tspan>
+          </text>
+        </svg>
+      </div>
+      <span class="tag t-block">block</span>
+      <span class="hint">Half-closed eyes<br>Drowsy</span>
+    </div>
+
+    <!-- ── COMPLETED ── -->
+    <div class="cell">
+      <div class="cell-icon ad">
+        <svg viewBox="0 0 120 120" width="96" height="96" fill="none">
+          <path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M27 44 L19 16 L44 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M93 44 L101 16 L76 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/>
+          <ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/>
+          <ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/>
+          <circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/>
+          <circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/>
+          <path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="4" fill="none"/>
+          <!-- happy ^_^ eyes -->
+          <path d="M30 66 Q42 56 54 66" stroke="#484A30" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <path d="M66 66 Q78 56 90 66" stroke="#484A30" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <!-- cheek blush -->
+          <circle cx="24" cy="78" r="6" fill="#FFB5B5" opacity=".25"/>
+          <circle cx="96" cy="78" r="6" fill="#FFB5B5" opacity=".25"/>
+          <!-- nose -->
+          <path d="M57 84 L60 88 L63 84Z" fill="#FF9898" stroke="#FF9898" stroke-width="2" stroke-linejoin="round"/>
+          <!-- big smile -->
+          <path d="M50 92 Q60 102 70 92" stroke="#DD8878" stroke-width="1.8" fill="none" opacity=".45" stroke-linecap="round"/>
+          <!-- sparkles -->
+          <g class="s1"><path d="M10 20 L10 28 M6 24 L14 24" stroke="#60A5FA" stroke-width="2" stroke-linecap="round" opacity=".55"/></g>
+          <g class="s2"><path d="M106 12 L106 19 M103 15.5 L109 15.5" stroke="#60A5FA" stroke-width="1.8" stroke-linecap="round" opacity=".4"/></g>
+          <g class="s3"><path d="M100 38 L100 43 M97.5 40.5 L102.5 40.5" stroke="#60A5FA" stroke-width="1.2" stroke-linecap="round" opacity=".3"/></g>
+        </svg>
+      </div>
+      <span class="tag t-done">done</span>
+      <span class="hint">Squinting smile<br>Happy celebration</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ SIZE COMPARISON ═══ -->
+<div class="card">
+  <div class="card-h">Size Comparison</div>
+
+  <!-- 48px -->
+  <div class="sz-row">
+    <span class="sz-lbl">48</span>
+    <div class="sz-icons">
+      <div class="ai"><svg viewBox="0 0 120 120" width="48" height="48" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/><path d="M27 44 L19 16 L44 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/><path d="M93 44 L101 16 L76 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/><path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="4" fill="none"/><g class="eye-blink"><circle cx="42" cy="65" r="9" fill="url(#iris)"/><circle cx="42" cy="66" r="5" fill="#2A2C1F"/><circle cx="78" cy="65" r="9" fill="url(#iris)"/><circle cx="78" cy="66" r="5" fill="#2A2C1F"/></g><circle cx="38" cy="62" r="3" fill="white" opacity=".7"/><circle cx="74" cy="62" r="3" fill="white" opacity=".7"/><path d="M57 84 L60 88 L63 84Z" fill="#FF9898" stroke="#FF9898" stroke-width="2" stroke-linejoin="round"/></svg></div>
+      <div class="at"><svg viewBox="0 0 120 120" width="48" height="48" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/><path d="M27 44 L19 16 L44 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/><path d="M93 44 L101 16 L76 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/><path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="4" fill="none"/><circle cx="40" cy="61" r="9" fill="url(#iris)"/><circle cx="40" cy="61" r="5" fill="#2A2C1F"/><circle cx="76" cy="61" r="9" fill="url(#iris)"/><circle cx="76" cy="61" r="5" fill="#2A2C1F"/><circle cx="37" cy="58" r="3" fill="white" opacity=".7"/><circle cx="73" cy="58" r="3" fill="white" opacity=".7"/><path d="M57 84 L60 88 L63 84Z" fill="#FF9898" stroke="#FF9898" stroke-width="2" stroke-linejoin="round"/><circle cx="96" cy="28" r="3" fill="#A78BFA" opacity=".5" class="s1"/><circle cx="102" cy="18" r="3.5" fill="#A78BFA" opacity=".4" class="s2"/></svg></div>
+      <div class="aw"><svg viewBox="0 0 120 120" width="48" height="48" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/><path d="M27 44 L19 16 L44 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/><path d="M93 44 L101 16 L76 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="url(#lensGreen)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="url(#lensGreen)"/><path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="4" fill="none"/><ellipse cx="42" cy="65" rx="10" ry="6" fill="url(#iris)"/><ellipse cx="42" cy="65" rx="6" ry="3.5" fill="#2A2C1F"/><ellipse cx="78" cy="65" rx="10" ry="6" fill="url(#iris)"/><ellipse cx="78" cy="65" rx="6" ry="3.5" fill="#2A2C1F"/><circle cx="38" cy="63" r="2.5" fill="white" opacity=".6"/><circle cx="74" cy="63" r="2.5" fill="white" opacity=".6"/><path d="M57 84 L60 88 L63 84Z" fill="#FF9898" stroke="#FF9898" stroke-width="2" stroke-linejoin="round"/></svg></div>
+      <div class="ab"><svg viewBox="0 0 120 120" width="48" height="48" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/><path d="M27 44 L19 16 L44 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/><path d="M93 44 L101 16 L76 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/><path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="4" fill="none"/><path d="M30 64 Q42 74 54 64" stroke="#484A30" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M66 64 Q78 74 90 64" stroke="#484A30" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M57 84 L60 88 L63 84Z" fill="#FF9898" stroke="#FF9898" stroke-width="2" stroke-linejoin="round"/></svg></div>
+      <div class="ad"><svg viewBox="0 0 120 120" width="48" height="48" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/><path d="M27 44 L19 16 L44 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="3" stroke-linejoin="round"/><path d="M93 44 L101 16 L76 31Z" fill="#FFB0B0" stroke="#FFB0B0" stroke-width="2" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="4.5" fill="rgba(50,48,28,.07)"/><path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="4" fill="none"/><path d="M30 66 Q42 56 54 66" stroke="#484A30" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M66 66 Q78 56 90 66" stroke="#484A30" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="24" cy="78" r="6" fill="#FFB5B5" opacity=".2"/><circle cx="96" cy="78" r="6" fill="#FFB5B5" opacity=".2"/><path d="M57 84 L60 88 L63 84Z" fill="#FF9898" stroke="#FF9898" stroke-width="2" stroke-linejoin="round"/></svg></div>
+    </div>
+  </div>
+
+  <!-- 28px -->
+  <div class="sz-row">
+    <span class="sz-lbl">28</span>
+    <div class="sz-icons">
+      <div class="ai"><svg viewBox="0 0 120 120" width="28" height="28" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="4" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="4" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="5.5" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="5.5" fill="rgba(50,48,28,.07)"/><path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="5" fill="none"/><circle cx="42" cy="65" r="8" fill="url(#iris)"/><circle cx="42" cy="66" r="4.5" fill="#2A2C1F"/><circle cx="78" cy="65" r="8" fill="url(#iris)"/><circle cx="78" cy="66" r="4.5" fill="#2A2C1F"/><circle cx="38" cy="62" r="3" fill="white" opacity=".65"/><circle cx="74" cy="62" r="3" fill="white" opacity=".65"/></svg></div>
+      <div class="at"><svg viewBox="0 0 120 120" width="28" height="28" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="4" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="4" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="5.5" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="5.5" fill="rgba(50,48,28,.07)"/><path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="5" fill="none"/><circle cx="40" cy="61" r="8" fill="url(#iris)"/><circle cx="40" cy="61" r="4.5" fill="#2A2C1F"/><circle cx="76" cy="61" r="8" fill="url(#iris)"/><circle cx="76" cy="61" r="4.5" fill="#2A2C1F"/><circle cx="37" cy="58" r="3" fill="white" opacity=".65"/><circle cx="73" cy="58" r="3" fill="white" opacity=".65"/></svg></div>
+      <div class="aw"><svg viewBox="0 0 120 120" width="28" height="28" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="4" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="4" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="5.5" fill="url(#lensGreen)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="5.5" fill="url(#lensGreen)"/><path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="5" fill="none"/><ellipse cx="42" cy="65" rx="9" ry="5.5" fill="url(#iris)"/><ellipse cx="42" cy="65" rx="5.5" ry="3" fill="#2A2C1F"/><ellipse cx="78" cy="65" rx="9" ry="5.5" fill="url(#iris)"/><ellipse cx="78" cy="65" rx="5.5" ry="3" fill="#2A2C1F"/><circle cx="38" cy="63" r="2.5" fill="white" opacity=".5"/><circle cx="74" cy="63" r="2.5" fill="white" opacity=".5"/></svg></div>
+      <div class="ab"><svg viewBox="0 0 120 120" width="28" height="28" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="4" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="4" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="5.5" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="5.5" fill="rgba(50,48,28,.07)"/><path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="5" fill="none"/><path d="M30 64 Q42 74 54 64" stroke="#484A30" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M66 64 Q78 74 90 64" stroke="#484A30" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg></div>
+      <div class="ad"><svg viewBox="0 0 120 120" width="28" height="28" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="4" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="4" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><ellipse cx="60" cy="58" rx="30" ry="28" fill="url(#faceHi)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="5.5" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="5.5" fill="rgba(50,48,28,.07)"/><path d="M57 62 Q60 59 63 62" stroke="#7B7A48" stroke-width="5" fill="none"/><path d="M30 66 Q42 56 54 66" stroke="#484A30" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M66 66 Q78 56 90 66" stroke="#484A30" stroke-width="4.5" fill="none" stroke-linecap="round"/></svg></div>
+    </div>
+  </div>
+
+  <!-- 20px -->
+  <div class="sz-row">
+    <span class="sz-lbl">20</span>
+    <div class="sz-icons">
+      <div class="ai"><svg viewBox="0 0 120 120" width="20" height="20" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="5" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="5" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="7" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="7" fill="rgba(50,48,28,.07)"/><circle cx="42" cy="65" r="7" fill="#484A30"/><circle cx="78" cy="65" r="7" fill="#484A30"/><circle cx="39" cy="62" r="2.5" fill="white" opacity=".6"/><circle cx="75" cy="62" r="2.5" fill="white" opacity=".6"/></svg></div>
+      <div class="at"><svg viewBox="0 0 120 120" width="20" height="20" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="5" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="5" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="7" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="7" fill="rgba(50,48,28,.07)"/><circle cx="40" cy="61" r="7" fill="#484A30"/><circle cx="76" cy="61" r="7" fill="#484A30"/><circle cx="37" cy="58" r="2.5" fill="white" opacity=".6"/><circle cx="73" cy="58" r="2.5" fill="white" opacity=".6"/></svg></div>
+      <div class="aw"><svg viewBox="0 0 120 120" width="20" height="20" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="5" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="5" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="7" fill="url(#lensGreen)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="7" fill="url(#lensGreen)"/><ellipse cx="42" cy="65" rx="8" ry="5" fill="#484A30"/><ellipse cx="78" cy="65" rx="8" ry="5" fill="#484A30"/></svg></div>
+      <div class="ab"><svg viewBox="0 0 120 120" width="20" height="20" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="5" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="5" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="7" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="7" fill="rgba(50,48,28,.07)"/><path d="M30 64 Q42 74 54 64" stroke="#484A30" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M66 64 Q78 74 90 64" stroke="#484A30" stroke-width="5" fill="none" stroke-linecap="round"/></svg></div>
+      <div class="ad"><svg viewBox="0 0 120 120" width="20" height="20" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="5" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="5" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="7" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="7" fill="rgba(50,48,28,.07)"/><path d="M30 66 Q42 56 54 66" stroke="#484A30" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M66 66 Q78 56 90 66" stroke="#484A30" stroke-width="5" fill="none" stroke-linecap="round"/></svg></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SIDEBAR MOCKUP ═══ -->
+<div class="card">
+  <div class="card-h">Sidebar · 18px in 36px button</div>
+  <div class="sb-wrap">
+
+    <div class="sb-col">
+      <div class="sb-strip">
+        <div class="sb-btn ai">
+          <svg viewBox="0 0 120 120" width="18" height="18" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="6" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="6" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="8" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="8" fill="rgba(50,48,28,.07)"/><circle cx="42" cy="65" r="7" fill="#484A30"/><circle cx="78" cy="65" r="7" fill="#484A30"/><circle cx="39" cy="62" r="2.5" fill="white" opacity=".5"/><circle cx="75" cy="62" r="2.5" fill="white" opacity=".5"/></svg>
+        </div>
+      </div>
+      <div class="sb-txt">idle</div>
+    </div>
+
+    <div class="sb-col">
+      <div class="sb-strip">
+        <div class="sb-btn at">
+          <svg viewBox="0 0 120 120" width="18" height="18" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="6" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="6" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="8" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="8" fill="rgba(50,48,28,.07)"/><circle cx="40" cy="61" r="7" fill="#484A30"/><circle cx="76" cy="61" r="7" fill="#484A30"/><circle cx="37" cy="58" r="2.5" fill="white" opacity=".5"/><circle cx="73" cy="58" r="2.5" fill="white" opacity=".5"/></svg>
+          <span class="sb-badge" style="background:#A78BFA">2</span>
+        </div>
+      </div>
+      <div class="sb-txt">think</div>
+    </div>
+
+    <div class="sb-col">
+      <div class="sb-strip">
+        <div class="sb-btn aw">
+          <svg viewBox="0 0 120 120" width="18" height="18" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="6" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="6" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="8" fill="url(#lensGreen)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="8" fill="url(#lensGreen)"/><ellipse cx="42" cy="65" rx="8" ry="5" fill="#484A30"/><ellipse cx="78" cy="65" rx="8" ry="5" fill="#484A30"/></svg>
+          <span class="sb-badge" style="background:#4ADE80">1</span>
+        </div>
+      </div>
+      <div class="sb-txt">work</div>
+    </div>
+
+    <div class="sb-col">
+      <div class="sb-strip">
+        <div class="sb-btn ab">
+          <svg viewBox="0 0 120 120" width="18" height="18" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="6" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="6" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="8" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="8" fill="rgba(50,48,28,.07)"/><path d="M30 64 Q42 74 54 64" stroke="#484A30" stroke-width="5.5" fill="none" stroke-linecap="round"/><path d="M66 64 Q78 74 90 64" stroke="#484A30" stroke-width="5.5" fill="none" stroke-linecap="round"/></svg>
+          <span class="sb-badge" style="background:#FBBF24">!</span>
+        </div>
+      </div>
+      <div class="sb-txt">block</div>
+    </div>
+
+    <div class="sb-col">
+      <div class="sb-strip">
+        <div class="sb-btn ad">
+          <svg viewBox="0 0 120 120" width="18" height="18" fill="none"><path d="M22 49 L13 7 L48 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="6" stroke-linejoin="round"/><path d="M98 49 L107 7 L72 28Z" fill="url(#earG)" stroke="url(#earG)" stroke-width="6" stroke-linejoin="round"/><ellipse cx="60" cy="66" rx="42" ry="40" fill="url(#face)"/><circle cx="42" cy="64" r="15" stroke="#7B7A48" stroke-width="8" fill="rgba(50,48,28,.07)"/><circle cx="78" cy="64" r="15" stroke="#7B7A48" stroke-width="8" fill="rgba(50,48,28,.07)"/><path d="M30 66 Q42 56 54 66" stroke="#484A30" stroke-width="5.5" fill="none" stroke-linecap="round"/><path d="M66 66 Q78 56 90 66" stroke="#484A30" stroke-width="5.5" fill="none" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+      <div class="sb-txt">done</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="note">
+  <b>v5 vs reference improvements</b><br><br>
+  <b>1. 4-stop radialGradient</b> — Simulates 3D spherical lighting: bright gold top → warm gold mid → deep amber edge → dark rim<br>
+  <b>2. Highlight overlay</b> — Extra radialGradient layered above the head for specular reflection and spherical depth<br>
+  <b>3. Thick olive frames</b> — stroke-width 4.5, color #7B7A48, matching the reference deep olive tone<br>
+  <b>4. Layered iris</b> — iris(radialGradient olive) → pupil(dark brown) → highlight(white) three-layer structure<br>
+  <b>5. viewBox 120×120</b> — 3x precision for smoother gradients and finer detail<br>
+  <b>6. Pink cat nose</b> — Inverted triangle + round linejoin, standard cat nose shape<br>
+  <b>7. Small-size adaptive</b> — 18-20px versions use thicker frame stroke and simplified eyes for readability
+</div>
+
+</div>
+</body>
+</html>

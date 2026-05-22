@@ -1,0 +1,152 @@
+{
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "workspaces": "Workspaces",
+    "myTeam": "My AI Team",
+    "skills": "Skills",
+    "settings": "Settings",
+    "cronJobs": "Scheduled Tasks",
+    "chatRoom": "Chat Room",
+    "chatHistory": "Chat History",
+    "notifications": "Notifications",
+    "backToHome": "Back to Home",
+    "profile": "Profile",
+    "logout": "Log out",
+    "logoutConfirm": "Are you sure you want to log out? You will need to log in again.",
+    "admin": "Database Admin"
+  },
+  "theme": {
+    "toggleLight": "Switch to Light Mode",
+    "toggleDark": "Switch to Dark Mode",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode"
+  },
+  "language": {
+    "toggle": "Switch Language",
+    "zh": "中文",
+    "en": "English",
+    "ja": "日本語",
+    "ko": "한국어",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português"
+  },
+  "action": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "save": "Save",
+    "refresh": "Refresh",
+    "search": "Search",
+    "create": "Create",
+    "edit": "Edit",
+    "apply": "Apply",
+    "close": "Close",
+    "rename": "Rename",
+    "loading": "Loading...",
+    "new": "New"
+  },
+  "status": {
+    "running": "Running",
+    "idle": "Idle",
+    "stopped": "Stopped",
+    "completed": "Completed",
+    "merged": "Merged",
+    "error": "Error",
+    "connected": "Connected",
+    "connecting": "Connecting...",
+    "initializing": "Initializing...",
+    "reconnecting": "Reconnecting..."
+  },
+  "role": {
+    "lead": "Lead",
+    "expert": "Expert"
+  },
+  "current": "Current",
+  "source": {
+    "builtin": "Official",
+    "custom": "Custom"
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
+  },
+  "dialog": {
+    "confirmDelete": "Confirm Delete",
+    "cannotUndo": "This action cannot be undone."
+  },
+  "envCheck": {
+    "nodeNotFound": "Node.js not detected. AI Agent features will be limited. Please install Node.js and restart.",
+    "installLink": "Install Now"
+  },
+  "admin": {
+    "title": "Database Admin",
+    "rows": "{{count}} rows",
+    "tables": "Tables",
+    "selectTable": "Select a table to view",
+    "clickToExpand": "Click to view full content",
+    "emptyTable": "Empty table",
+    "pagination": "Page {{page}} / {{total}}",
+    "copy": "Copy"
+  },
+  "auth": {
+    "blacklisted": "Account Disabled",
+    "blacklistedDesc": "Your account has been disabled. Please contact the administrator.",
+    "serviceClosed": "Service Maintenance",
+    "serviceClosedDesc": "OpenTeam is under maintenance. Please try again later.",
+    "accessDenied": "Access Denied",
+    "accessDeniedDesc": "Your account does not have access to OpenTeam. Please contact the administrator.",
+    "missingParams": "Missing required parameters (token / workid)",
+    "savingLogin": "Saving login state…",
+    "loginSuccess": "Login Successful",
+    "loginSuccessDesc": "Token saved. You can close this window.",
+    "loginFailed": "Login Failed",
+    "saveFailed": "Save failed"
+  },
+  "error": {
+    "renderError": "Page render error",
+    "createFailed": "Failed to create chat, please retry",
+    "unexpectedHint": "An unexpected error occurred. Please try refreshing the page.",
+    "goHome": "Go Home",
+    "reload": "Reload Page"
+  },
+  "clearAll": {
+    "confirmClick": "Click again to confirm",
+    "dismissAll": "Dismiss all"
+  },
+  "permission": {
+    "allowOnce": "Allow once",
+    "allowAlways": "Always allow",
+    "rejectOnce": "Reject once",
+    "rejectAlways": "Always reject",
+    "requestTitle": "Permission request"
+  },
+  "chatTab": {
+    "errorTitle": "Task error, click to view",
+    "completedTitle": "Task completed, click to view",
+    "error": "Task error, click to view",
+    "completed": "Task completed, click to view",
+    "needConfirm": "Needs confirmation",
+    "close": "Close",
+    "closeOthers": "Close other tabs",
+    "closeRight": "Close tabs to the right"
+  },
+  "upgrade": {
+    "versionTooLow": "Current version {{clientVersion}} is too low, minimum required: {{minVersion}}",
+    "incompatibleEvent": "Server returned an incompatible complete event, please retry",
+    "noResponse": "Server did not respond (15s timeout). Please confirm Claude CLI is installed and the service is running normally.",
+    "noAgentId": "Cannot upgrade: agent has not been saved yet (missing ID). Please save first.",
+    "emptyMarkdown": "Cannot upgrade: AGENTS.md content is empty. Please fill in content in the editor first.",
+    "wsConnectFailed": "WebSocket connection failed. Please refresh the page and retry. Details: {{reason}}",
+    "retryMissingDescription": "Cannot retry: missing original description"
+  },
+  "preflight": {
+    "pass": "Pass",
+    "fail": "Fail",
+    "warn": "Warning"
+  }
+}

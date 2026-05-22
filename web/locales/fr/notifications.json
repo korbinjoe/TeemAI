@@ -1,0 +1,18 @@
+{
+  "title": "Notifications",
+  "markAllRead": "Tout marquer comme lu",
+  "clearRead": "Effacer les lues",
+  "allCaughtUp": "Tout est à jour",
+  "empty": "Pas de notifications",
+  "tabs": {
+    "all": "Toutes",
+    "unread": "Non lues"
+  },
+  "category": {
+    "cron_success": "Tâche terminée",
+    "cron_failed": "Tâche échouée",
+    "system": "Système"
+  },
+  "viewChat": "Voir la discussion",
+  "justNow": "À l'instant"
+}

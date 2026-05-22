@@ -1,0 +1,138 @@
+{
+  "nav": {
+    "home": "Início",
+    "dashboard": "Painel",
+    "workspaces": "Espaços de trabalho",
+    "myTeam": "Minha equipe IA",
+    "skills": "Habilidades",
+    "settings": "Configurações",
+    "cronJobs": "Tarefas agendadas",
+    "chatRoom": "Sala de chat",
+    "chatHistory": "Histórico de chat",
+    "notifications": "Notificações",
+    "backToHome": "Voltar ao início",
+    "profile": "Perfil",
+    "logout": "Sair",
+    "logoutConfirm": "Tem certeza de que deseja sair? Será necessário fazer login novamente.",
+    "admin": "Administração do BD"
+  },
+  "theme": {
+    "toggleLight": "Mudar para modo claro",
+    "toggleDark": "Mudar para modo escuro",
+    "lightMode": "Modo claro",
+    "darkMode": "Modo escuro"
+  },
+  "language": {
+    "toggle": "Mudar idioma",
+    "zh": "中文",
+    "en": "English",
+    "ja": "日本語",
+    "ko": "한국어",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português"
+  },
+  "action": {
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "save": "Salvar",
+    "refresh": "Atualizar",
+    "search": "Buscar",
+    "create": "Criar",
+    "edit": "Editar",
+    "apply": "Aplicar",
+    "close": "Fechar",
+    "rename": "Renomear",
+    "loading": "Carregando...",
+    "new": "Novo"
+  },
+  "status": {
+    "running": "Em execução",
+    "idle": "Inativo",
+    "stopped": "Parado",
+    "completed": "Concluído",
+    "merged": "Mesclado",
+    "error": "Erro",
+    "connected": "Conectado",
+    "connecting": "Conectando...",
+    "initializing": "Inicializando...",
+    "reconnecting": "Reconectando..."
+  },
+  "role": {
+    "lead": "Líder",
+    "expert": "Especialista"
+  },
+  "current": "Atual",
+  "source": {
+    "builtin": "Oficial",
+    "custom": "Personalizado"
+  },
+  "time": {
+    "justNow": "agora mesmo",
+    "minutesAgo": "há {{count}}min",
+    "hoursAgo": "há {{count}}h",
+    "daysAgo": "há {{count}}d"
+  },
+  "dialog": {
+    "confirmDelete": "Confirmar exclusão",
+    "cannotUndo": "Esta ação não pode ser desfeita."
+  },
+  "envCheck": {
+    "nodeNotFound": "Node.js não detectado. As funcionalidades do agente IA serão limitadas. Instale o Node.js e reinicie.",
+    "installLink": "Instalar agora"
+  },
+  "admin": {
+    "title": "Administração do BD",
+    "rows": "{{count}} linhas",
+    "tables": "Tabelas",
+    "selectTable": "Selecione uma tabela para visualizar",
+    "clickToExpand": "Clique para ver o conteúdo completo",
+    "emptyTable": "Tabela vazia",
+    "pagination": "Página {{page}} / {{total}}",
+    "copy": "Copiar"
+  },
+  "auth": {
+    "blacklisted": "Conta desativada",
+    "blacklistedDesc": "Sua conta foi desativada. Entre em contato com o administrador.",
+    "serviceClosed": "Manutenção do sistema",
+    "serviceClosedDesc": "OpenTeam está em manutenção. Tente novamente mais tarde.",
+    "accessDenied": "Acesso negado",
+    "accessDeniedDesc": "Sua conta não tem acesso ao OpenTeam. Entre em contato com o administrador.",
+    "missingParams": "Parâmetros obrigatórios ausentes (token / workid)",
+    "savingLogin": "Salvando estado de login…",
+    "loginSuccess": "Login bem-sucedido",
+    "loginSuccessDesc": "Token salvo. Você pode fechar esta janela.",
+    "loginFailed": "Falha no login",
+    "saveFailed": "Falha ao salvar"
+  },
+  "error": {
+    "renderError": "Erro de renderização",
+    "createFailed": "Falha ao criar chat, tente novamente",
+    "unexpectedHint": "Ocorreu um erro inesperado. Tente atualizar a página.",
+    "goHome": "Ir para o início",
+    "reload": "Recarregar página"
+  },
+  "clearAll": {
+    "confirmClick": "Clique novamente para confirmar",
+    "dismissAll": "Ignorar tudo"
+  },
+  "permission": {
+    "allowOnce": "Permitir uma vez",
+    "allowAlways": "Sempre permitir",
+    "rejectOnce": "Rejeitar uma vez",
+    "rejectAlways": "Sempre rejeitar",
+    "requestTitle": "Solicitação de permissão"
+  },
+  "chatTab": {
+    "errorTitle": "Erro na tarefa, clique para ver",
+    "completedTitle": "Tarefa concluída, clique para ver",
+    "error": "Erro na tarefa, clique para ver",
+    "completed": "Tarefa concluída, clique para ver",
+    "needConfirm": "Necessita confirmação",
+    "close": "Fechar",
+    "closeOthers": "Fechar outras abas",
+    "closeRight": "Fechar abas à direita"
+  }
+}

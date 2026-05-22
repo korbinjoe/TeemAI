@@ -1,0 +1,18 @@
+{
+  "title": "알림",
+  "markAllRead": "모두 읽음으로 표시",
+  "clearRead": "읽은 알림 삭제",
+  "allCaughtUp": "모두 확인했습니다",
+  "empty": "아직 알림이 없습니다",
+  "tabs": {
+    "all": "전체",
+    "unread": "읽지 않음"
+  },
+  "category": {
+    "cron_success": "작업 완료",
+    "cron_failed": "작업 실패",
+    "system": "시스템"
+  },
+  "viewChat": "채팅 보기",
+  "justNow": "방금"
+}

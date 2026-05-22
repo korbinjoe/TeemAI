@@ -1,0 +1,74 @@
+{
+  "title": "Tarefas agendadas",
+  "newTask": "Nova tarefa",
+  "editTask": "Editar tarefa",
+  "deleteTask": "Excluir tarefa",
+  "deleteConfirm": "Tem certeza de que deseja excluir \"{{name}}\"?",
+  "runNow": "Executar agora",
+  "runNowConfirm": "Executar \"{{name}}\" imediatamente?",
+  "enable": "Ativar",
+  "disable": "Desativar",
+  "form": {
+    "name": "Nome da tarefa",
+    "namePlaceholder": "ex. Revisão diária de código",
+    "workspace": "Espaço de trabalho",
+    "agent": "Agente (opcional)",
+    "model": "Modelo (opcional)",
+    "trigger": "Agendamento",
+    "triggerCron": "Expressão Cron",
+    "triggerOnce": "Uma vez",
+    "triggerInterval": "Intervalo",
+    "cronExpression": "Expressão Cron",
+    "cronPlaceholder": "ex. 0 9 * * 1-5",
+    "cronHelp": "Minuto Hora Dia Mês Dia da semana",
+    "timezone": "Fuso horário",
+    "nextRun": "Próxima execução: {{time}}",
+    "invalidCron": "Expressão cron inválida",
+    "scheduledTime": "Hora agendada",
+    "interval": "Intervalo",
+    "intervalUnit": "Unidade",
+    "minutes": "minutos",
+    "hours": "horas",
+    "days": "dias",
+    "prompt": "Prompt inicial",
+    "promptPlaceholder": "A mensagem enviada ao agente ao iniciar a tarefa...",
+    "retryOnFailure": "Tentar novamente em caso de falha",
+    "maxRetries": "Máximo de tentativas"
+  },
+  "status": {
+    "enabled": "Ativado",
+    "disabled": "Desativado",
+    "running": "Em execução",
+    "success": "Sucesso",
+    "failed": "Falhou"
+  },
+  "executions": "Histórico de execução",
+  "noExecutions": "Sem execuções ainda",
+  "lastRun": "Última execução",
+  "nextRun": "Próxima execução",
+  "neverRun": "Nunca",
+  "empty": {
+    "title": "Sem tarefas agendadas",
+    "description": "Crie sua primeira tarefa agendada para o agente trabalhar automaticamente"
+  },
+  "toast": {
+    "created": "Tarefa \"{{name}}\" criada",
+    "updated": "Tarefa \"{{name}}\" atualizada",
+    "deleted": "Tarefa \"{{name}}\" excluída",
+    "triggered": "Tarefa \"{{name}}\" acionada"
+  },
+  "nl": {
+    "title": "Criar tarefa agendada",
+    "description": "Descreva a tarefa agendada em linguagem natural",
+    "placeholder": "ex. Revisar PRs do my-app toda manhã às 9h",
+    "send": "Analisar",
+    "parsing": "Analisando...",
+    "skipToManual": "Modo manual",
+    "or": "ou",
+    "error": {
+      "parseFailed": "Análise inteligente falhou, mudando para modo manual",
+      "noCredentials": "Configure ANTHROPIC_API_KEY para habilitar recursos de IA",
+      "networkError": "Erro de rede, mudando para modo manual"
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "title": "예약 작업",
+  "newTask": "새 작업",
+  "editTask": "작업 편집",
+  "deleteTask": "작업 삭제",
+  "deleteConfirm": "\"{{name}}\"을(를) 삭제하시겠습니까?",
+  "runNow": "지금 실행",
+  "runNowConfirm": "\"{{name}}\"을(를) 즉시 실행하시겠습니까?",
+  "enable": "활성화",
+  "disable": "비활성화",
+  "form": {
+    "name": "작업 이름",
+    "namePlaceholder": "예: 매일 코드 리뷰",
+    "workspace": "워크스페이스",
+    "agent": "에이전트 (선택사항)",
+    "model": "모델 (선택사항)",
+    "trigger": "스케줄",
+    "triggerCron": "Cron 표현식",
+    "triggerOnce": "일회성",
+    "triggerInterval": "간격",
+    "cronExpression": "Cron 표현식",
+    "cronPlaceholder": "예: 0 9 * * 1-5",
+    "cronHelp": "분 시 일 월 요일",
+    "timezone": "시간대",
+    "nextRun": "다음 실행: {{time}}",
+    "invalidCron": "잘못된 Cron 표현식",
+    "scheduledTime": "예약 시간",
+    "interval": "간격",
+    "intervalUnit": "단위",
+    "minutes": "분",
+    "hours": "시간",
+    "days": "일",
+    "prompt": "초기 프롬프트",
+    "promptPlaceholder": "작업 시작 시 에이전트에 전송할 메시지...",
+    "retryOnFailure": "실패 시 재시도",
+    "maxRetries": "최대 재시도 횟수"
+  },
+  "status": {
+    "enabled": "활성화됨",
+    "disabled": "비활성화됨",
+    "running": "실행 중",
+    "success": "성공",
+    "failed": "실패"
+  },
+  "executions": "실행 이력",
+  "noExecutions": "실행 이력 없음",
+  "lastRun": "마지막 실행",
+  "nextRun": "다음 실행",
+  "neverRun": "없음",
+  "empty": {
+    "title": "예약 작업 없음",
+    "description": "첫 번째 예약 작업을 생성하여 에이전트를 자동으로 실행하세요"
+  },
+  "toast": {
+    "created": "작업 \"{{name}}\" 생성됨",
+    "updated": "작업 \"{{name}}\" 업데이트됨",
+    "deleted": "작업 \"{{name}}\" 삭제됨",
+    "triggered": "작업 \"{{name}}\" 트리거됨"
+  },
+  "nl": {
+    "title": "예약 작업 생성",
+    "description": "자연어로 예약 작업을 설명하세요",
+    "placeholder": "예: 매일 아침 9시에 my-app PR 리뷰",
+    "send": "분석",
+    "parsing": "분석 중...",
+    "skipToManual": "수동 모드",
+    "or": "또는",
+    "error": {
+      "parseFailed": "스마트 분석 실패, 수동 모드로 전환",
+      "noCredentials": "AI 기능을 활성화하려면 ANTHROPIC_API_KEY를 설정하세요",
+      "networkError": "네트워크 오류, 수동 모드로 전환"
+    }
+  }
+}

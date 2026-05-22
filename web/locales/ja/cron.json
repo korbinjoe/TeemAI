@@ -1,0 +1,74 @@
+{
+  "title": "スケジュールタスク",
+  "newTask": "新規タスク",
+  "editTask": "タスクを編集",
+  "deleteTask": "タスクを削除",
+  "deleteConfirm": "「{{name}}」を削除しますか？",
+  "runNow": "今すぐ実行",
+  "runNowConfirm": "「{{name}}」を今すぐ実行しますか？",
+  "enable": "有効化",
+  "disable": "無効化",
+  "form": {
+    "name": "タスク名",
+    "namePlaceholder": "例: 毎日のコードレビュー",
+    "workspace": "ワークスペース",
+    "agent": "エージェント（任意）",
+    "model": "モデル（任意）",
+    "trigger": "スケジュール",
+    "triggerCron": "Cron式",
+    "triggerOnce": "ワンショット",
+    "triggerInterval": "間隔",
+    "cronExpression": "Cron式",
+    "cronPlaceholder": "例: 0 9 * * 1-5",
+    "cronHelp": "分 時 日 月 曜日",
+    "timezone": "タイムゾーン",
+    "nextRun": "次回実行: {{time}}",
+    "invalidCron": "無効なCron式です",
+    "scheduledTime": "予定時刻",
+    "interval": "間隔",
+    "intervalUnit": "単位",
+    "minutes": "分",
+    "hours": "時間",
+    "days": "日",
+    "prompt": "初期プロンプト",
+    "promptPlaceholder": "タスク開始時にエージェントに送信するメッセージ...",
+    "retryOnFailure": "失敗時にリトライ",
+    "maxRetries": "最大リトライ回数"
+  },
+  "status": {
+    "enabled": "有効",
+    "disabled": "無効",
+    "running": "実行中",
+    "success": "成功",
+    "failed": "失敗"
+  },
+  "executions": "実行履歴",
+  "noExecutions": "実行履歴なし",
+  "lastRun": "最終実行",
+  "nextRun": "次回実行",
+  "neverRun": "未実行",
+  "empty": {
+    "title": "スケジュールタスクなし",
+    "description": "最初のスケジュールタスクを作成してエージェントを自動で動かしましょう"
+  },
+  "toast": {
+    "created": "タスク「{{name}}」を作成しました",
+    "updated": "タスク「{{name}}」を更新しました",
+    "deleted": "タスク「{{name}}」を削除しました",
+    "triggered": "タスク「{{name}}」をトリガーしました"
+  },
+  "nl": {
+    "title": "スケジュールタスクを作成",
+    "description": "自然言語でスケジュールタスクを記述",
+    "placeholder": "例: 毎朝9時にmy-appのPRをレビュー",
+    "send": "解析",
+    "parsing": "解析中...",
+    "skipToManual": "手動モード",
+    "or": "または",
+    "error": {
+      "parseFailed": "スマート解析に失敗しました。手動モードに切り替えます",
+      "noCredentials": "AI機能を有効にするにはANTHROPIC_API_KEYを設定してください",
+      "networkError": "ネットワークエラー、手動モードに切り替えます"
+    }
+  }
+}

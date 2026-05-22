@@ -1,0 +1,74 @@
+{
+  "title": "Tâches planifiées",
+  "newTask": "Nouvelle tâche",
+  "editTask": "Modifier la tâche",
+  "deleteTask": "Supprimer la tâche",
+  "deleteConfirm": "Voulez-vous vraiment supprimer \"{{name}}\" ?",
+  "runNow": "Exécuter maintenant",
+  "runNowConfirm": "Exécuter \"{{name}}\" immédiatement ?",
+  "enable": "Activer",
+  "disable": "Désactiver",
+  "form": {
+    "name": "Nom de la tâche",
+    "namePlaceholder": "ex. Revue de code quotidienne",
+    "workspace": "Espace de travail",
+    "agent": "Agent (optionnel)",
+    "model": "Modèle (optionnel)",
+    "trigger": "Planification",
+    "triggerCron": "Expression Cron",
+    "triggerOnce": "Exécution unique",
+    "triggerInterval": "Intervalle",
+    "cronExpression": "Expression Cron",
+    "cronPlaceholder": "ex. 0 9 * * 1-5",
+    "cronHelp": "Minute Heure Jour Mois Jour de semaine",
+    "timezone": "Fuseau horaire",
+    "nextRun": "Prochaine exécution : {{time}}",
+    "invalidCron": "Expression cron invalide",
+    "scheduledTime": "Heure planifiée",
+    "interval": "Intervalle",
+    "intervalUnit": "Unité",
+    "minutes": "minutes",
+    "hours": "heures",
+    "days": "jours",
+    "prompt": "Prompt initial",
+    "promptPlaceholder": "Le message envoyé à l'agent au démarrage de la tâche...",
+    "retryOnFailure": "Réessayer en cas d'échec",
+    "maxRetries": "Nombre max de tentatives"
+  },
+  "status": {
+    "enabled": "Activé",
+    "disabled": "Désactivé",
+    "running": "En cours",
+    "success": "Succès",
+    "failed": "Échoué"
+  },
+  "executions": "Historique d'exécution",
+  "noExecutions": "Aucune exécution",
+  "lastRun": "Dernière exécution",
+  "nextRun": "Prochaine exécution",
+  "neverRun": "Jamais",
+  "empty": {
+    "title": "Aucune tâche planifiée",
+    "description": "Créez votre première tâche planifiée pour que l'agent travaille automatiquement"
+  },
+  "toast": {
+    "created": "Tâche \"{{name}}\" créée",
+    "updated": "Tâche \"{{name}}\" mise à jour",
+    "deleted": "Tâche \"{{name}}\" supprimée",
+    "triggered": "Tâche \"{{name}}\" déclenchée"
+  },
+  "nl": {
+    "title": "Créer une tâche planifiée",
+    "description": "Décrivez la tâche planifiée en langage naturel",
+    "placeholder": "ex. Vérifier les PR de my-app chaque matin à 9h",
+    "send": "Analyser",
+    "parsing": "Analyse...",
+    "skipToManual": "Mode manuel",
+    "or": "ou",
+    "error": {
+      "parseFailed": "Analyse intelligente échouée, passage en mode manuel",
+      "noCredentials": "Veuillez configurer ANTHROPIC_API_KEY pour activer les fonctionnalités IA",
+      "networkError": "Erreur réseau, passage en mode manuel"
+    }
+  }
+}

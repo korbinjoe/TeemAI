@@ -1,0 +1,18 @@
+{
+  "title": "Notifications",
+  "markAllRead": "Mark all read",
+  "clearRead": "Clear read",
+  "allCaughtUp": "All caught up",
+  "empty": "No notifications yet",
+  "tabs": {
+    "all": "All",
+    "unread": "Unread"
+  },
+  "category": {
+    "cron_success": "Task completed",
+    "cron_failed": "Task failed",
+    "system": "System"
+  },
+  "viewChat": "View chat",
+  "justNow": "Just now"
+}

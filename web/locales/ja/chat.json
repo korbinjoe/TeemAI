@@ -1,0 +1,282 @@
+{
+  "newChat": "新しいチャット",
+  "editTitle": "チャットタイトルを編集",
+  "clickEditTitle": "クリックしてタイトルを編集",
+  "emptyStateHint": "下にメッセージを入力して会話を始めましょう",
+  "emptyStateMentionHint": "@を入力してエージェントをメンション、または上のアバターをクリックして選択",
+  "inputPlaceholder": "Claudeに聞く...",
+  "inputDisabled": "接続中...",
+  "history": {
+    "title": "チャット履歴",
+    "searchPlaceholder": "チャットを検索...",
+    "filterAll": "すべて",
+    "filterRunning": "実行中",
+    "filterStopped": "停止",
+    "noRecords": "チャット記録なし",
+    "noMatch": "一致するチャットなし",
+    "deleteTitle": "削除の確認",
+    "deleteDesc": "チャット「{{title}}」を削除しますか？この操作は取り消せません。",
+    "openChat": "チャットを開く {{title}}"
+  },
+  "tools": {
+    "Read": "ファイル読み込み",
+    "Edit": "ファイル編集",
+    "Write": "ファイル書き込み",
+    "Glob": "ファイル検索",
+    "Bash": "コマンド実行",
+    "WebFetch": "Web取得",
+    "WebSearch": "Web検索",
+    "Grep": "コンテンツ検索",
+    "Agent": "サブタスク割り当て",
+    "TaskCreate": "タスク作成",
+    "TaskUpdate": "タスク更新",
+    "TaskList": "タスク一覧",
+    "NotebookEdit": "ノートブック編集",
+    "wait_for_expert": "エキスパート待機",
+    "start_expert": "エキスパート起動",
+    "stop_expert": "エキスパート停止",
+    "send_to_expert": "メッセージ送信",
+    "list_experts": "エキスパート一覧",
+    "stop_all_experts": "全て停止",
+    "check_inbox": "受信箱確認",
+    "waitExpert": "専門家を待機",
+    "startExpert": "専門家を起動",
+    "stopExpert": "専門家を停止",
+    "sendMessage": "メッセージ送信",
+    "listExperts": "専門家一覧",
+    "stopAll": "全て停止",
+    "checkInbox": "受信箱確認"
+  },
+  "activity": {
+    "title": "アクティビティ",
+    "defaultLead": "リーダー",
+    "phase": {
+      "idle": "待機中",
+      "thinking": "思考中",
+      "tool_running": "作業中",
+      "responding": "応答中",
+      "completed": "完了",
+      "error": "エラー",
+      "waiting_input": "入力待ち",
+      "waiting_confirmation": "確認待ち",
+      "initializing": "起動中"
+    },
+    "toolAction": {
+      "Read": "読み込み中",
+      "Edit": "編集中",
+      "Write": "書き込み中",
+      "Glob": "検索中",
+      "Bash": "実行中",
+      "WebFetch": "取得中",
+      "WebSearch": "検索中",
+      "Grep": "検索中",
+      "Agent": "割り当て中",
+      "TaskCreate": "計画中",
+      "TaskUpdate": "更新中",
+      "TaskList": "確認中"
+    },
+    "showMore": "他{{count}}件",
+    "fileOp": {
+      "create": "作成",
+      "edit": "編集",
+      "delete": "削除",
+      "read": "読み込み"
+    },
+    "log": {
+      "completedTools": "{{count}}件の操作が完了",
+      "error": "実行失敗"
+    }
+  },
+  "mention": {
+    "title": "エージェントをメンション",
+    "filesSection": "ファイル",
+    "agentsSection": "エージェント",
+    "noMatches": "一致なし",
+    "searching": "検索中..."
+  },
+  "agentSwitcher": {
+    "placeholder": "Agentを検索...",
+    "footer": "↑↓ ナビゲーション  ↵ 選択  esc 閉じる"
+  },
+  "message": {
+    "executionError": "実行エラー",
+    "executionResult": "実行結果",
+    "completed": "完了",
+    "toolRunning": "ツール実行中...",
+    "responding": "応答中...",
+    "thinking": "思考中...",
+    "processing": "処理中...",
+    "expandDetail": "{{name}}の応答詳細を展開",
+    "expandTool": "ツール{{name}}の詳細を展開",
+    "duration": "所要時間",
+    "inputTokens": "入力",
+    "outputTokens": "出力",
+    "turns": "{{count}}ターン",
+    "waitingConfirmation": "確認待ち",
+    "initializing": "起動中",
+    "clickToExpand": "クリックして展開",
+    "local": "ローカル"
+  },
+  "gitStatus": {
+    "files": "ファイル",
+    "ahead": "先行",
+    "viewChanges": "変更を表示"
+  },
+  "changes": {
+    "files": "ファイル",
+    "commits": "コミット",
+    "noCommits": "コミットなし",
+    "selectFile": "ファイルを選択して差分を表示",
+    "loading": "読み込み中...",
+    "readOnly": "読み取り専用",
+    "editable": "編集可能",
+    "unsaved": "未保存",
+    "save": "保存",
+    "saved": "{{file}}を保存しました",
+    "saveFailed": "保存に失敗しました",
+    "editLocked": "エージェントがアクティブです。編集は退避されます",
+    "editRestore": "退避された編集を復元しますか？",
+    "restore": "復元",
+    "discard": "破棄",
+    "fullScreen": "全画面レビュー",
+    "merge": "{{branch}}にマージ",
+    "openInIde": "IDEで開く",
+    "discardChanges": "変更を破棄"
+  },
+  "turnChanges": {
+    "title": "ファイル変更",
+    "created": "作成",
+    "modified": "変更",
+    "filesChanged": "{{count}}ファイル変更",
+    "viewChanges": "変更を表示"
+  },
+  "expertResumeExpired": "エキスパート{{name}}のセッションが期限切れで復元できません",
+  "expertResumeCwdNotFound": "エキスパート{{name}}の作業ディレクトリが存在しないため、セッションを復元できません（{{message}}）",
+  "input": {
+    "queuedCount": "{{count}}件キュー済み · 現在のタスク完了後自動送信",
+    "taskInProgress": "タスク実行中 · Enterでキューに追加",
+    "agentSwitchTitle": "{{name}} · {{shortcut}} で切り替え",
+    "local": "ローカル",
+    "queueTooltip": "キューに追加（現在のタスク完了後自動送信）",
+    "queueDisabled": "メッセージを入力してキューに追加"
+  },
+  "expandPanel": "メッセージパネルを展開",
+  "collapsePanel": "メッセージパネルを折りたたむ",
+  "terminal": {
+    "closeTerminal": "ターミナルを閉じる",
+    "tabMode": "タブモード",
+    "splitMode": "分割モード",
+    "reopenLabel": "再開 ({{count}})",
+    "reopenTooltip": "閉じたターミナルを再開",
+    "openAll": "すべて開く",
+    "reconnecting": "接続が切断されました。再接続中...",
+    "emptyHint": "メッセージ送信後、Agentターミナルがここに表示されます",
+    "hiddenCount": "{{count}}個のターミナルを閉じました"
+  },
+  "whiteboard": {
+    "goal": "目標",
+    "openQuestion": "未回答",
+    "handoff": "引き継ぎ",
+    "constraint": "制約",
+    "decision": "決定",
+    "progress": "進捗",
+    "artifact": "成果物",
+    "archive": "アーカイブ",
+    "archiveEntry": "このエントリをアーカイブ",
+    "selectChat": "チャットを選択してください",
+    "warRoom": "作戦室",
+    "archived": "アーカイブ済み {{count}}",
+    "viewLabel": "作戦室ビュー",
+    "listView": "リスト",
+    "timelineView": "タイムライン",
+    "listViewLabel": "リストビュー",
+    "timelineViewLabel": "タイムラインビュー",
+    "refreshLabel": "更新",
+    "refreshWarRoom": "作戦室を更新",
+    "emptyState": "まだエントリがありません。Agent が goal / decision / artifact を書き込むとここに表示されます。",
+    "currentGoal": "現在の目標",
+    "timeAgo": {
+      "seconds": "{{count}}秒前",
+      "minutes": "{{count}}分前",
+      "hours": "{{count}}時間前",
+      "days": "{{count}}日前"
+    },
+    "type": {
+      "goal": "目標",
+      "decision": "決定",
+      "output": "成果物",
+      "progress": "進捗",
+      "pending": "回答待ち",
+      "constraint": "制約",
+      "handoff": "引継ぎ",
+      "artifact": "成果物",
+      "open_question": "未解決"
+    }
+  },
+  "planApproval": {
+    "title": "プランの準備完了、実行を承認しますか？",
+    "rejectPlaceholder": "修正コメントを入力（任意）...",
+    "revise": "修正",
+    "submitFeedback": "フィードバックを送信",
+    "approve": "承認",
+    "approved": "承認済み",
+    "feedbackSubmitted": "修正フィードバック送信済み"
+  },
+  "completion": {
+    "title": "タスク完了",
+    "toolCalls": "回呼び出し",
+    "taskDone": "タスクを完了しました",
+    "toolCallsDone": "{{count}} 回のツール呼び出しを完了",
+    "reviewOk": "レビュー完了、問題なし",
+    "done": "完了",
+    "engineerDetailed": "{{count}} 件の操作を完了、コード配置済み",
+    "engineerBrief": "{{count}} 件の操作完了",
+    "reviewDetailed": "{{count}} 箇所をチェック、品質確認済み",
+    "reviewBrief": "{{count}} 箇所のチェック完了",
+    "designDetailed": "{{count}} 箇所を改善、UIが向上",
+    "designBrief": "{{count}} 箇所の最適化完了",
+    "casualDefault": "{{count}} 件の操作を実行",
+    "formalDefault": "{{count}} 件の操作を完了"
+  },
+  "heartbeat": {
+    "interruptHint": "Escキーまたはクリックで中断",
+    "interrupt": "中断",
+    "expandAgentList": "Agentリストを展開",
+    "collapseAgentList": "Agentリストを折りたたむ",
+    "activeCount": "{{count}} 個のAgentが作業中",
+    "interruptAllHint": "Escキーまたはクリックで全て中断",
+    "interruptAll": "全て中断"
+  },
+  "askQuestion": {
+    "customPlaceholder": "カスタム回答を入力...",
+    "selectPreset": "プリセットオプションを選択",
+    "customInput": "カスタム入力",
+    "confirm": "確認",
+    "submitted": "回答を送信しました"
+  },
+  "expertProgress": {
+    "completed": "{{name}} 完了",
+    "waiting": "{{name}} を待機中"
+  },
+  "chatHeader": {
+    "local": "ローカル"
+  },
+  "reconnection": {
+    "reconnecting": "接続が切断されました。再接続中...",
+    "reconnected": "再接続しました"
+  },
+  "fileOp": {
+    "create": "作成",
+    "edit": "編集",
+    "delete": "削除",
+    "read": "読取",
+    "executing": "実行中"
+  },
+  "phase": {
+    "initializing": "起動中",
+    "thinking": "思考中",
+    "responding": "出力中",
+    "toolRunning": "ツール実行中",
+    "tool_running": "ツール実行中"
+  }
+}

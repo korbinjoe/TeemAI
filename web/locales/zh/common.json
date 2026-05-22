@@ -1,0 +1,152 @@
+{
+  "nav": {
+    "home": "首页",
+    "dashboard": "工作台",
+    "workspaces": "工作目录",
+    "myTeam": "我的AI团队",
+    "skills": "技能",
+    "settings": "设置",
+    "cronJobs": "定时任务",
+    "chatRoom": "聊天室",
+    "chatHistory": "对话历史",
+    "notifications": "消息中心",
+    "backToHome": "回到首页",
+    "profile": "个人主页",
+    "logout": "退出登录",
+    "logoutConfirm": "确定要退出登录吗？退出后需要重新登录。",
+    "admin": "数据库管理"
+  },
+  "theme": {
+    "toggleLight": "切换浅色模式",
+    "toggleDark": "切换深色模式",
+    "lightMode": "浅色模式",
+    "darkMode": "深色模式"
+  },
+  "language": {
+    "toggle": "切换语言",
+    "zh": "中文",
+    "en": "English",
+    "ja": "日本語",
+    "ko": "한국어",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português"
+  },
+  "action": {
+    "confirm": "确认",
+    "cancel": "取消",
+    "delete": "删除",
+    "save": "保存",
+    "refresh": "刷新",
+    "search": "搜索",
+    "create": "创建",
+    "edit": "编辑",
+    "apply": "应用",
+    "close": "关闭",
+    "rename": "重命名",
+    "loading": "加载中...",
+    "new": "新建"
+  },
+  "status": {
+    "running": "进行中",
+    "idle": "空闲",
+    "stopped": "已结束",
+    "completed": "已完成",
+    "merged": "已合并",
+    "error": "出错",
+    "connected": "已连接",
+    "connecting": "正在连接...",
+    "initializing": "初始化中...",
+    "reconnecting": "重新连接中..."
+  },
+  "role": {
+    "lead": "负责人",
+    "expert": "专家"
+  },
+  "current": "当前",
+  "source": {
+    "builtin": "官方",
+    "custom": "自建"
+  },
+  "time": {
+    "justNow": "刚刚",
+    "minutesAgo": "{{count}} 分钟前",
+    "hoursAgo": "{{count}} 小时前",
+    "daysAgo": "{{count}} 天前"
+  },
+  "dialog": {
+    "confirmDelete": "确认删除",
+    "cannotUndo": "此操作不可撤销。"
+  },
+  "envCheck": {
+    "nodeNotFound": "未检测到 Node.js 环境，AI Agent 功能将受限。请安装 Node.js 后重启应用。",
+    "installLink": "前往安装"
+  },
+  "admin": {
+    "title": "数据库管理",
+    "rows": "{{count}} 行",
+    "tables": "数据表",
+    "selectTable": "选择一个数据表查看",
+    "clickToExpand": "点击查看完整内容",
+    "emptyTable": "空表",
+    "pagination": "第 {{page}} / {{total}} 页",
+    "copy": "复制"
+  },
+  "auth": {
+    "blacklisted": "账号已被禁用",
+    "blacklistedDesc": "你的账号已被禁用，无法使用 OpenTeam 服务，请联系管理员",
+    "serviceClosed": "系统维护中",
+    "serviceClosedDesc": "OpenTeam 服务维护中，请稍后再试",
+    "accessDenied": "暂无使用权限",
+    "accessDeniedDesc": "你的账号暂未开通 OpenTeam 使用权限，请联系管理员申请",
+    "missingParams": "缺少必要参数（token / workid）",
+    "savingLogin": "正在保存登录状态…",
+    "loginSuccess": "登录成功",
+    "loginSuccessDesc": "Token 已保存，可以关闭此窗口",
+    "loginFailed": "登录失败",
+    "saveFailed": "保存失败"
+  },
+  "error": {
+    "renderError": "页面渲染出错",
+    "createFailed": "创建对话失败，请重试",
+    "unexpectedHint": "发生了一个未预期的错误，请尝试刷新页面。",
+    "goHome": "返回首页",
+    "reload": "刷新页面"
+  },
+  "clearAll": {
+    "confirmClick": "再次点击确认",
+    "dismissAll": "全部忽略"
+  },
+  "permission": {
+    "allowOnce": "允许本次",
+    "allowAlways": "总是允许",
+    "rejectOnce": "拒绝本次",
+    "rejectAlways": "总是拒绝",
+    "requestTitle": "请求权限"
+  },
+  "chatTab": {
+    "errorTitle": "任务出错，点击查看",
+    "completedTitle": "任务已完成，点击查看",
+    "error": "任务出错，点击查看",
+    "completed": "任务已完成，点击查看",
+    "needConfirm": "需要确认",
+    "close": "关闭",
+    "closeOthers": "关闭其他标签页",
+    "closeRight": "关闭右侧标签页"
+  },
+  "upgrade": {
+    "versionTooLow": "当前版本 {{clientVersion}} 过低，最低要求 {{minVersion}}",
+    "incompatibleEvent": "服务端返回了不兼容的 complete 事件，请重试",
+    "noResponse": "服务器无响应（15s 超时）。请确认 Claude CLI 已安装且服务正常运行。",
+    "noAgentId": "无法发起能力升级：数字员工尚未保存（缺少 ID），请先保存后重试。",
+    "emptyMarkdown": "无法发起能力升级：AGENTS.md 内容为空，请先在编辑器中填写后再升级。",
+    "wsConnectFailed": "WebSocket 连接失败，请刷新页面后重试。详情：{{reason}}",
+    "retryMissingDescription": "无法重试：缺少原始描述"
+  },
+  "preflight": {
+    "pass": "通过",
+    "fail": "失败",
+    "warn": "警告"
+  }
+}

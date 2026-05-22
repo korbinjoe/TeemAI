@@ -1,0 +1,138 @@
+{
+  "nav": {
+    "home": "Startseite",
+    "dashboard": "Dashboard",
+    "workspaces": "Arbeitsbereiche",
+    "myTeam": "Mein KI-Team",
+    "skills": "Fähigkeiten",
+    "settings": "Einstellungen",
+    "cronJobs": "Geplante Aufgaben",
+    "chatRoom": "Chatraum",
+    "chatHistory": "Chatverlauf",
+    "notifications": "Benachrichtigungen",
+    "backToHome": "Zurück zur Startseite",
+    "profile": "Profil",
+    "logout": "Abmelden",
+    "logoutConfirm": "Möchtest du dich wirklich abmelden? Du musst dich erneut anmelden.",
+    "admin": "Datenbankverwaltung"
+  },
+  "theme": {
+    "toggleLight": "Zum hellen Modus wechseln",
+    "toggleDark": "Zum dunklen Modus wechseln",
+    "lightMode": "Heller Modus",
+    "darkMode": "Dunkler Modus"
+  },
+  "language": {
+    "toggle": "Sprache wechseln",
+    "zh": "中文",
+    "en": "English",
+    "ja": "日本語",
+    "ko": "한국어",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português"
+  },
+  "action": {
+    "confirm": "Bestätigen",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "save": "Speichern",
+    "refresh": "Aktualisieren",
+    "search": "Suchen",
+    "create": "Erstellen",
+    "edit": "Bearbeiten",
+    "apply": "Anwenden",
+    "close": "Schließen",
+    "rename": "Umbenennen",
+    "loading": "Wird geladen...",
+    "new": "Neu"
+  },
+  "status": {
+    "running": "Läuft",
+    "idle": "Inaktiv",
+    "stopped": "Gestoppt",
+    "completed": "Abgeschlossen",
+    "merged": "Zusammengeführt",
+    "error": "Fehler",
+    "connected": "Verbunden",
+    "connecting": "Verbindung wird hergestellt...",
+    "initializing": "Initialisierung...",
+    "reconnecting": "Verbindung wird wiederhergestellt..."
+  },
+  "role": {
+    "lead": "Leiter",
+    "expert": "Experte"
+  },
+  "current": "Aktuell",
+  "source": {
+    "builtin": "Offiziell",
+    "custom": "Benutzerdefiniert"
+  },
+  "time": {
+    "justNow": "gerade eben",
+    "minutesAgo": "vor {{count}}Min.",
+    "hoursAgo": "vor {{count}}Std.",
+    "daysAgo": "vor {{count}}T."
+  },
+  "dialog": {
+    "confirmDelete": "Löschen bestätigen",
+    "cannotUndo": "Diese Aktion kann nicht rückgängig gemacht werden."
+  },
+  "envCheck": {
+    "nodeNotFound": "Node.js nicht erkannt. KI-Agent-Funktionen werden eingeschränkt sein. Bitte installieren Sie Node.js und starten Sie neu.",
+    "installLink": "Jetzt installieren"
+  },
+  "admin": {
+    "title": "Datenbankverwaltung",
+    "rows": "{{count}} Zeilen",
+    "tables": "Tabellen",
+    "selectTable": "Tabelle zum Anzeigen auswählen",
+    "clickToExpand": "Klicken für vollständigen Inhalt",
+    "emptyTable": "Leere Tabelle",
+    "pagination": "Seite {{page}} / {{total}}",
+    "copy": "Kopieren"
+  },
+  "auth": {
+    "blacklisted": "Konto deaktiviert",
+    "blacklistedDesc": "Ihr Konto wurde deaktiviert. Bitte kontaktieren Sie den Administrator.",
+    "serviceClosed": "Systemwartung",
+    "serviceClosedDesc": "OpenTeam ist in Wartung. Bitte versuchen Sie es später erneut.",
+    "accessDenied": "Zugriff verweigert",
+    "accessDeniedDesc": "Ihr Konto hat keinen Zugang zu OpenTeam. Bitte kontaktieren Sie den Administrator.",
+    "missingParams": "Erforderliche Parameter fehlen (token / workid)",
+    "savingLogin": "Anmeldestatus wird gespeichert…",
+    "loginSuccess": "Anmeldung erfolgreich",
+    "loginSuccessDesc": "Token gespeichert. Sie können dieses Fenster schließen.",
+    "loginFailed": "Anmeldung fehlgeschlagen",
+    "saveFailed": "Speichern fehlgeschlagen"
+  },
+  "error": {
+    "renderError": "Seiten-Renderfehler",
+    "createFailed": "Chat-Erstellung fehlgeschlagen, bitte erneut versuchen",
+    "unexpectedHint": "Ein unerwarteter Fehler ist aufgetreten. Bitte aktualisieren Sie die Seite.",
+    "goHome": "Zur Startseite",
+    "reload": "Seite neu laden"
+  },
+  "clearAll": {
+    "confirmClick": "Erneut klicken zum Bestätigen",
+    "dismissAll": "Alle verwerfen"
+  },
+  "permission": {
+    "allowOnce": "Einmal erlauben",
+    "allowAlways": "Immer erlauben",
+    "rejectOnce": "Einmal ablehnen",
+    "rejectAlways": "Immer ablehnen",
+    "requestTitle": "Berechtigungsanfrage"
+  },
+  "chatTab": {
+    "errorTitle": "Aufgabenfehler, klicken zum Anzeigen",
+    "completedTitle": "Aufgabe abgeschlossen, klicken zum Anzeigen",
+    "error": "Aufgabenfehler, klicken zum Anzeigen",
+    "completed": "Aufgabe abgeschlossen, klicken zum Anzeigen",
+    "needConfirm": "Bestätigung erforderlich",
+    "close": "Schließen",
+    "closeOthers": "Andere Tabs schließen",
+    "closeRight": "Tabs rechts schließen"
+  }
+}

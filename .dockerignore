@@ -1,0 +1,36 @@
+node_modules
+dist
+.git
+.qoder
+.claude
+.github
+.agents
+
+# Electron build artifacts
+dist/mac-arm64/
+dist/win-unpacked/
+dist/linux-unpacked/
+dist/*.dmg
+dist/*.exe
+dist/*.AppImage
+
+# Docs & specs (not needed at runtime)
+docs/
+openspec/
+
+# Dev config
+*.log
+.DS_Store
+.env
+.env.*
+
+# Tests
+coverage/
+*.test.ts
+*.test.tsx
+*.spec.ts
+
+# Build cache
+.turbo
+.cache
+__pycache__

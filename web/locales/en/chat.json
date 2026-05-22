@@ -1,0 +1,318 @@
+{
+  "newChat": "New Chat",
+  "editTitle": "Edit chat title",
+  "clickEditTitle": "Click to edit chat title",
+  "emptyStateHint": "Type a message below to start a conversation",
+  "emptyStateMentionHint": "Type @ to mention an agent, or click an avatar above to select",
+  "inputPlaceholder": "Ask Claude...",
+  "inputDisabled": "Connecting...",
+  "history": {
+    "title": "Chat History",
+    "searchPlaceholder": "Search chats...",
+    "filterAll": "All",
+    "filterRunning": "Running",
+    "filterStopped": "Stopped",
+    "noRecords": "No chat records",
+    "noMatch": "No matching chats",
+    "deleteTitle": "Confirm Delete",
+    "deleteDesc": "Are you sure you want to delete chat \"{{title}}\"? This action cannot be undone.",
+    "openChat": "Open chat {{title}}"
+  },
+  "tools": {
+    "Read": "Read File",
+    "Edit": "Edit File",
+    "Write": "Write File",
+    "Glob": "Search Files",
+    "Bash": "Run Command",
+    "WebFetch": "Fetch Web",
+    "WebSearch": "Web Search",
+    "Grep": "Search Content",
+    "Agent": "Dispatch Subtask",
+    "TaskCreate": "Create Task",
+    "TaskUpdate": "Update Task",
+    "TaskList": "Task List",
+    "NotebookEdit": "Edit Notebook",
+    "wait_for_expert": "Wait for expert",
+    "start_expert": "Start expert",
+    "stop_expert": "Stop expert",
+    "send_to_expert": "Send message",
+    "list_experts": "List experts",
+    "stop_all_experts": "Stop all",
+    "check_inbox": "Check inbox",
+    "waitExpert": "Wait for expert",
+    "startExpert": "Start expert",
+    "stopExpert": "Stop expert",
+    "sendMessage": "Send message",
+    "listExperts": "List experts",
+    "stopAll": "Stop all",
+    "checkInbox": "Check inbox"
+  },
+  "activity": {
+    "title": "Activity",
+    "defaultLead": "Lead",
+    "phase": {
+      "idle": "Idle",
+      "thinking": "Thinking",
+      "tool_running": "Working",
+      "responding": "Responding",
+      "completed": "Completed",
+      "error": "Error",
+      "waiting_input": "Awaiting input",
+      "waiting_confirmation": "Awaiting confirmation",
+      "initializing": "Starting"
+    },
+    "toolAction": {
+      "Read": "Reading",
+      "Edit": "Editing",
+      "Write": "Writing",
+      "Glob": "Searching",
+      "Bash": "Executing",
+      "WebFetch": "Fetching",
+      "WebSearch": "Searching",
+      "Grep": "Searching",
+      "Agent": "Dispatching",
+      "TaskCreate": "Planning",
+      "TaskUpdate": "Updating",
+      "TaskList": "Reviewing"
+    },
+    "showMore": "{{count}} more",
+    "fileOp": {
+      "create": "Create",
+      "edit": "Edit",
+      "delete": "Delete",
+      "read": "Read"
+    },
+    "log": {
+      "completedTools": "{{count}} operations done",
+      "error": "Execution failed"
+    }
+  },
+  "mention": {
+    "title": "Mention Agent",
+    "filesSection": "Files",
+    "agentsSection": "Agents",
+    "noMatches": "No matches",
+    "searching": "Searching..."
+  },
+  "agentSwitcher": {
+    "placeholder": "Search agents...",
+    "footer": "↑↓ Navigate  ↵ Select  esc Close"
+  },
+  "message": {
+    "executionError": "Execution Error",
+    "executionResult": "Execution Result",
+    "completed": "Completed",
+    "toolRunning": "Running tool...",
+    "responding": "Responding...",
+    "thinking": "Thinking...",
+    "processing": "Processing...",
+    "expandDetail": "Expand {{name}} response details",
+    "expandTool": "Expand tool {{name}} details",
+    "duration": "Duration",
+    "inputTokens": "Input",
+    "outputTokens": "Output",
+    "turns": "{{count}} turns",
+    "waitingConfirmation": "Waiting for confirmation",
+    "initializing": "Starting",
+    "clickToExpand": "Click to expand",
+    "clickToPreview": "Click to preview",
+    "local": "Local"
+  },
+  "gitStatus": {
+    "files": "files",
+    "ahead": "ahead",
+    "viewChanges": "View Changes"
+  },
+  "changes": {
+    "files": "Files",
+    "commits": "Commits",
+    "noCommits": "No commits yet",
+    "selectFile": "Select a file to view diff",
+    "loading": "Loading...",
+    "readOnly": "Read-only",
+    "editable": "Editable",
+    "unsaved": "Unsaved",
+    "save": "Save",
+    "saved": "{{file}} saved",
+    "saveFailed": "Save failed",
+    "editLocked": "Agent is active, edits stashed",
+    "editRestore": "Found stashed edits, restore?",
+    "restore": "Restore",
+    "discard": "Discard",
+    "fullScreen": "Full Screen Review",
+    "merge": "Merge to {{branch}}",
+    "openInIde": "Open in IDE",
+    "discardChanges": "Discard Changes"
+  },
+  "turnChanges": {
+    "title": "File Changes",
+    "created": "Created",
+    "modified": "Modified",
+    "filesChanged": "{{count}} files changed",
+    "viewChanges": "View Changes"
+  },
+  "expertResumeExpired": "Expert {{name}} session has expired and cannot be restored",
+  "expertResumeCwdNotFound": "Expert {{name}} working directory no longer exists, cannot restore session ({{message}})",
+  "input": {
+    "queuedCount": "{{count}} queued · auto-sends after current task",
+    "taskInProgress": "Task in progress · Enter to queue",
+    "agentSwitchTitle": "{{name}} · {{shortcut}} to switch",
+    "local": "Local",
+    "queueTooltip": "Add to queue (auto-sends after current task)",
+    "queueDisabled": "Enter a message to add to queue"
+  },
+  "expandPanel": "Expand message panel",
+  "collapsePanel": "Collapse message panel",
+  "terminal": {
+    "closeTerminal": "Close terminal",
+    "tabMode": "Tab mode",
+    "splitMode": "Split mode",
+    "reopenLabel": "Reopen ({{count}})",
+    "reopenTooltip": "Reopen closed terminals",
+    "openAll": "Open all",
+    "reconnecting": "Connection lost, reconnecting...",
+    "emptyHint": "After sending a message, Agent terminals will appear here",
+    "hiddenCount": "{{count}} terminals closed"
+  },
+  "whiteboard": {
+    "goal": "Goal",
+    "openQuestion": "Open Questions",
+    "handoff": "Handoffs",
+    "constraint": "Constraints",
+    "decision": "Decisions",
+    "progress": "Progress",
+    "artifact": "Artifacts",
+    "archive": "Archive",
+    "archiveEntry": "Archive this entry",
+    "selectChat": "Please select a chat first",
+    "warRoom": "War Room",
+    "archived": "Archived {{count}}",
+    "viewLabel": "War Room view",
+    "listView": "List",
+    "timelineView": "Timeline",
+    "listViewLabel": "List view",
+    "timelineViewLabel": "Timeline view",
+    "refreshLabel": "Refresh",
+    "refreshWarRoom": "Refresh war room",
+    "emptyState": "No entries yet. Entries will appear here when agents write goals / decisions / artifacts.",
+    "currentGoal": "Current Goal",
+    "timeAgo": {
+      "seconds": "{{count}}s ago",
+      "minutes": "{{count}}m ago",
+      "hours": "{{count}}h ago",
+      "days": "{{count}}d ago"
+    },
+    "type": {
+      "goal": "Goal",
+      "decision": "Decision",
+      "output": "Output",
+      "progress": "Progress",
+      "pending": "Pending",
+      "constraint": "Constraint",
+      "handoff": "Handoff",
+      "artifact": "Artifact",
+      "open_question": "Open Question"
+    }
+  },
+  "planApproval": {
+    "title": "Plan is ready, approve execution?",
+    "rejectPlaceholder": "Enter revision notes (optional)...",
+    "revise": "Revise",
+    "submitFeedback": "Submit feedback",
+    "approve": "Approve",
+    "approved": "Approved",
+    "feedbackSubmitted": "Revision feedback submitted"
+  },
+  "completion": {
+    "title": "Task Complete",
+    "toolCalls": "calls",
+    "taskDone": "Task completed",
+    "toolCallsDone": "Completed {{count}} tool calls",
+    "reviewOk": "Review complete, all OK",
+    "done": "Done",
+    "engineerDetailed": "Handled {{count}} operations, code is in place",
+    "engineerBrief": "{{count}} operations, done",
+    "reviewDetailed": "Checked {{count}} steps, quality assured",
+    "reviewBrief": "{{count}} checks completed",
+    "designDetailed": "Polished {{count}} details, UI improved",
+    "designBrief": "{{count}} optimizations done",
+    "casualDefault": "Did {{count}} operations",
+    "formalDefault": "Completed {{count}} operations"
+  },
+  "heartbeat": {
+    "interruptHint": "Press Esc or click to interrupt",
+    "interrupt": "Interrupt",
+    "expandAgentList": "Expand Agent list",
+    "collapseAgentList": "Collapse Agent list",
+    "activeCount": "{{count}} Agents working",
+    "interruptAllHint": "Press Esc or click to interrupt all",
+    "interruptAll": "Interrupt all"
+  },
+  "askQuestion": {
+    "customPlaceholder": "Type custom answer...",
+    "selectPreset": "Select preset option",
+    "customInput": "Custom input",
+    "confirm": "Confirm",
+    "submitted": "Answer submitted"
+  },
+  "expertProgress": {
+    "completed": "{{name}} completed",
+    "waiting": "Waiting for {{name}}"
+  },
+  "chatHeader": {
+    "local": "Local"
+  },
+  "reconnection": {
+    "reconnecting": "Connection lost, reconnecting...",
+    "reconnected": "Reconnected"
+  },
+  "fileOp": {
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "read": "Read",
+    "executing": "Executing"
+  },
+  "phase": {
+    "initializing": "Initializing",
+    "thinking": "Thinking",
+    "responding": "Responding",
+    "toolRunning": "Running tools",
+    "tool_running": "Running tool"
+  },
+  "queue": {
+    "queuing": "Queued",
+    "imageCount": "{{count}} image(s)",
+    "mentionCount": "{{count}} mention(s)",
+    "removeItem": "Remove this queued message"
+  },
+  "plan": {
+    "header": "Plan · {{completed}}/{{total}}"
+  },
+  "newMessages": "{{count}} new messages",
+  "permission": {
+    "toolCall": "Tool call",
+    "hideParams": "▼ Hide parameters",
+    "showParams": "▶ Show parameters",
+    "truncated": "\n... (truncated)"
+  },
+  "timeline": {
+    "listExperts": "List experts",
+    "checkInbox": "Check inbox",
+    "stopAll": "Stop all"
+  },
+  "dev": {
+    "messages": "{{count}} messages",
+    "newestFirst": "Newest first",
+    "noMatch": "No matching messages",
+    "noSession": "No sessions",
+    "noEvents": "No events",
+    "noMessages": "No messages",
+    "total": "{{count}} total",
+    "recentCacheOnly": "Only caching recent {{count}}",
+    "localMode": "local — Local daemon directly spawns expert",
+    "waitingPipeline": "Waiting for pipeline data...",
+    "shortcutHint": "⌘⇧D Toggle · Drag title bar to move · Drag edges to resize · Auto-refresh 5s",
+    "snapshotTime": "Snapshot time"
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "dashboard": "Tableau de bord",
+    "workspaces": "Espaces de travail",
+    "myTeam": "Mon équipe IA",
+    "skills": "Compétences",
+    "settings": "Paramètres",
+    "cronJobs": "Tâches planifiées",
+    "chatRoom": "Salon de discussion",
+    "chatHistory": "Historique des discussions",
+    "notifications": "Notifications",
+    "backToHome": "Retour à l'accueil",
+    "profile": "Profil",
+    "logout": "Se déconnecter",
+    "logoutConfirm": "Voulez-vous vraiment vous déconnecter ? Vous devrez vous reconnecter.",
+    "admin": "Administration BD"
+  },
+  "theme": {
+    "toggleLight": "Passer en mode clair",
+    "toggleDark": "Passer en mode sombre",
+    "lightMode": "Mode clair",
+    "darkMode": "Mode sombre"
+  },
+  "language": {
+    "toggle": "Changer de langue",
+    "zh": "中文",
+    "en": "English",
+    "ja": "日本語",
+    "ko": "한국어",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português"
+  },
+  "action": {
+    "confirm": "Confirmer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "save": "Enregistrer",
+    "refresh": "Actualiser",
+    "search": "Rechercher",
+    "create": "Créer",
+    "edit": "Modifier",
+    "apply": "Appliquer",
+    "close": "Fermer",
+    "rename": "Renommer",
+    "loading": "Chargement...",
+    "new": "Nouveau"
+  },
+  "status": {
+    "running": "En cours",
+    "idle": "Inactif",
+    "stopped": "Arrêté",
+    "completed": "Terminé",
+    "merged": "Fusionné",
+    "error": "Erreur",
+    "connected": "Connecté",
+    "connecting": "Connexion...",
+    "initializing": "Initialisation...",
+    "reconnecting": "Reconnexion..."
+  },
+  "role": {
+    "lead": "Responsable",
+    "expert": "Expert"
+  },
+  "current": "Actuel",
+  "source": {
+    "builtin": "Officiel",
+    "custom": "Personnalisé"
+  },
+  "time": {
+    "justNow": "à l'instant",
+    "minutesAgo": "il y a {{count}}min",
+    "hoursAgo": "il y a {{count}}h",
+    "daysAgo": "il y a {{count}}j"
+  },
+  "dialog": {
+    "confirmDelete": "Confirmer la suppression",
+    "cannotUndo": "Cette action est irréversible."
+  },
+  "envCheck": {
+    "nodeNotFound": "Node.js non détecté. Les fonctionnalités d'agent IA seront limitées. Veuillez installer Node.js et redémarrer.",
+    "installLink": "Installer maintenant"
+  },
+  "admin": {
+    "title": "Administration BD",
+    "rows": "{{count}} lignes",
+    "tables": "Tables",
+    "selectTable": "Sélectionnez une table pour afficher",
+    "clickToExpand": "Cliquez pour voir le contenu complet",
+    "emptyTable": "Table vide",
+    "pagination": "Page {{page}} / {{total}}",
+    "copy": "Copier"
+  },
+  "auth": {
+    "blacklisted": "Compte désactivé",
+    "blacklistedDesc": "Votre compte a été désactivé. Veuillez contacter l'administrateur.",
+    "serviceClosed": "Maintenance du système",
+    "serviceClosedDesc": "OpenTeam est en maintenance. Veuillez réessayer plus tard.",
+    "accessDenied": "Accès refusé",
+    "accessDeniedDesc": "Votre compte n'a pas accès à OpenTeam. Veuillez contacter l'administrateur.",
+    "missingParams": "Paramètres requis manquants (token / workid)",
+    "savingLogin": "Enregistrement de la connexion…",
+    "loginSuccess": "Connexion réussie",
+    "loginSuccessDesc": "Token enregistré. Vous pouvez fermer cette fenêtre.",
+    "loginFailed": "Échec de la connexion",
+    "saveFailed": "Échec de l'enregistrement"
+  },
+  "error": {
+    "renderError": "Erreur de rendu",
+    "createFailed": "Échec de création du chat, veuillez réessayer",
+    "unexpectedHint": "Une erreur inattendue est survenue. Veuillez actualiser la page.",
+    "goHome": "Retour à l'accueil",
+    "reload": "Actualiser la page"
+  },
+  "clearAll": {
+    "confirmClick": "Cliquer à nouveau pour confirmer",
+    "dismissAll": "Tout ignorer"
+  },
+  "permission": {
+    "allowOnce": "Autoriser une fois",
+    "allowAlways": "Toujours autoriser",
+    "rejectOnce": "Refuser une fois",
+    "rejectAlways": "Toujours refuser",
+    "requestTitle": "Demande de permission"
+  },
+  "chatTab": {
+    "errorTitle": "Erreur de tâche, cliquer pour voir",
+    "completedTitle": "Tâche terminée, cliquer pour voir",
+    "error": "Erreur de tâche, cliquez pour voir",
+    "completed": "Tâche terminée, cliquez pour voir",
+    "needConfirm": "Confirmation nécessaire",
+    "close": "Fermer",
+    "closeOthers": "Fermer les autres onglets",
+    "closeRight": "Fermer les onglets à droite"
+  }
+}

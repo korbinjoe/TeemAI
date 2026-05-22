@@ -1,0 +1,18 @@
+{
+  "title": "Notificações",
+  "markAllRead": "Marcar tudo como lido",
+  "clearRead": "Limpar lidas",
+  "allCaughtUp": "Tudo em dia",
+  "empty": "Sem notificações ainda",
+  "tabs": {
+    "all": "Todas",
+    "unread": "Não lidas"
+  },
+  "category": {
+    "cron_success": "Tarefa concluída",
+    "cron_failed": "Tarefa falhou",
+    "system": "Sistema"
+  },
+  "viewChat": "Ver chat",
+  "justNow": "Agora mesmo"
+}

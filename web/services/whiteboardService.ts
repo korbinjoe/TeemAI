@@ -10,7 +10,7 @@ import { api } from './api'
 import type {
   WhiteboardEntry,
   WhiteboardEntryInput,
-  WhiteboardSnapshot,
+  WhiteboardSnapshotWithWorkflow,
   WhiteboardQueryOptions,
 } from '@shared/whiteboard-types'
 
@@ -30,8 +30,10 @@ const buildQuery = (opts?: WhiteboardQueryOptions): string => {
 }
 
 export const whiteboardService = {
-  getSnapshot: (chatId: string) =>
-    api.get<WhiteboardSnapshot>(`${base(chatId)}/snapshot`),
+  getSnapshot: (chatId: string, includeWorkflow = true) =>
+    api.get<WhiteboardSnapshotWithWorkflow>(
+      `${base(chatId)}/snapshot${includeWorkflow ? '?includeWorkflow=true' : ''}`,
+    ),
 
   queryEntries: (chatId: string, opts?: WhiteboardQueryOptions) =>
     api.get<{ entries: WhiteboardEntry[] }>(`${base(chatId)}/entries${buildQuery(opts)}`),

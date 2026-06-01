@@ -164,7 +164,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   const terminalPanelRef = useRef<TerminalPanelHandle>(null)
   const [agentSwitcherOpen, setAgentSwitcherOpen] = useState(false)
 
-  const onInitError = useCallback(() => navigate('/'), [navigate])
+  const onInitError = useCallback(() => navigate(`/workspace/${workspaceId}`), [navigate, workspaceId])
 
   const {
     wsClient, connected, currentSessionId,

@@ -122,20 +122,23 @@ is_valid_path() {
   return 0
 }
 
+# -- Artifact accumulator file (flushed by wb-auto-extract.sh at turn end) --
+ACC_FILE="${FP_DIR}/.artifact-acc-${INSTANCE_ID}.txt"
+
 # -- Dispatch by tool_name --
 case "$TOOL_NAME" in
   Write|write_to_file)
     FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null || echo "")
     if is_valid_path "$FILE_PATH"; then
       BASENAME=$(printf "%s" "$FILE_PATH" | awk -F/ '{print $NF}')
-      write_wb "artifact" "wrote ${BASENAME}"
+      echo "$BASENAME" >> "$ACC_FILE"
     fi
     ;;
   Edit)
     FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null || echo "")
     if is_valid_path "$FILE_PATH"; then
       BASENAME=$(printf "%s" "$FILE_PATH" | awk -F/ '{print $NF}')
-      write_wb "artifact" "edited ${BASENAME}"
+      echo "$BASENAME" >> "$ACC_FILE"
     fi
     ;;
   Task|Agent)

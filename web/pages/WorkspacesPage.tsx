@@ -220,7 +220,7 @@ const WorkspacesPage = () => {
                       <WorkspaceCard
                         key={ws.id}
                         workspace={ws}
-                        onOpen={() => navigate(`${WORKSPACE_BASE}/${ws.id}`)}
+                        onOpen={() => navigate(`/workspaces/${ws.id}`)}
                         onDelete={() => handleDelete(ws)}
                         onRename={(newName) => handleRename(ws, newName)}
                       />

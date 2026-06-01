@@ -9,7 +9,11 @@ import type {
   WhiteboardEntryType,
   WhiteboardEntryStatus,
 } from '../../../shared/whiteboard-types'
-import { WHITEBOARD_SUMMARY_MAX } from '../../../shared/whiteboard-types'
+import {
+  WHITEBOARD_SUMMARY_MAX,
+  WHITEBOARD_PAYLOAD_MAX_BYTES,
+  WHITEBOARD_TASK_ID_MAX_LENGTH,
+} from '../../../shared/whiteboard-types'
 import { join } from 'path'
 import { WHITEBOARD_ROOT } from '../../config/paths'
 import { createLogger } from '../../lib/logger'
@@ -20,6 +24,7 @@ interface WhiteboardRouteDeps {
   whiteboardManager: WhiteboardManager
   chatStore: ChatStore
   broadcastToChat?: (chatId: string, msg: Record<string, unknown>) => void
+  workflowRegistry?: { findByChatId: (chatId: string) => Array<{ getState: () => import('../../../shared/workflow-types').WorkflowState }> }
 }
 
 const VALID_TYPES: WhiteboardEntryType[] = [
@@ -66,6 +71,34 @@ const parseEntryInput = (body: Record<string, unknown>): WhiteboardEntryInput =>
   if (status !== undefined && !VALID_STATUS.includes(status as WhiteboardEntryStatus)) {
     throw new Error(`invalid status: ${status}`)
   }
+  const payload = body.payload
+  if (payload !== undefined) {
+    if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+      throw new Error('payload must be a plain object')
+    }
+    const payloadSize = Buffer.byteLength(JSON.stringify(payload), 'utf-8')
+    if (payloadSize > WHITEBOARD_PAYLOAD_MAX_BYTES) {
+      throw new Error(`payload too large (${payloadSize} > ${WHITEBOARD_PAYLOAD_MAX_BYTES} bytes)`)
+    }
+  }
+
+  const taskId = body.taskId
+  if (taskId !== undefined) {
+    if (typeof taskId !== 'string' || !String(taskId).trim()) {
+      throw new Error('taskId must be a non-empty string')
+    }
+    if (String(taskId).length > WHITEBOARD_TASK_ID_MAX_LENGTH) {
+      throw new Error(`taskId too long (max ${WHITEBOARD_TASK_ID_MAX_LENGTH})`)
+    }
+  }
+
+  const resolves = body.resolves
+  if (resolves !== undefined) {
+    if (typeof resolves !== 'string' || !String(resolves).trim()) {
+      throw new Error('resolves must be a non-empty string')
+    }
+  }
+
   return {
     type,
     by,
@@ -78,11 +111,14 @@ const parseEntryInput = (body: Record<string, unknown>): WhiteboardEntryInput =>
         })
       : undefined,
     status: status as WhiteboardEntryStatus | undefined,
+    ...(payload !== undefined && { payload: payload as Record<string, unknown> }),
+    ...(taskId !== undefined && { taskId: String(taskId) }),
+    ...(resolves !== undefined && { resolves: String(resolves) }),
   }
 }
 
 export const createWhiteboardRoutes = (deps: WhiteboardRouteDeps): Router => {
-  const { whiteboardManager: wb, chatStore, broadcastToChat } = deps
+  const { whiteboardManager: wb, chatStore, broadcastToChat, workflowRegistry } = deps
   const router = Router()
 
   router.post('/api/chats/:chatId/whiteboard/entries', (req, res) => {
@@ -138,6 +174,37 @@ export const createWhiteboardRoutes = (deps: WhiteboardRouteDeps): Router => {
         log.warn('snapshot setCursor failed', { chatId, instanceId, error: e instanceof Error ? e.message : String(e) })
       }
     }
+
+    const includeWorkflow = req.query.includeWorkflow === 'true'
+    if (includeWorkflow && workflowRegistry) {
+      const engines = workflowRegistry.findByChatId(chatId)
+      const engine = engines[engines.length - 1]
+      if (engine) {
+        const state = engine.getState()
+        const workflowView = {
+          workflowId: state.workflowId,
+          status: state.status,
+          tasks: Object.values(state.tasks).map((t) => {
+            const taskEntries = snap.taskEntries?.[t.taskId] ?? []
+            const entrySummary: Record<string, number> = {}
+            for (const e of taskEntries) {
+              entrySummary[e.type] = (entrySummary[e.type] ?? 0) + 1
+            }
+            return {
+              taskId: t.taskId,
+              agentId: t.agentId,
+              status: t.status,
+              description: state.dag.tasks.find((dt) => dt.taskId === t.taskId)?.description ?? '',
+              dependsOn: state.dag.tasks.find((dt) => dt.taskId === t.taskId)?.dependsOn ?? [],
+              entryCount: taskEntries.length,
+              entrySummary,
+            }
+          }),
+        }
+        return res.json({ ...snap, workflow: workflowView })
+      }
+    }
+
     return res.json(snap)
   })
 
@@ -226,6 +293,7 @@ export const createWhiteboardRoutes = (deps: WhiteboardRouteDeps): Router => {
     }
     if (typeof q.byAgent === 'string') opts.byAgent = q.byAgent
     if (typeof q.tags === 'string') opts.tags = q.tags.split(',').map((s) => s.trim()).filter(Boolean)
+    if (typeof q.taskId === 'string' && q.taskId.trim()) opts.taskId = q.taskId.trim()
     if (typeof q.sinceTs === 'string') opts.sinceTs = q.sinceTs
     if (typeof q.status === 'string' && VALID_STATUS.includes(q.status as WhiteboardEntryStatus)) {
       opts.status = q.status as WhiteboardEntryStatus

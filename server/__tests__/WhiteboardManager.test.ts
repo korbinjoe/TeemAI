@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, readFileSync, existsSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { WhiteboardManager, WhiteboardValidationError } from '../whiteboard/WhiteboardManager'
-import { WHITEBOARD_ERROR, WHITEBOARD_SUMMARY_MAX } from '../../shared/whiteboard-types'
+import { WHITEBOARD_ERROR, WHITEBOARD_SUMMARY_MAX, WHITEBOARD_PAYLOAD_MAX_BYTES, WHITEBOARD_TASK_ID_MAX_LENGTH } from '../../shared/whiteboard-types'
 
 function uniqChatId(label: string): string {
   return `__test_${label}_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
@@ -58,6 +58,102 @@ describe('WhiteboardManager', () => {
       expect(e.status).toBe('active')
       expect(e.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/)
       expect(e.chatId).toBe(chatId)
+    })
+  })
+
+  describe('payload / taskId / resolves validation', () => {
+    it('rejects non-object payload', () => {
+      expect(() =>
+        mgr.appendEntry(chatId, { type: 'decision', by: 'forge', summary: 'ok', payload: 'string' as any }),
+      ).toThrowError(/payload/i)
+    })
+
+    it('rejects array payload', () => {
+      expect(() =>
+        mgr.appendEntry(chatId, { type: 'decision', by: 'forge', summary: 'ok', payload: [] as any }),
+      ).toThrowError(/payload/i)
+    })
+
+    it('rejects oversized payload', () => {
+      const big = { data: 'x'.repeat(WHITEBOARD_PAYLOAD_MAX_BYTES) }
+      expect(() =>
+        mgr.appendEntry(chatId, { type: 'decision', by: 'forge', summary: 'ok', payload: big }),
+      ).toThrowError(/too large/i)
+    })
+
+    it('accepts valid payload under size limit', () => {
+      const e = mgr.appendEntry(chatId, {
+        type: 'decision', by: 'forge', summary: 'ok',
+        payload: { options: ['a', 'b'], chosen: 'a' },
+      })
+      expect(e.payload).toEqual({ options: ['a', 'b'], chosen: 'a' })
+    })
+
+    it('rejects empty taskId', () => {
+      expect(() =>
+        mgr.appendEntry(chatId, { type: 'progress', by: 'forge', summary: 'ok', taskId: '  ' }),
+      ).toThrowError(/taskId/i)
+    })
+
+    it('rejects taskId exceeding max length', () => {
+      expect(() =>
+        mgr.appendEntry(chatId, { type: 'progress', by: 'forge', summary: 'ok', taskId: 'x'.repeat(WHITEBOARD_TASK_ID_MAX_LENGTH + 1) }),
+      ).toThrowError(/too long/i)
+    })
+
+    it('accepts valid taskId', () => {
+      const e = mgr.appendEntry(chatId, { type: 'progress', by: 'forge', summary: 'ok', taskId: 'design-auth' })
+      expect(e.taskId).toBe('design-auth')
+    })
+
+    it('resolves rejects non-existent entry', () => {
+      expect(() =>
+        mgr.appendEntry(chatId, { type: 'decision', by: 'forge', summary: 'ok', resolves: 'nonexistent' }),
+      ).toThrowError(/not found/i)
+    })
+
+    it('resolves rejects non-open_question entry', () => {
+      const decision = mgr.appendEntry(chatId, { type: 'decision', by: 'forge', summary: 'D1' })
+      expect(() =>
+        mgr.appendEntry(chatId, { type: 'decision', by: 'forge', summary: 'ok', resolves: decision.id }),
+      ).toThrowError(/open_question/i)
+    })
+
+    it('resolves accepts active open_question', () => {
+      const q = mgr.appendEntry(chatId, { type: 'open_question', by: 'forge', summary: 'which DB?' })
+      const d = mgr.appendEntry(chatId, { type: 'decision', by: 'lead', summary: 'use postgres', resolves: q.id })
+      expect(d.resolves).toBe(q.id)
+    })
+  })
+
+  describe('taskId query filtering', () => {
+    beforeEach(() => {
+      mgr.appendEntry(chatId, { type: 'decision', by: 'arch', summary: 'D1', taskId: 'design-auth' })
+      mgr.appendEntry(chatId, { type: 'artifact', by: 'arch', summary: 'A1', taskId: 'design-auth' })
+      mgr.appendEntry(chatId, { type: 'progress', by: 'eng', summary: 'P1', taskId: 'impl-auth' })
+      mgr.appendEntry(chatId, { type: 'progress', by: 'eng', summary: 'P2' })
+    })
+
+    it('filters entries by taskId', () => {
+      const list = mgr.query(chatId, { taskId: 'design-auth' })
+      expect(list.length).toBe(2)
+      expect(list.every((e) => e.taskId === 'design-auth')).toBe(true)
+    })
+
+    it('returns empty for unknown taskId', () => {
+      expect(mgr.query(chatId, { taskId: 'nope' })).toEqual([])
+    })
+
+    it('snapshot groups entries by taskId in taskEntries', () => {
+      const snap = mgr.getSnapshot(chatId)
+      expect(snap.taskEntries).toBeDefined()
+      expect(snap.taskEntries!['design-auth'].length).toBe(2)
+      expect(snap.taskEntries!['impl-auth'].length).toBe(1)
+    })
+
+    it('entries without taskId still in active array', () => {
+      const snap = mgr.getSnapshot(chatId)
+      expect(snap.active.some((e) => e.summary === 'P2')).toBe(true)
     })
   })
 

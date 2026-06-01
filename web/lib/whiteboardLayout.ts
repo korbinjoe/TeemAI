@@ -20,13 +20,13 @@ import {
 // ============================================================
 
 export const DAG = {
-  NODE_W: 280,
-  NODE_MIN_H: 68,
-  NODE_MAX_H: 120,
-  GAP_X: 56,
-  GAP_Y: 24,
-  PADDING_X: 40,
-  PADDING_Y: 40,
+  NODE_W: 220,
+  NODE_MIN_H: 56,
+  NODE_MAX_H: 80,
+  GAP_X: 48,
+  GAP_Y: 16,
+  PADDING_X: 32,
+  PADDING_Y: 32,
 } as const
 
 const TIME_BUCKET_GAP_MS = 5 * 60_000
@@ -556,6 +556,165 @@ const extractToAgent = (
 
 // ============================================================
 // ============================================================
+
+// ============================================================
+// Workflow DAG layout — uses explicit task graph as skeleton
+// ============================================================
+
+export interface WorkflowDagTaskNode {
+  taskId: string
+  agentId: string
+  status: string
+  description: string
+  dependsOn: string[]
+  entryCount: number
+  entrySummary: Record<string, number>
+}
+
+const WORKFLOW_DAG = {
+  NODE_W: 240,
+  NODE_H: 80,
+  NODE_EXPANDED_H: 200,
+  GAP_X: 60,
+  GAP_Y: 24,
+  PADDING_X: 40,
+  PADDING_Y: 40,
+  GOAL_H: 40,
+} as const
+
+export const layoutWorkflowDag = (
+  workflowTasks: WorkflowDagTaskNode[],
+  entries: WhiteboardEntry[],
+  _floatingEntries: WhiteboardEntry[],
+  goal: WhiteboardEntry | null,
+): DagLayout => {
+  const nodes: DagNode[] = []
+  const edges: DagEdge[] = []
+
+  const layers = topoSort(workflowTasks)
+  const taskIndex = new Map(workflowTasks.map((t) => [t.taskId, t]))
+
+  const entriesByTask = new Map<string, WhiteboardEntry[]>()
+  for (const e of entries) {
+    if (!e.taskId) continue
+    const list = entriesByTask.get(e.taskId) ?? []
+    list.push(e)
+    entriesByTask.set(e.taskId, list)
+  }
+
+  let yOffset = WORKFLOW_DAG.PADDING_Y
+  if (goal) {
+    yOffset += WORKFLOW_DAG.GOAL_H + WORKFLOW_DAG.GAP_Y
+  }
+
+  let maxY = yOffset
+  const taskPositions = new Map<string, { x: number; y: number; h: number }>()
+
+  for (let col = 0; col < layers.length; col++) {
+    const layer = layers[col]
+    const x = WORKFLOW_DAG.PADDING_X + col * (WORKFLOW_DAG.NODE_W + WORKFLOW_DAG.GAP_X)
+    let y = yOffset
+
+    for (const taskId of layer) {
+      const task = taskIndex.get(taskId)
+      if (!task) continue
+
+      const isExpanded = task.status === 'running'
+      const h = isExpanded ? WORKFLOW_DAG.NODE_EXPANDED_H : WORKFLOW_DAG.NODE_H
+
+      taskPositions.set(taskId, { x, y, h })
+
+      const taskEntries = entriesByTask.get(taskId) ?? []
+      const representative = taskEntries[0]
+
+      nodes.push({
+        id: `wf-${taskId}`,
+        by: task.agentId,
+        agent: task.agentId,
+        type: 'progress',
+        group: 'exec',
+        x,
+        y,
+        width: WORKFLOW_DAG.NODE_W,
+        height: h,
+        layer: col,
+        timestamp: representative ? Date.parse(representative.timestamp) : Date.now(),
+        isLive: task.status === 'running',
+        isCritical: task.status === 'running',
+        entry: representative ?? {
+          id: `wf-${taskId}`,
+          chatId: '',
+          seq: 0,
+          type: 'progress',
+          by: task.agentId,
+          summary: task.description,
+          status: 'active',
+          timestamp: new Date().toISOString(),
+          taskId,
+        } as WhiteboardEntry,
+        causedBySeq: undefined,
+        causedByType: undefined,
+      })
+
+      y += h + WORKFLOW_DAG.GAP_Y
+    }
+    maxY = Math.max(maxY, y)
+  }
+
+  for (const task of workflowTasks) {
+    for (const depId of task.dependsOn) {
+      if (taskPositions.has(depId) && taskPositions.has(task.taskId)) {
+        edges.push({
+          id: `wf-edge-${depId}-${task.taskId}`,
+          source: `wf-${depId}`,
+          target: `wf-${task.taskId}`,
+          type: task.status === 'pending' ? 'temporal' : 'causal',
+          isCritical: false,
+        })
+      }
+    }
+  }
+
+  const totalW = WORKFLOW_DAG.PADDING_X * 2 + layers.length * (WORKFLOW_DAG.NODE_W + WORKFLOW_DAG.GAP_X)
+  const totalH = maxY + WORKFLOW_DAG.PADDING_Y
+
+  return { nodes, edges, totalW: Math.max(totalW, 400), totalH: Math.max(totalH, 200) }
+}
+
+const topoSort = (tasks: WorkflowDagTaskNode[]): string[][] => {
+  const inDegree = new Map<string, number>()
+  const adj = new Map<string, string[]>()
+  for (const t of tasks) {
+    inDegree.set(t.taskId, 0)
+    adj.set(t.taskId, [])
+  }
+  for (const t of tasks) {
+    for (const dep of t.dependsOn) {
+      if (adj.has(dep)) {
+        adj.get(dep)!.push(t.taskId)
+        inDegree.set(t.taskId, (inDegree.get(t.taskId) ?? 0) + 1)
+      }
+    }
+  }
+
+  const layers: string[][] = []
+  let queue = [...inDegree.entries()].filter(([, d]) => d === 0).map(([id]) => id)
+
+  while (queue.length > 0) {
+    layers.push(queue)
+    const next: string[] = []
+    for (const id of queue) {
+      for (const child of adj.get(id) ?? []) {
+        const deg = (inDegree.get(child) ?? 1) - 1
+        inDegree.set(child, deg)
+        if (deg === 0) next.push(child)
+      }
+    }
+    queue = next
+  }
+
+  return layers
+}
 
 export type { WhiteboardEntry }
 

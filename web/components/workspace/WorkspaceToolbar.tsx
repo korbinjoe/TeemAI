@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { useWorkspaceChats } from '../../hooks/useWorkspaceChats'
+import { useWorkspaceMeta } from '../../hooks/useWorkspaceMeta'
 import { useAgents } from '../../hooks/useAgents'
 import LayoutControls from './LayoutControls'
 import { UsersGroup, ChevronRight } from './icons'
@@ -18,6 +19,7 @@ const noDrag = { WebkitAppRegion: 'no-drag' } as React.CSSProperties
 
 const WorkspaceToolbar = () => {
   const { viewMode, workspaceId, activeChatId } = useWorkspace()
+  const { meta } = useWorkspaceMeta(workspaceId)
   const navigate = useNavigate()
 
   const handleGoHome = () => {
@@ -30,7 +32,7 @@ const WorkspaceToolbar = () => {
       <div className={cn('h-8 border-b border-border-subtle flex items-center px-3 gap-2 flex-shrink-0 bg-bg-tertiary', isElectron && '-webkit-app-region-drag')}>
         <span className="text-[11px] font-semibold text-text-secondary">OpenTeam</span>
         <ChevronRight size={11} className="text-text-muted flex-shrink-0" />
-        <span className="text-[11px] font-medium text-text-secondary">Home</span>
+        <span className="text-[11px] font-medium text-text-secondary">{meta?.name ?? 'Workspace'}</span>
         <span className="flex-1" />
       </div>
     )

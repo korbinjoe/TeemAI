@@ -124,7 +124,7 @@ const EntryRow = ({ entry, onArchive, archivingId, t }: EntryRowProps) => {
 
 const WhiteboardSidebar = ({ chatId, actor = 'user', className }: WhiteboardSidebarProps) => {
   const { t } = useTranslation('chat')
-  const { loading, error, goal, active, archivedCount, refresh, archive } = useWhiteboard(chatId)
+  const { loading, error, goal, active, archivedCount, workflowTasks, refresh, archive } = useWhiteboard(chatId)
   const [archivingId, setArchivingId] = useState<string | null>(null)
   const [view, setView] = useState<ViewMode>(readStoredView)
 
@@ -236,6 +236,7 @@ const WhiteboardSidebar = ({ chatId, actor = 'user', className }: WhiteboardSide
               goal={goal}
               archivingId={archivingId}
               onArchive={handleArchive}
+              workflowTasks={workflowTasks}
             />
           )}
         </div>

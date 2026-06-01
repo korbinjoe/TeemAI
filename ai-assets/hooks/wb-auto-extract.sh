@@ -7,11 +7,8 @@
 # Rules (only extract high-confidence events, fingerprint dedup prevents spam):
 #   1. No goal in chat war-room and is first turn -> extract <=120 chars from first user message as goal
 #   2. This turn used Task tool -> write handoff
-#   3. (Removed) artifact now written proactively by Expert
-#   4. (Removed) progress now written proactively by Expert
-#   5. Last segment contains decision signal -> write decision
-#   6. Last segment contains blocker signal -> write open_question
-#   7. Last segment contains constraint signal -> write constraint
+#   3-7. (Removed) artifact/progress/decision/open_question/constraint now written by agents manually
+#   Flush: aggregate per-file artifact accumulator (from wb-post-tool-write.sh) into one entry
 #
 # Writes tagged with by=${OPENTEAM_INSTANCE_ID}:auto to distinguish from Agent's own writes
 # All errors are silent (exit 0), never blocks the Agent main flow
@@ -153,34 +150,20 @@ if [ -n "$HANDOFF" ]; then
   write_wb "handoff" "$HANDOFF"
 fi
 
-# -- Rules 3 & 4 removed (artifact/progress no longer auto-extracted, now written by Expert) --
+# -- Rules 3-7 removed (artifact/progress/decision/open_question/constraint
+#    no longer auto-extracted, agents write these manually with higher quality) --
 
-LAST_TEXT=$(printf "%s\n" "$LAST_CHUNK" \
-  | jq -s '[.[] | select(.type=="assistant")] | last | (.message.content // []) | [.[] | select(.type=="text") | .text] | last // empty' -r 2>/dev/null \
-  | tr '\n' ' ')
-
-# -- Rule 5: decision (last segment contains decision signal) --
-if printf "%s" "$LAST_TEXT" | grep -qE "decided|chosen|finalized|adopting|decision:|decided to"; then
-  SENTENCE=$(printf "%s" "$LAST_TEXT" \
-    | awk 'BEGIN{RS="[.!?]"} /decided|chosen|finalized|adopting|decision:|decided to/ {print; exit}')
-  [ -z "$SENTENCE" ] && SENTENCE="$LAST_TEXT"
-  write_wb "decision" "$SENTENCE"
-fi
-
-# -- Rule 6: open_question (last segment contains blocker signal) --
-if printf "%s" "$LAST_TEXT" | grep -qE "need confirmation|pending|blocked|needs decision|awaiting"; then
-  SENTENCE=$(printf "%s" "$LAST_TEXT" \
-    | awk 'BEGIN{RS="[.!?]"} /need confirmation|pending|blocked|needs decision|awaiting/ {print; exit}')
-  [ -z "$SENTENCE" ] && SENTENCE="$LAST_TEXT"
-  write_wb "open_question" "$SENTENCE"
-fi
-
-# -- Rule 7: constraint (last segment contains constraint signal) --
-if printf "%s" "$LAST_TEXT" | grep -qE "constraint|limitation|hard requirement|must not exceed|must not|cannot exceed"; then
-  SENTENCE=$(printf "%s" "$LAST_TEXT" \
-    | awk 'BEGIN{RS="[.!?]"} /constraint|limitation|hard requirement|must not exceed|must not|cannot exceed/ {print; exit}')
-  [ -z "$SENTENCE" ] && SENTENCE="$LAST_TEXT"
-  write_wb "constraint" "$SENTENCE"
+# -- Artifact accumulator flush (aggregate per-file artifacts into one entry) --
+ACC_FILE="${FP_DIR}/.artifact-acc-${INSTANCE_ID}.txt"
+if [ -f "$ACC_FILE" ]; then
+  COUNT=$(wc -l < "$ACC_FILE" | tr -d ' ')
+  if [ "$COUNT" -gt 0 ]; then
+    FILES=$(sort -u "$ACC_FILE" | head -5 | tr '\n' ', ' | sed 's/,$//')
+    EXTRA=""
+    [ "$COUNT" -gt 5 ] && EXTRA=" +$((COUNT - 5)) more"
+    write_wb "artifact" "modified ${COUNT} files: ${FILES}${EXTRA}"
+  fi
+  rm -f "$ACC_FILE"
 fi
 
 exit 0

@@ -109,7 +109,6 @@ const SpanNodeInner = ({ data }: NodeProps) => {
             <Icon size={11} strokeWidth={2.5} aria-hidden="true" />
             {t(visual.labelKey)}
           </span>
-          <span className="text-[9.5px] text-text-faint font-mono">#{node.entry.seq}</span>
           <span className="ml-auto text-[10px] text-text-muted font-mono shrink-0">
             {relTime}
           </span>
@@ -122,18 +121,13 @@ const SpanNodeInner = ({ data }: NodeProps) => {
         </div>
 
         {/* Summary */}
-        <div className="text-[12px] text-text-primary leading-snug line-clamp-3 break-words">
+        <div className="text-[11.5px] text-text-primary leading-snug line-clamp-2 break-words">
           {node.entry.summary}
         </div>
 
         <div className="flex items-center gap-1.5 min-w-0">
           <AgentAvatar name={displayName} agentId={node.agent} size="xs" />
           <span className="text-[10.5px] text-text-muted truncate">{displayName}</span>
-          {node.causedBySeq != null && node.causedByType && (
-            <span className="text-[9px] text-text-faint ml-0.5">
-              ← {TYPE_VISUAL[node.causedByType]?.labelKey ? t(TYPE_VISUAL[node.causedByType].labelKey) : node.causedByType} #{node.causedBySeq}
-            </span>
-          )}
 
           {(fileCount > 0 || refCount > 0 || tags.length > 0) && (
             <div className="ml-auto flex items-center gap-2 shrink-0">

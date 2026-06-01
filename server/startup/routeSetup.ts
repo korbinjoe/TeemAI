@@ -144,7 +144,7 @@ export const setupRoutes = (app: Express, d: RouteDeps) => {
   app.use(createWorkspaceApiRoutes({ workspaceStore: d.workspaceStore, chatStore: d.chatStore, chatService: d.chatService }))
   app.use(createExternalSessionRoutes({ workspaceStore: d.workspaceStore, chatStore: d.chatStore, broadcast: d.broadcast }))
   app.use(createChatRoutes({ chatStore: d.chatStore, chatService: d.chatService, tokenUsageStore: d.tokenUsageStore, sessionRegistry: d.sessionRegistry, broadcast: d.broadcast }))
-  app.use(createWhiteboardRoutes({ whiteboardManager: d.whiteboardManager, chatStore: d.chatStore, broadcastToChat: d.broadcastToChat }))
+  app.use(createWhiteboardRoutes({ whiteboardManager: d.whiteboardManager, chatStore: d.chatStore, broadcastToChat: d.broadcastToChat, workflowRegistry: d.workflowRegistry }))
   app.use(createExecutionLogRoutes(d.executionLogStore))
   app.use(createCronJobRoutes({ cronJobStore: d.cronJobStore, cronScheduler: d.cronScheduler, nlCronParser: d.nlCronParser, workspaceStore: d.workspaceStore, agentStore: d.agentStore }))
   app.use(createNotificationRoutes({ notificationStore: d.notificationStore, broadcast: d.broadcast }))

@@ -167,6 +167,11 @@ export class ContextBriefing {
       lines.push('', `**target** ${TYPE_ICON.goal} ${goal.summary}`)
     }
 
+    const hasTaskIds = ranked.some((e) => e.taskId)
+    if (hasTaskIds) {
+      return this.composeByTask(lines, ranked)
+    }
+
     const groups: Record<WhiteboardEntryType, WhiteboardEntry[]> = {
       goal: [],
       open_question: [],
@@ -194,6 +199,39 @@ export class ContextBriefing {
     pushGroup('Key Decisions', 'decision', 4)
     pushGroup('Recent Progress', 'progress', 4)
     pushGroup('Deliverables', 'artifact', 4)
+
+    return lines
+  }
+
+  private composeByTask(lines: string[], ranked: WhiteboardEntry[]): string[] {
+    const taskMap = new Map<string, WhiteboardEntry[]>()
+    const ungrouped: WhiteboardEntry[] = []
+
+    for (const e of ranked) {
+      if (e.taskId) {
+        const list = taskMap.get(e.taskId) ?? []
+        list.push(e)
+        taskMap.set(e.taskId, list)
+      } else {
+        ungrouped.push(e)
+      }
+    }
+
+    for (const [taskId, entries] of taskMap) {
+      lines.push('', `**Task: ${taskId}**`)
+      for (const e of entries.slice(0, 5)) {
+        lines.push(`- ${TYPE_ICON[e.type]} ${e.summary}  _by ${e.by}_`)
+      }
+      if (entries.length > 5) lines.push(`- _+${entries.length - 5} more_`)
+    }
+
+    const openQuestions = ungrouped.filter((e) => e.type === 'open_question' || e.type === 'constraint')
+    if (openQuestions.length > 0) {
+      lines.push('', '**Open Questions**')
+      for (const e of openQuestions.slice(0, 3)) {
+        lines.push(`- ${TYPE_ICON[e.type]} ${e.summary}  _by ${e.by}_`)
+      }
+    }
 
     return lines
   }

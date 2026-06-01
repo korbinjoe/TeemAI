@@ -18,6 +18,7 @@ const AgentsHubPage = lazy(() => import('./pages/AgentsHubPage'))
 const AgentEditorPage = lazy(() => import('./pages/AgentEditorPage'))
 const CronJobsPage = lazy(() => import('./pages/CronJobsPage'))
 const WorkspacesPage = lazy(() => import('./pages/WorkspacesPage'))
+const WorkspaceDetailPage = lazy(() => import('./pages/WorkspaceDetailPage'))
 const ChatHistoryPage = lazy(() => import('./pages/ChatHistoryPage'))
 
 const RouteFallback = () => (
@@ -53,6 +54,7 @@ const App = () => (
       {/* Resource pages — single canonical top-level URL per page. */}
       <Route element={<ResourceLayout />}>
         <Route path="/workspaces" element={<WorkspacesPage />} />
+        <Route path="/workspaces/:workspaceId" element={<WorkspaceDetailPage />} />
         <Route path="/agents" element={<AgentsHubPage />} />
         <Route path="/agents/:id/edit" element={<AgentEditorPage />} />
         <Route path="/skills" element={<SkillsPage />} />

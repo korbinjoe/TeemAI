@@ -58,9 +58,11 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
   const [extDirExpanded, setExtDirExpanded] = useState<Record<string, boolean>>({})
 
   const activeWorkspaceId = useMemo(() => {
-    if (!activeChatId) return null
-    return chats.find((c) => c.id === activeChatId)?.workspaceId ?? null
-  }, [activeChatId, chats])
+    if (activeChatId) {
+      return chats.find((c) => c.id === activeChatId)?.workspaceId ?? workspaceId ?? null
+    }
+    return workspaceId ?? null
+  }, [activeChatId, chats, workspaceId])
 
   const defaultExpanded = useCallback(
     (wsId: string) => wsId === activeWorkspaceId,

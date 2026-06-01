@@ -18,13 +18,16 @@ import {
 import { cn } from '@/lib/utils'
 import {
   layoutWhiteboardDag,
+  layoutWorkflowDag,
   type DagNode,
 } from '@/lib/whiteboardLayout'
 import { useAgents } from '@/hooks/useAgents'
 import AgentAvatar from '@/components/ui/agent-avatar'
-import type { WhiteboardEntry, WhiteboardEntryType } from '@shared/whiteboard-types'
+import type { WhiteboardEntry, WhiteboardEntryType, WorkflowTaskNode } from '@shared/whiteboard-types'
+import type { WorkflowTaskNodeData } from './WorkflowTaskNode'
 
 import { SpanNode, type SpanNodeData } from './SpanNode'
+import { WorkflowTaskNodeComponent } from './WorkflowTaskNode'
 import { HandoffFlowEdge } from './HandoffFlowEdge'
 import { RefFlowEdge } from './RefFlowEdge'
 import { CausalFlowEdge } from './CausalFlowEdge'
@@ -52,13 +55,14 @@ export interface WhiteboardFlowViewProps {
   archivingId: string | null
   onArchive: (entryId: string) => void
   className?: string
+  workflowTasks?: WorkflowTaskNode[]
 }
 
 // ============================================================
 // nodeTypes / edgeTypes
 // ============================================================
 
-const nodeTypes = { span: SpanNode } as const
+const nodeTypes = { span: SpanNode, workflowTask: WorkflowTaskNodeComponent } as const
 const edgeTypes = { handoff: HandoffFlowEdge, ref: RefFlowEdge, causal: CausalFlowEdge, temporal: TemporalFlowEdge, inferred: InferredFlowEdge } as const
 
 // ============================================================
@@ -81,7 +85,7 @@ const formatRelative = (iso: string): string => {
 // ============================================================
 
 const WhiteboardFlowViewInner = ({
-  entries, goal, archivingId, onArchive, className,
+  entries, goal, archivingId, onArchive, className, workflowTasks,
 }: WhiteboardFlowViewProps) => {
   const { t } = useTranslation('chat')
   const [nowBucket, setNowBucket] = useState(() => Math.floor(Date.now() / 30_000))
@@ -90,10 +94,14 @@ const WhiteboardFlowViewInner = ({
     return () => window.clearInterval(timer)
   }, [])
 
-  const layout = useMemo(
-    () => layoutWhiteboardDag(entries, goal, nowBucket * 30_000),
-    [entries, goal, nowBucket],
-  )
+  const layout = useMemo(() => {
+    if (workflowTasks && workflowTasks.length > 0) {
+      const entriesWithTaskId = entries.filter((e) => e.taskId)
+      const floatingEntries = entries.filter((e) => !e.taskId)
+      return layoutWorkflowDag(workflowTasks, entriesWithTaskId, floatingEntries, goal)
+    }
+    return layoutWhiteboardDag(entries, goal, nowBucket * 30_000)
+  }, [entries, goal, nowBucket, workflowTasks])
 
   // type filter
   const [hiddenTypes] = useState<Set<WhiteboardEntryType>>(new Set())
@@ -141,17 +149,54 @@ const WhiteboardFlowViewInner = ({
   }, [detailNode, selectedNode])
 
   const visibleNodes = useMemo(() => {
-    return layout.nodes.filter((n) => !hiddenTypes.has(n.type))
-  }, [layout.nodes, hiddenTypes])
+    return layout.nodes.filter((n) => {
+      if (hiddenTypes.has(n.type)) return false
+      if (goal && n.type === 'goal') return false
+      return true
+    })
+  }, [layout.nodes, hiddenTypes, goal])
 
   const visibleIds = useMemo(() => new Set(visibleNodes.map((n) => n.id)), [visibleNodes])
 
-  const flowNodes: Node<SpanNodeData>[] = useMemo(() => {
+  const workflowTaskMap = useMemo(() => {
+    if (!workflowTasks) return new Map<string, WorkflowTaskNode>()
+    return new Map(workflowTasks.map((t) => [`wf-${t.taskId}`, t]))
+  }, [workflowTasks])
+
+  const flowNodes = useMemo<Node[]>(() => {
     return visibleNodes.map((n) => {
       const isHighlighted = highlightedIds.has(n.id)
       const isSelected = selectedNode?.id === n.id
       const isDimmed = (Boolean(hoveredNode) || Boolean(selectedNode)) &&
         !isHighlighted && !isSelected
+
+      const wfTask = workflowTaskMap.get(n.id)
+      if (wfTask) {
+        return {
+          id: n.id,
+          type: 'workflowTask',
+          position: { x: n.x, y: n.y },
+          data: {
+            node: n,
+            taskId: wfTask.taskId,
+            agentId: wfTask.agentId,
+            status: wfTask.status,
+            description: wfTask.description,
+            entryCount: wfTask.entryCount,
+            entrySummary: wfTask.entrySummary,
+            isExpanded: wfTask.status === 'running',
+            onHover: handleNodeHover,
+            onLeave: handleNodeLeave,
+            onClick: handleNodeClick,
+          } satisfies WorkflowTaskNodeData,
+          style: { width: n.width },
+          draggable: false,
+          selectable: false,
+          connectable: false,
+          deletable: false,
+        }
+      }
+
       return {
         id: n.id,
         type: 'span',
@@ -164,7 +209,7 @@ const WhiteboardFlowViewInner = ({
           onHover: handleNodeHover,
           onLeave: handleNodeLeave,
           onClick: handleNodeClick,
-        },
+        } satisfies SpanNodeData,
         style: { width: n.width },
         draggable: false,
         selectable: false,
@@ -172,7 +217,7 @@ const WhiteboardFlowViewInner = ({
         deletable: false,
       }
     })
-  }, [visibleNodes, highlightedIds, selectedNode, hoveredNode, handleNodeHover, handleNodeLeave, handleNodeClick])
+  }, [visibleNodes, highlightedIds, selectedNode, hoveredNode, handleNodeHover, handleNodeLeave, handleNodeClick, workflowTaskMap])
 
   const flowEdges: Edge[] = useMemo(() => {
     const connectedPairs = new Set<string>()
@@ -234,8 +279,8 @@ const WhiteboardFlowViewInner = ({
   }, [layout.edges, layout.nodes, visibleIds, highlightedIds])
 
   // ReactFlow instance ref for fitView
-  const [rfInstance, setRfInstance] = useState<ReactFlowInstance<Node<SpanNodeData>, Edge> | null>(null)
-  const handleInit = useCallback((instance: ReactFlowInstance<Node<SpanNodeData>, Edge>) => {
+  const [rfInstance, setRfInstance] = useState<ReactFlowInstance<Node, Edge> | null>(null)
+  const handleInit = useCallback((instance: ReactFlowInstance<Node, Edge>) => {
     setRfInstance(instance)
     setTimeout(() => {
       instance.fitView({ padding: 0.15, duration: 300 })
@@ -272,7 +317,7 @@ const WhiteboardFlowViewInner = ({
         >
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-[rgb(var(--accent-brand))] font-semibold">
             <Target size={10} />
-            <span>Currenttarget</span>
+            <span>Current target</span>
           </div>
           <div className="mt-1 text-sm text-text-primary leading-snug break-words">{goal.summary}</div>
           <div className="mt-1 text-[10px] text-text-muted">

@@ -14,8 +14,9 @@ import { getWebSocketClient } from '@/services/WebSocketClient'
 import { whiteboardService } from '@/services/whiteboardService'
 import type {
   WhiteboardEntry,
-  WhiteboardSnapshot,
+  WhiteboardSnapshotWithWorkflow,
   WhiteboardEntryInput,
+  WorkflowTaskNode,
 } from '@shared/whiteboard-types'
 
 interface UseWhiteboardResult {
@@ -25,13 +26,14 @@ interface UseWhiteboardResult {
   active: WhiteboardEntry[]
   archivedCount: number
   updatedAt: string
+  workflowTasks: WorkflowTaskNode[] | undefined
   refresh: () => Promise<void>
   append: (input: WhiteboardEntryInput) => Promise<WhiteboardEntry>
   supersede: (entryId: string, input: WhiteboardEntryInput) => Promise<WhiteboardEntry>
   archive: (entryId: string, by: string) => Promise<void>
 }
 
-const EMPTY_SNAPSHOT: WhiteboardSnapshot = {
+const EMPTY_SNAPSHOT: WhiteboardSnapshotWithWorkflow = {
   chatId: '',
   goal: null,
   active: [],
@@ -40,7 +42,7 @@ const EMPTY_SNAPSHOT: WhiteboardSnapshot = {
 }
 
 export const useWhiteboard = (chatId: string | undefined): UseWhiteboardResult => {
-  const [snapshot, setSnapshot] = useState<WhiteboardSnapshot>(EMPTY_SNAPSHOT)
+  const [snapshot, setSnapshot] = useState<WhiteboardSnapshotWithWorkflow>(EMPTY_SNAPSHOT)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const reqSeqRef = useRef(0)
@@ -140,6 +142,7 @@ export const useWhiteboard = (chatId: string | undefined): UseWhiteboardResult =
     active: snapshot.active,
     archivedCount: snapshot.archivedCount,
     updatedAt: snapshot.updatedAt,
+    workflowTasks: snapshot.workflow?.tasks,
     refresh,
     append,
     supersede,

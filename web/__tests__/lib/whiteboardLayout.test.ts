@@ -14,9 +14,11 @@
 import { describe, it, expect } from 'vitest'
 import {
   layoutWhiteboardDag,
+  layoutWorkflowDag,
   typeColorGroup,
   normalizeAgent,
   DAG,
+  type WorkflowDagTaskNode,
 } from '../../lib/whiteboardLayout'
 import type {
   WhiteboardEntry,
@@ -658,5 +660,212 @@ describe('layoutWhiteboardDag — inferred edges', () => {
     const a1 = nodes.find((n) => n.id === 'a1')!
     expect(d1.isCritical).toBe(true)
     expect(a1.isCritical).toBe(true)
+  })
+})
+
+// ============================================================
+// layoutWorkflowDag — workflow-based DAG layout
+// ============================================================
+
+const mkTask = (
+  taskId: string,
+  agentId: string,
+  status: string,
+  dependsOn: string[] = [],
+  entrySummary: Record<string, number> = {},
+): WorkflowDagTaskNode => ({
+  taskId,
+  agentId,
+  status,
+  description: `Task ${taskId}`,
+  dependsOn,
+  entryCount: Object.values(entrySummary).reduce((s, c) => s + c, 0),
+  entrySummary,
+})
+
+describe('layoutWorkflowDag — topological sort', () => {
+  it('independent tasks placed in same layer', () => {
+    const tasks = [
+      mkTask('t1', 'forge', 'running'),
+      mkTask('t2', 'shield', 'pending'),
+    ]
+    const { nodes } = layoutWorkflowDag(tasks, [], [], null)
+    const t1 = nodes.find((n) => n.id === 'wf-t1')!
+    const t2 = nodes.find((n) => n.id === 'wf-t2')!
+    expect(t1.layer).toBe(t2.layer)
+  })
+
+  it('dependent task placed in later layer', () => {
+    const tasks = [
+      mkTask('t1', 'forge', 'completed'),
+      mkTask('t2', 'shield', 'running', ['t1']),
+    ]
+    const { nodes } = layoutWorkflowDag(tasks, [], [], null)
+    const t1 = nodes.find((n) => n.id === 'wf-t1')!
+    const t2 = nodes.find((n) => n.id === 'wf-t2')!
+    expect(t1.layer).toBeLessThan(t2.layer)
+  })
+
+  it('diamond dependency: A → B, A → C, B → D, C → D', () => {
+    const tasks = [
+      mkTask('A', 'forge', 'completed'),
+      mkTask('B', 'shield', 'completed', ['A']),
+      mkTask('C', 'compass', 'completed', ['A']),
+      mkTask('D', 'forge', 'running', ['B', 'C']),
+    ]
+    const { nodes } = layoutWorkflowDag(tasks, [], [], null)
+    const a = nodes.find((n) => n.id === 'wf-A')!
+    const b = nodes.find((n) => n.id === 'wf-B')!
+    const c = nodes.find((n) => n.id === 'wf-C')!
+    const d = nodes.find((n) => n.id === 'wf-D')!
+    expect(a.layer).toBe(0)
+    expect(b.layer).toBe(c.layer)
+    expect(b.layer).toBe(1)
+    expect(d.layer).toBe(2)
+  })
+
+  it('chain: A → B → C → D in sequential layers', () => {
+    const tasks = [
+      mkTask('A', 'forge', 'completed'),
+      mkTask('B', 'shield', 'completed', ['A']),
+      mkTask('C', 'forge', 'running', ['B']),
+      mkTask('D', 'shield', 'pending', ['C']),
+    ]
+    const { nodes } = layoutWorkflowDag(tasks, [], [], null)
+    const layers = nodes.map((n) => n.layer).sort()
+    expect(layers).toEqual([0, 1, 2, 3])
+  })
+})
+
+describe('layoutWorkflowDag — node positioning', () => {
+  it('nodes within same layer share the same x', () => {
+    const tasks = [
+      mkTask('t1', 'forge', 'running'),
+      mkTask('t2', 'shield', 'running'),
+      mkTask('t3', 'compass', 'pending'),
+    ]
+    const { nodes } = layoutWorkflowDag(tasks, [], [], null)
+    const xs = nodes.map((n) => n.x)
+    expect(new Set(xs).size).toBe(1)
+  })
+
+  it('nodes in different layers have increasing x', () => {
+    const tasks = [
+      mkTask('t1', 'forge', 'completed'),
+      mkTask('t2', 'shield', 'running', ['t1']),
+    ]
+    const { nodes } = layoutWorkflowDag(tasks, [], [], null)
+    const t1 = nodes.find((n) => n.id === 'wf-t1')!
+    const t2 = nodes.find((n) => n.id === 'wf-t2')!
+    expect(t1.x).toBeLessThan(t2.x)
+  })
+
+  it('running task gets expanded height', () => {
+    const tasks = [
+      mkTask('t1', 'forge', 'running'),
+      mkTask('t2', 'shield', 'completed'),
+    ]
+    const { nodes } = layoutWorkflowDag(tasks, [], [], null)
+    const t1 = nodes.find((n) => n.id === 'wf-t1')!
+    const t2 = nodes.find((n) => n.id === 'wf-t2')!
+    expect(t1.height).toBeGreaterThan(t2.height)
+  })
+
+  it('totalW and totalH cover all nodes', () => {
+    const tasks = [
+      mkTask('t1', 'forge', 'completed'),
+      mkTask('t2', 'shield', 'running', ['t1']),
+      mkTask('t3', 'compass', 'pending', ['t2']),
+    ]
+    const { nodes, totalW, totalH } = layoutWorkflowDag(tasks, [], [], null)
+    const maxRight = Math.max(...nodes.map((n) => n.x + n.width))
+    const maxBottom = Math.max(...nodes.map((n) => n.y + n.height))
+    expect(totalW).toBeGreaterThanOrEqual(maxRight)
+    expect(totalH).toBeGreaterThanOrEqual(maxBottom)
+  })
+})
+
+describe('layoutWorkflowDag — edges', () => {
+  it('creates edges from dependsOn relationships', () => {
+    const tasks = [
+      mkTask('t1', 'forge', 'completed'),
+      mkTask('t2', 'shield', 'running', ['t1']),
+    ]
+    const { edges } = layoutWorkflowDag(tasks, [], [], null)
+    expect(edges).toHaveLength(1)
+    expect(edges[0].source).toBe('wf-t1')
+    expect(edges[0].target).toBe('wf-t2')
+  })
+
+  it('pending task dependency uses temporal edge type', () => {
+    const tasks = [
+      mkTask('t1', 'forge', 'completed'),
+      mkTask('t2', 'shield', 'pending', ['t1']),
+    ]
+    const { edges } = layoutWorkflowDag(tasks, [], [], null)
+    expect(edges[0].type).toBe('temporal')
+  })
+
+  it('non-pending task dependency uses causal edge type', () => {
+    const tasks = [
+      mkTask('t1', 'forge', 'completed'),
+      mkTask('t2', 'shield', 'running', ['t1']),
+    ]
+    const { edges } = layoutWorkflowDag(tasks, [], [], null)
+    expect(edges[0].type).toBe('causal')
+  })
+
+  it('multiple dependencies create multiple edges', () => {
+    const tasks = [
+      mkTask('t1', 'forge', 'completed'),
+      mkTask('t2', 'shield', 'completed'),
+      mkTask('t3', 'compass', 'running', ['t1', 't2']),
+    ]
+    const { edges } = layoutWorkflowDag(tasks, [], [], null)
+    expect(edges).toHaveLength(2)
+    expect(edges.map((e) => e.source).sort()).toEqual(['wf-t1', 'wf-t2'])
+  })
+})
+
+describe('layoutWorkflowDag — edge cases', () => {
+  it('empty tasks → empty layout', () => {
+    const { nodes, edges } = layoutWorkflowDag([], [], [], null)
+    expect(nodes).toEqual([])
+    expect(edges).toEqual([])
+  })
+
+  it('single task → one node, zero edges', () => {
+    const tasks = [mkTask('solo', 'forge', 'running')]
+    const { nodes, edges } = layoutWorkflowDag(tasks, [], [], null)
+    expect(nodes).toHaveLength(1)
+    expect(nodes[0].id).toBe('wf-solo')
+    expect(edges).toHaveLength(0)
+  })
+
+  it('running task marked as isLive and isCritical', () => {
+    const tasks = [mkTask('t1', 'forge', 'running')]
+    const { nodes } = layoutWorkflowDag(tasks, [], [], null)
+    expect(nodes[0].isLive).toBe(true)
+    expect(nodes[0].isCritical).toBe(true)
+  })
+
+  it('completed task not marked isLive', () => {
+    const tasks = [mkTask('t1', 'forge', 'completed')]
+    const { nodes } = layoutWorkflowDag(tasks, [], [], null)
+    expect(nodes[0].isLive).toBe(false)
+  })
+
+  it('node IDs are prefixed with wf-', () => {
+    const tasks = [mkTask('my-task', 'forge', 'pending')]
+    const { nodes } = layoutWorkflowDag(tasks, [], [], null)
+    expect(nodes[0].id).toBe('wf-my-task')
+  })
+
+  it('uses representative entry timestamp when available', () => {
+    const tasks = [mkTask('t1', 'forge', 'running')]
+    const entry = mk('e1', 'artifact', 'forge', min(5))
+    entry.taskId = 't1'
+    const { nodes } = layoutWorkflowDag(tasks, [entry], [], null)
+    expect(nodes[0].timestamp).toBe(min(5))
   })
 })

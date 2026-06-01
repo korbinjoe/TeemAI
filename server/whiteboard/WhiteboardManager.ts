@@ -35,6 +35,8 @@ import {
   type WhiteboardSnapshot,
   type WhiteboardErrorCode,
   WHITEBOARD_SUMMARY_MAX,
+  WHITEBOARD_PAYLOAD_MAX_BYTES,
+  WHITEBOARD_TASK_ID_MAX_LENGTH,
   WHITEBOARD_ERROR,
   normalizeAgentId,
 } from '../../shared/whiteboard-types'
@@ -123,6 +125,9 @@ export class WhiteboardManager {
       tags: input.tags,
       status: input.status ?? 'active',
       timestamp: new Date().toISOString(),
+      ...(input.payload !== undefined && { payload: input.payload }),
+      ...(input.taskId !== undefined && { taskId: input.taskId }),
+      ...(input.resolves !== undefined && { resolves: input.resolves }),
     }
 
     const line = JSON.stringify(entry) + '\n'
@@ -205,6 +210,7 @@ export class WhiteboardManager {
       list = list.filter((e) => normalizeAgentId(e.by) === norm)
     }
     if (opts.tags?.length) list = list.filter((e) => e.tags?.some((t) => opts.tags!.includes(t)))
+    if (opts.taskId) list = list.filter((e) => e.taskId === opts.taskId)
     if (opts.sinceTs) list = list.filter((e) => e.timestamp > opts.sinceTs!)
 
     list.sort((a, b) => (a.timestamp < b.timestamp ? -1 : 1))
@@ -219,14 +225,27 @@ export class WhiteboardManager {
     const goal = active.find((e) => e.type === 'goal') ?? null
     const archivedCount = entries.length - active.length
 
+    const nonGoal = active
+      .filter((e) => e.type !== 'goal')
+      .sort((a, b) => (a.timestamp < b.timestamp ? -1 : 1))
+
+    let taskEntries: Record<string, WhiteboardEntry[]> | undefined
+    const withTaskId = nonGoal.filter((e) => e.taskId)
+    if (withTaskId.length > 0) {
+      taskEntries = {}
+      for (const e of withTaskId) {
+        const tid = e.taskId!
+        ;(taskEntries[tid] ??= []).push(e)
+      }
+    }
+
     return {
       chatId,
       goal,
-      active: active
-        .filter((e) => e.type !== 'goal')
-        .sort((a, b) => (a.timestamp < b.timestamp ? -1 : 1)),
+      active: nonGoal,
       archivedCount,
       updatedAt: new Date().toISOString(),
+      ...(taskEntries && { taskEntries }),
     }
   }
 
@@ -305,6 +324,48 @@ export class WhiteboardManager {
         throw new WhiteboardValidationError(
           WHITEBOARD_ERROR.GOAL_ALREADY_EXISTS,
           `chat ${chatId} already has active goal entry ${existing.id}; supersede it instead`,
+        )
+      }
+    }
+
+    if (input.payload !== undefined) {
+      if (typeof input.payload !== 'object' || input.payload === null || Array.isArray(input.payload)) {
+        throw new WhiteboardValidationError(WHITEBOARD_ERROR.PAYLOAD_INVALID, 'payload must be a plain object')
+      }
+      const payloadSize = Buffer.byteLength(JSON.stringify(input.payload), 'utf-8')
+      if (payloadSize > WHITEBOARD_PAYLOAD_MAX_BYTES) {
+        throw new WhiteboardValidationError(
+          WHITEBOARD_ERROR.PAYLOAD_TOO_LARGE,
+          `payload too large (${payloadSize} > ${WHITEBOARD_PAYLOAD_MAX_BYTES} bytes)`,
+        )
+      }
+    }
+
+    if (input.taskId !== undefined) {
+      if (typeof input.taskId !== 'string' || !input.taskId.trim()) {
+        throw new WhiteboardValidationError(WHITEBOARD_ERROR.TASK_ID_TOO_LONG, 'taskId must be a non-empty string')
+      }
+      if (input.taskId.length > WHITEBOARD_TASK_ID_MAX_LENGTH) {
+        throw new WhiteboardValidationError(
+          WHITEBOARD_ERROR.TASK_ID_TOO_LONG,
+          `taskId too long (${input.taskId.length} > ${WHITEBOARD_TASK_ID_MAX_LENGTH})`,
+        )
+      }
+    }
+
+    if (input.resolves !== undefined) {
+      if (typeof input.resolves !== 'string' || !input.resolves.trim()) {
+        throw new WhiteboardValidationError(WHITEBOARD_ERROR.RESOLVES_INVALID, 'resolves must be a non-empty string')
+      }
+      const entries = this.loadEntries(chatId)
+      const target = entries.find((e) => e.id === input.resolves)
+      if (!target) {
+        throw new WhiteboardValidationError(WHITEBOARD_ERROR.RESOLVES_INVALID, `resolves target ${input.resolves} not found`)
+      }
+      if (target.type !== 'open_question' || target.status !== 'active') {
+        throw new WhiteboardValidationError(
+          WHITEBOARD_ERROR.RESOLVES_INVALID,
+          `resolves target must be an active open_question (got ${target.type}/${target.status})`,
         )
       }
     }

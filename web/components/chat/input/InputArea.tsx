@@ -43,9 +43,7 @@ const MAX_IMAGES = 5
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 
 interface Props {
-  value: string
-  onChange: (v: string) => void
-  onSend: (mentions: MentionInfo[], images: PendingImage[]) => void
+  onSend: (text: string, mentions: MentionInfo[], images: PendingImage[]) => void
   /**  Ctrl+Cagent 3s  kill */
   onInterrupt: () => void
   disabled: boolean
@@ -90,10 +88,11 @@ const parseMentions = (text: string, agents: AgentSummary[]): MentionInfo[] => {
 
 export interface InputAreaHandle {
   focus: () => void
+  clear: () => void
 }
 
 const InputArea = forwardRef<InputAreaHandle, Props>(({
-  value, onChange, onSend, onInterrupt, disabled, activity, slashCommands, model,
+  onSend, onInterrupt, disabled, activity, slashCommands, model,
   onModelChange, availableModels = [],
   agents = [], expertActivities = {},
   targetAgentId, onTargetChange, cwd,
@@ -119,16 +118,22 @@ const InputArea = forwardRef<InputAreaHandle, Props>(({
   const modelDropdownRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<HTMLDivElement>(null)
   const composingRef = useRef(false)
+  const [value, setValue] = useState('')
 
   useImperativeHandle(ref, () => ({
     focus: () => editorRef.current?.focus(),
+    clear: () => {
+      const el = editorRef.current
+      if (el) resetEditor(el, '')
+      setValue('')
+    },
   }), [])
 
   const syncValue = useCallback(() => {
     const el = editorRef.current
     if (!el) return
-    onChange(serialize(el))
-  }, [onChange])
+    setValue(serialize(el))
+  }, [])
 
   const refreshTrigger = useCallback(() => {
     if (composingRef.current) return
@@ -436,7 +441,10 @@ const InputArea = forwardRef<InputAreaHandle, Props>(({
 
   const handleSend = useCallback(() => {
     const mentions = parseMentions(value, agents)
-    onSend(mentions, pendingImages)
+    onSend(value, mentions, pendingImages)
+    const el = editorRef.current
+    if (el) resetEditor(el, '')
+    setValue('')
     setPendingImages([])
     sendAESEvent('chat', 'message_sent', { messageLength: value.trim().length, mentionCount: mentions.length, imageCount: pendingImages.length })
   }, [value, agents, onSend, pendingImages])
@@ -445,7 +453,7 @@ const InputArea = forwardRef<InputAreaHandle, Props>(({
     if (!onRecallLastQueued) return false
     const popped = onRecallLastQueued()
     if (!popped) return false
-    onChange(popped.text)
+    setValue(popped.text)
     const el = editorRef.current
     if (el) {
       resetEditor(el, popped.text)
@@ -466,7 +474,7 @@ const InputArea = forwardRef<InputAreaHandle, Props>(({
     }
     sendAESEvent('chat', 'queue_recalled', { textLength: popped.text.length, imageCount: popped.images.length })
     return true
-  }, [onRecallLastQueued, onChange, agents, onTargetChange])
+  }, [onRecallLastQueued, agents, onTargetChange])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (activeMenu === 'slash') {
@@ -478,7 +486,7 @@ const InputArea = forwardRef<InputAreaHandle, Props>(({
       if (e.key === 'Escape') {
         e.preventDefault()
         if (editorRef.current) resetEditor(editorRef.current, '')
-        onChange('')
+        setValue('')
         return
       }
     }

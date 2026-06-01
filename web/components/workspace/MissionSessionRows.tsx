@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ChevronRight, Pin, PinOff, Archive, Plus, Trash } from './icons'
@@ -105,7 +105,7 @@ interface MissionRowProps {
   badge?: string
 }
 
-export const MissionRow = ({ chat, isSelected, agentNames, onPin, onArchive, onAddAgent, isPinned = false, badge }: MissionRowProps) => {
+export const MissionRow = memo(({ chat, isSelected, agentNames, onPin, onArchive, onAddAgent, isPinned = false, badge }: MissionRowProps) => {
   const navigate = useNavigate()
   const { selectedAgentId } = useWorkspace()
   const [expanded, setExpanded] = useState(false)
@@ -255,9 +255,10 @@ export const MissionRow = ({ chat, isSelected, agentNames, onPin, onArchive, onA
       )}
     </div>
   )
-}
+})
+MissionRow.displayName = 'MissionRow'
 
-export const AgentRow = ({ agentId, agentName, isLead, chat, member, isSelected }: {
+export const AgentRow = memo(({ agentId, agentName, isLead, chat, member, isSelected }: {
   agentId: string
   agentName: string
   isLead: boolean
@@ -362,9 +363,10 @@ export const AgentRow = ({ agentId, agentName, isLead, chat, member, isSelected 
       )}
     </div>
   )
-}
+})
+AgentRow.displayName = 'AgentRow'
 
-export const CompletedRow = ({ chat, isSelected, archived, agentNames, onPin, onUnarchive }: {
+export const CompletedRow = memo(({ chat, isSelected, archived, agentNames, onPin, onUnarchive }: {
   chat: Chat
   isSelected: boolean
   archived: boolean
@@ -418,7 +420,8 @@ export const CompletedRow = ({ chat, isSelected, archived, agentNames, onPin, on
       />
     </button>
   )
-}
+})
+CompletedRow.displayName = 'CompletedRow'
 
 export interface RowAction {
   title: string

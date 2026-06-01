@@ -23,8 +23,6 @@ interface UseChatActionsParams {
    *  or cancel that sibling on interrupt. */
   lockedAgentId?: string | null
   messages: Message[]
-  input: string
-  setInput: (v: string) => void
   addAgentMessage: (agentId: string, msg: Message) => void
   uid: (prefix: string) => string
   handleScrollToBottom: () => void
@@ -40,7 +38,7 @@ export const useChatActions = ({
   chatId, wsClient, currentSessionId, currentWorkingDirectory, wsRepositories,
   availableAgents, targetAgentId, expertActivities, currentMergedActivity,
   lockedAgentId,
-  messages, input, setInput, addAgentMessage, uid, handleScrollToBottom,
+  messages, addAgentMessage, uid, handleScrollToBottom,
   setExpertActivities, setTargetAgentId, setLoading, chatTitle, setChatTitle,
   openDirPicker,
 }: UseChatActionsParams) => {
@@ -176,8 +174,8 @@ export const useChatActions = ({
     return !!activity && WORKING_PHASES.has(activity.phase)
   }
 
-  const handleSend = (mentions: MentionInfo[] = [], images: PendingImage[] = []) => {
-    const text = input.trim()
+  const handleSend = (rawText: string, mentions: MentionInfo[] = [], images: PendingImage[] = []) => {
+    const text = rawText.trim()
     if ((!text && images.length === 0) || !currentSessionId) return
 
     if (/^\/add-dir\s*$/.test(text)) {
@@ -190,7 +188,6 @@ export const useChatActions = ({
         id: uid('queue'), text, mentions, images, targetAgentId, enqueuedAt: Date.now(),
       }
       setQueuedMessages((prev) => [...prev, queued])
-      setInput('')
       sendAESEvent('chat', 'message_queued', {
         position: queuedMessages.length + 1, textLength: text.length,
         mentionCount: mentions.length, imageCount: images.length,
@@ -203,7 +200,6 @@ export const useChatActions = ({
       setChatTitle(autoTitle)
     }
 
-    setInput('')
     dispatchMessage({ text, mentions, images, targetAgentId })
   }
 

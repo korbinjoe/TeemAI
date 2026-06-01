@@ -8,7 +8,7 @@
  * OpenTeam  Agent  Agent  +
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronRight, Square } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -45,6 +45,21 @@ const formatElapsed = (ms: number): string => {
   return rs > 0 ? `${m}m ${rs}s` : `${m}m`
 }
 
+const useElapsed = (startTime: number) => {
+  const [elapsed, setElapsed] = useState(() => Math.max(0, Date.now() - startTime))
+  useEffect(() => {
+    setElapsed(Math.max(0, Date.now() - startTime))
+    const id = setInterval(() => setElapsed(Math.max(0, Date.now() - startTime)), 1000)
+    return () => clearInterval(id)
+  }, [startTime])
+  return elapsed
+}
+
+const ElapsedLabel = ({ startTime, className }: { startTime: number; className?: string }) => {
+  const elapsed = useElapsed(startTime)
+  return <span className={className}>{formatElapsed(elapsed)}</span>
+}
+
 /**  Agent fileOp > toolName >  */
 const useActivityDesc = (activity: AgentActivity): string => {
   const { t } = useTranslation('chat')
@@ -77,15 +92,16 @@ const STALE_MS = 60_000
  */
 const agentStartTimes = new Map<string, number>()
 
-const AgentDetailRow = ({ agentId, displayName, activity, elapsed, onClick }: {
+const AgentDetailRow = memo(({ agentId, displayName, activity, startTime, onClick }: {
   agentId: string
   displayName: string
   activity: AgentActivity
-  elapsed: number
+  startTime: number
   onClick?: (agentId: string) => void
 }) => {
   const config = PHASE_STYLES[activity.phase] || PHASE_STYLES.initializing
   const desc = useActivityDesc(activity)
+  const elapsed = useElapsed(startTime)
   const isError = activity.phase === 'error'
   const isWaiting = activity.phase === 'waiting_input' || activity.phase === 'waiting_confirmation'
 
@@ -128,17 +144,19 @@ const AgentDetailRow = ({ agentId, displayName, activity, elapsed, onClick }: {
       </span>
     </button>
   )
-}
+})
+AgentDetailRow.displayName = 'AgentDetailRow'
 
-const SingleAgentRow = ({ agentId, displayName, activity, elapsed, onClick }: {
+const SingleAgentRow = memo(({ agentId, displayName, activity, startTime, onClick }: {
   agentId: string
   displayName: string
   activity: AgentActivity
-  elapsed: number
+  startTime: number
   onClick?: (agentId: string) => void
 }) => {
   const config = PHASE_STYLES[activity.phase] || PHASE_STYLES.initializing
   const desc = useActivityDesc(activity)
+  const elapsed = useElapsed(startTime)
   const tokens = activity.tokens
 
   return (
@@ -174,9 +192,10 @@ const SingleAgentRow = ({ agentId, displayName, activity, elapsed, onClick }: {
       </span>
     </button>
   )
-}
+})
+SingleAgentRow.displayName = 'SingleAgentRow'
 
-const GlobalHeartbeatBar = ({
+const GlobalHeartbeatBar = memo(({
   expertActivities,
   agentNames,
   agentPersonalities,
@@ -186,13 +205,14 @@ const GlobalHeartbeatBar = ({
 }: GlobalHeartbeatBarProps) => {
   const { t } = useTranslation('chat')
 
-  const [now, setNow] = useState(() => Date.now())
+  const [staleCheckTick, setStaleCheckTick] = useState(0)
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000)
+    const id = setInterval(() => setStaleCheckTick((t) => t + 1), 10_000)
     return () => clearInterval(id)
   }, [])
 
   const activeEntries = useMemo(() => {
+    const now = Date.now()
     const entries = Object.entries(expertActivities).filter(([, a]) => {
       if (!isActivePhase(a.phase)) return false
       if (now - a.updatedAt > STALE_MS) return false
@@ -204,7 +224,7 @@ const GlobalHeartbeatBar = ({
       return 2
     }
     return entries.sort(([, a], [, b]) => priority(a.phase) - priority(b.phase))
-  }, [expertActivities, now])
+  }, [expertActivities, staleCheckTick])
   const hasActiveWork = activeEntries.length > 0
   const activeCount = activeEntries.length
 
@@ -226,23 +246,21 @@ const GlobalHeartbeatBar = ({
     if (!activeIds.has(id)) agentStartTimes.delete(id)
   }
 
-  const perAgentElapsed = useMemo(() => {
+  const startTimes = useMemo(() => {
     const m = new Map<string, number>()
     for (const [id] of activeEntries) {
-      const start = agentStartTimes.get(id) ?? now
-      m.set(id, Math.max(0, now - start))
+      m.set(id, agentStartTimes.get(id) ?? Date.now())
     }
     return m
-  }, [activeEntries, now])
+  }, [activeEntries])
 
-  const overallElapsed = useMemo(() => {
-    let earliest = now
-    for (const [id] of activeEntries) {
-      const start = agentStartTimes.get(id) ?? now
+  const earliestStart = useMemo(() => {
+    let earliest = Infinity
+    for (const start of startTimes.values()) {
       if (start < earliest) earliest = start
     }
-    return Math.max(0, now - earliest)
-  }, [activeEntries, now])
+    return earliest === Infinity ? Date.now() : earliest
+  }, [startTimes])
 
   const totalTokens = useMemo(() => {
     let input = 0
@@ -290,7 +308,7 @@ const GlobalHeartbeatBar = ({
           agentId={agentId}
           displayName={displayName}
           activity={activity}
-          elapsed={perAgentElapsed.get(agentId) ?? 0}
+          startTime={startTimes.get(agentId) ?? Date.now()}
           onClick={onAgentClick}
         />
         {onInterrupt && (
@@ -341,9 +359,7 @@ const GlobalHeartbeatBar = ({
               {formatTokens(totalTokens.output)} out
             </span>
           )}
-          <span className="text-xs text-accent-purple shrink-0 font-mono font-semibold">
-            {formatElapsed(overallElapsed)}
-          </span>
+          <ElapsedLabel startTime={earliestStart} className="text-xs text-accent-purple shrink-0 font-mono font-semibold" />
         </button>
         {onInterrupt && (
           <button
@@ -370,7 +386,7 @@ const GlobalHeartbeatBar = ({
                 agentId={agentId}
                 displayName={displayName}
                 activity={activity}
-                elapsed={perAgentElapsed.get(agentId) ?? 0}
+                startTime={startTimes.get(agentId) ?? Date.now()}
                 onClick={onAgentClick}
               />
             )
@@ -379,6 +395,7 @@ const GlobalHeartbeatBar = ({
       )}
     </div>
   )
-}
+})
+GlobalHeartbeatBar.displayName = 'GlobalHeartbeatBar'
 
 export default GlobalHeartbeatBar

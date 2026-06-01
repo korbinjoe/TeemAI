@@ -6,7 +6,7 @@
  * statuses stay live without polling.
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { API_BASE, authFetch } from '@/config/api'
 import { getWebSocketClient } from '@/services/WebSocketClient'
 import type { ChatActivityPayload } from '@/types/chat'
@@ -55,34 +55,61 @@ export const useWorkspaceChats = (workspaceId: string | null | undefined): Works
     wsClient.connect().catch(() => {})
 
     const handleStatusChanged = ({ chatId, status, missionStatus }: { chatId: string; status: string; missionStatus?: string }) => {
-      setChats((prev) => prev.map((c) => c.id === chatId
-        ? { ...c, status: status as Chat['status'], ...(missionStatus ? { missionStatus } : {}) } as Chat
-        : c))
+      setChats((prev) => {
+        let changed = false
+        const next = prev.map((c) => {
+          if (c.id !== chatId) return c
+          if (c.status === status && (!missionStatus || (c as Chat & { missionStatus?: string }).missionStatus === missionStatus)) return c
+          changed = true
+          return { ...c, status: status as Chat['status'], ...(missionStatus ? { missionStatus } : {}) } as Chat
+        })
+        return changed ? next : prev
+      })
     }
 
     const handleActivity = (payload: ChatActivityPayload) => {
       const { chatId, phase } = payload
-      setChats((prev) => prev.map((c) => {
-        if (c.id !== chatId) return c
-        const next = { ...c } as Chat & { missionStatus?: string }
-        if (phase === 'completed') { next.status = 'stopped'; next.missionStatus = 'success'; next.waitingReason = undefined }
-        else if (phase === 'error') { next.status = 'stopped'; next.missionStatus = 'error'; next.waitingReason = undefined }
-        else if (phase === 'waiting_input') {
-          next.status = 'idle'; next.missionStatus = 'waiting_input'
-          next.waitingReason = payload.latestMessage?.text
-        }
-        else if (phase === 'waiting_confirmation') {
-          next.status = 'idle'; next.missionStatus = 'waiting_confirm'
-          next.waitingReason = payload.latestMessage?.text
-        }
-        else if (ACTIVE_PHASES.has(phase)) { next.status = 'running'; next.missionStatus = 'running'; next.waitingReason = undefined }
-        next.members = reconcileMembersFromActivity(c.members, payload)
-        return next
-      }))
+      setChats((prev) => {
+        let changed = false
+        const next = prev.map((c) => {
+          if (c.id !== chatId) return c
+          const updated = { ...c } as Chat & { missionStatus?: string }
+          if (phase === 'completed') { updated.status = 'stopped'; updated.missionStatus = 'success'; updated.waitingReason = undefined }
+          else if (phase === 'error') { updated.status = 'stopped'; updated.missionStatus = 'error'; updated.waitingReason = undefined }
+          else if (phase === 'waiting_input') {
+            updated.status = 'idle'; updated.missionStatus = 'waiting_input'
+            updated.waitingReason = payload.latestMessage?.text
+          }
+          else if (phase === 'waiting_confirmation') {
+            updated.status = 'idle'; updated.missionStatus = 'waiting_confirm'
+            updated.waitingReason = payload.latestMessage?.text
+          }
+          else if (ACTIVE_PHASES.has(phase)) { updated.status = 'running'; updated.missionStatus = 'running'; updated.waitingReason = undefined }
+          updated.members = reconcileMembersFromActivity(c.members, payload)
+          if (updated.status === c.status
+            && updated.missionStatus === (c as Chat & { missionStatus?: string }).missionStatus
+            && updated.waitingReason === c.waitingReason
+            && updated.members === c.members) {
+            return c
+          }
+          changed = true
+          return updated
+        })
+        return changed ? next : prev
+      })
     }
 
     const handleTitleUpdated = ({ chatId, title }: { chatId: string; title: string }) => {
-      setChats((prev) => prev.map((c) => c.id === chatId ? { ...c, title } as Chat : c))
+      setChats((prev) => {
+        let changed = false
+        const next = prev.map((c) => {
+          if (c.id !== chatId) return c
+          if (c.title === title) return c
+          changed = true
+          return { ...c, title } as Chat
+        })
+        return changed ? next : prev
+      })
     }
 
     wsClient.on('chat:status-changed', handleStatusChanged)
@@ -115,12 +142,12 @@ export const useWorkspaceChats = (workspaceId: string | null | undefined): Works
     }
   }, [workspaceId, refresh])
 
-  const awaitingReview = chats.filter((c) => {
+  const awaitingReview = useMemo(() => chats.filter((c) => {
     const missionStatus = (c as Chat & { missionStatus?: string }).missionStatus
     return missionStatus && WAITING_TASK_STATUSES.has(missionStatus)
-  })
-  const running = chats.filter((c) => c.status === 'running')
-  const done = chats.filter((c) => c.status === 'stopped' || c.status === 'merged')
+  }), [chats])
+  const running = useMemo(() => chats.filter((c) => c.status === 'running'), [chats])
+  const done = useMemo(() => chats.filter((c) => c.status === 'stopped' || c.status === 'merged'), [chats])
 
   return { chats, loading, refresh, awaitingReview, running, done }
 }

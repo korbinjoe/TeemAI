@@ -153,7 +153,6 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     : currentMergedActivity
 
   const [groupActivities, setGroupActivities] = useState<Record<string, AgentActivity>>({})
-  const [input, setInput] = useState('')
   const [terminalWidth, setTerminalWidth] = useState(58)
   const [chatCollapsed, setChatCollapsed] = useState(false)
   const [isResizing, setIsResizing] = useState(false)
@@ -370,7 +369,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
 
   const handleAddDirPick = useCallback((path: string) => {
     dirPicker.setDirModalOpen(false)
-    setInput('')
+    inputAreaRef.current?.clear()
     const message = `/add-dir ${path}`
     const targetAgent = availableAgents.find((a) => a.name === targetAgentId || a.id === targetAgentId)
     const agentId = targetAgent?.id || targetAgentId || availableAgents[0]?.id
@@ -394,7 +393,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     availableAgents, targetAgentId, expertActivities,
     currentMergedActivity: activeMergedActivity,
     lockedAgentId: singleAgentMode ? lockedAgentKey : null,
-    messages: mergedMessages, input, setInput, addAgentMessage, uid, handleScrollToBottom,
+    messages: mergedMessages, addAgentMessage, uid, handleScrollToBottom,
     setExpertActivities, setTargetAgentId, setLoading, chatTitle, setChatTitle,
     openDirPicker: dirPicker.openDirPicker,
   })
@@ -556,7 +555,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
           {viewMode === 'message' && (
             <>
               <QueuedMessagesBar queue={queuedMessages} onRemove={removeQueuedMessage} onClear={handleClearQueue} />
-              <InputArea ref={inputAreaRef} value={input} onChange={setInput} onSend={handleSend}
+              <InputArea ref={inputAreaRef} onSend={handleSend}
                 onInterrupt={handleInterrupt}
                 disabled={!canSend} activity={activeMergedActivity} slashCommands={currentSlashCommands}
                 model={chatModel} onModelChange={handleModelChange} availableModels={availableModels}

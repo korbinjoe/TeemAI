@@ -70,16 +70,11 @@ export const initDefaultHiredAgents = async (
     return builtinIds
   }
 
-  const builtinIds = allAgents
-    .filter((a) => a.source === 'builtin')
-    .map((a) => a.id)
-  const currentSet = new Set(ids)
   const allAgentIds = new Set(allAgents.map((a) => a.id))
-  const missing = builtinIds.filter((id) => !currentSet.has(id))
   const stale = ids.filter((id) => !allAgentIds.has(id))
 
-  if (missing.length > 0 || stale.length > 0) {
-    const updated = ids.filter((id) => !stale.includes(id)).concat(missing)
+  if (stale.length > 0) {
+    const updated = ids.filter((id) => !stale.includes(id))
     await putHiredAgents(updated)
     return updated
   }

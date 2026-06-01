@@ -104,7 +104,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   const lockedAgentId = agentScopeOverride !== undefined ? agentScopeOverride : workspaceSelectedAgentId
   // ── Hooks ──
   const {
-    availableAgents, setAvailableAgents,
+    availableAgents, hiredAgents, setAvailableAgents,
     selectedAgentId, targetAgentId, setTargetAgentId,
     handleSetSelectedAgentId, currentAgentName,
     agentNames, agentPersonalities,
@@ -122,8 +122,8 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   }, [lockedAgentId, availableAgents])
   const singleAgentMode = !!lockedAgent
   const inputAgents = useMemo(
-    () => (singleAgentMode && lockedAgent ? [lockedAgent] : availableAgents),
-    [singleAgentMode, lockedAgent, availableAgents],
+    () => (singleAgentMode && lockedAgent ? [lockedAgent] : hiredAgents),
+    [singleAgentMode, lockedAgent, hiredAgents],
   )
 
   // Keep the input's target locked to the URL agent in single-agent mode so
@@ -634,7 +634,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
       {isActive && !singleAgentMode && (
         <AgentSwitcherModal
           open={agentSwitcherOpen}
-          agents={availableAgents}
+          agents={hiredAgents}
           activities={expertActivities}
           currentAgentId={targetAgentId}
           onSelect={(agent) => setTargetAgentId(agent.id ?? agent.name)}

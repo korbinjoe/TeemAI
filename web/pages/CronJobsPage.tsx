@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { isElectron, ELECTRON_TITLEBAR_PADDING } from '../utils/env'
 import { getWebSocketClient } from '../services/WebSocketClient'
 import { authFetch } from '@/config/api'
+import { initDefaultHiredAgents } from '@/utils/teamStorage'
 import CronJobForm, { type CronJobFormData } from '../components/cron/CronJobForm'
 import NLInputDialog from '../components/cron/NLInputDialog'
 import type { CronJob } from '../types/cron'
@@ -17,9 +18,11 @@ interface Workspace {
 }
 
 interface Agent {
+  id: string
   name: string
   description: string
   role: string
+  source: string
 }
 
 const WORKSPACE_BASE = '/workspace'
@@ -50,7 +53,10 @@ const CronJobsPage = () => {
   useEffect(() => {
     fetchJobs()
     authFetch('/api/workspaces').then((r) => r.json()).then(setWorkspaces).catch(() => {})
-    authFetch('/api/agents').then((r) => r.json()).then(setAgents).catch(() => {})
+    authFetch('/api/agents').then((r) => r.json()).then(async (allAgents) => {
+      const hiredIds = await initDefaultHiredAgents(allAgents)
+      setAgents(allAgents.filter((a: Agent) => hiredIds.includes(a.id)))
+    }).catch(() => {})
   }, [fetchJobs])
 
   useEffect(() => {

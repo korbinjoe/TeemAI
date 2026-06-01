@@ -19,7 +19,7 @@ import WorkspaceIcon from '@/components/icons/WorkspaceIcon'
 import DirPickerDialog from '@/components/home/DirPickerDialog'
 import { cn } from '@/lib/utils'
 import { DEFAULT_MODEL, DEFAULT_MODELS, DEFAULT_AGENT, getModelsForProvider } from '@/lib/models'
-import { sortAgents } from '@/utils/teamStorage'
+import { sortAgents, initDefaultHiredAgents } from '@/utils/teamStorage'
 import { loadDirHistory, saveDirHistory, loadLastSession, saveLastSession } from '@/components/home/storage'
 import { useDirPicker } from '@/hooks/useDirPicker'
 import { isElectron } from '@/utils/env'
@@ -74,9 +74,11 @@ const NewChatForm = ({ currentWorkspaceId, currentAgentId, onCreated }: NewChatF
     Promise.all([
       authFetch(`${API_BASE}/api/workspaces`).then((r) => r.ok ? r.json() : []).catch(() => []),
       authFetch(`${API_BASE}/api/agents`).then((r) => r.ok ? r.json() : []).catch(() => []),
-    ]).then(([ws, agentList]) => {
+    ]).then(async ([ws, agentList]) => {
       setWorkspaces(ws)
-      setAgents(sortAgents(agentList))
+      const hiredIds = await initDefaultHiredAgents(agentList)
+      const hired = agentList.filter((a: AgentSummary) => hiredIds.includes(a.id))
+      setAgents(sortAgents(hired))
     }).finally(() => setLoading(false))
   }, [currentWorkspaceId])
 

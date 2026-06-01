@@ -38,7 +38,7 @@ const relativeTime = (dateStr: string | undefined): string => {
 const WorkspaceHome = () => {
   const { workspaceId, openNewMission } = useWorkspace()
   const { running, awaitingReview, done } = useWorkspaceChats(workspaceId)
-  const { availableAgents, resolveAgentName } = useAgents()
+  const { hiredAgents, resolveAgentName } = useAgents()
   const navigate = useNavigate()
 
   const failedChats = done.filter((c) => (c as Chat & { missionStatus?: string }).missionStatus === 'error')
@@ -133,16 +133,16 @@ const WorkspaceHome = () => {
         )}
 
         {/* Team strip */}
-        {availableAgents.length > 0 && (
+        {hiredAgents.length > 0 && (
           <div className="mb-9">
             <div className="text-[10px] font-bold text-text-muted uppercase tracking-[0.6px] mb-2.5 flex items-center gap-2">
               Your team
               <span className="text-[10px] font-semibold text-accent-green normal-case tracking-normal">
-                {availableAgents.length} online
+                {hiredAgents.length} online
               </span>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {availableAgents.map((agent) => (
+              {hiredAgents.map((agent) => (
                 <div
                   key={agent.id}
                   className="flex items-center gap-[7px] pl-2 pr-3 py-1.5 bg-bg-secondary border border-border-subtle rounded-full text-[11px] font-semibold text-text-secondary hover:border-border hover:bg-bg-hover transition-colors"

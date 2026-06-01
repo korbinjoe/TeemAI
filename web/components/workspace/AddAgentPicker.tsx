@@ -10,7 +10,7 @@ import { nextInstanceId } from '../../../shared/utils'
 
 const AddAgentPicker = () => {
   const { workspaceId, addAgentOpen, addAgentTaskId, closeAddAgent } = useWorkspace()
-  const { availableAgents } = useAgents()
+  const { hiredAgents } = useAgents()
   const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
   const [filter, setFilter] = useState('')
@@ -26,11 +26,11 @@ const AddAgentPicker = () => {
 
   const filteredAgents = useMemo(() => {
     const q = filter.trim().toLowerCase()
-    if (!q) return availableAgents
-    return availableAgents.filter((a) =>
+    if (!q) return hiredAgents
+    return hiredAgents.filter((a) =>
       a.name.toLowerCase().includes(q) || a.description.toLowerCase().includes(q),
     )
-  }, [availableAgents, filter])
+  }, [hiredAgents, filter])
 
   if (!addAgentOpen) return null
 
@@ -100,7 +100,7 @@ const AddAgentPicker = () => {
           </div>
           {filteredAgents.length === 0 ? (
             <div className="px-2.5 py-4 text-[11px] text-text-muted text-center">
-              {availableAgents.length === 0 ? 'Loading agents…' : 'No agents match your search.'}
+              {hiredAgents.length === 0 ? 'Loading agents…' : 'No agents match your search.'}
             </div>
           ) : filteredAgents.map((ag) => {
             const isBusy = busyAgentId === ag.id

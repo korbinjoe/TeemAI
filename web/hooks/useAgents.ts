@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { AgentSummary, AgentPersonality } from '../types/agentConfig'
 import { API_BASE, authFetch } from '@/config/api'
 import { parseInstanceId } from '../../shared/utils'
+import { initDefaultHiredAgents } from '@/utils/teamStorage'
 
 const instanceFallbackHandler = <T,>(): ProxyHandler<Record<string, T>> => ({
   get(target, prop, receiver) {
@@ -23,6 +24,7 @@ const instanceFallbackHandler = <T,>(): ProxyHandler<Record<string, T>> => ({
  */
 export const useAgents = () => {
   const [availableAgents, setAvailableAgents] = useState<AgentSummary[]>([])
+  const [hiredAgentIds, setHiredAgentIds] = useState<string[]>([])
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null)
   const [targetAgentId, setTargetAgentId] = useState<string | null>(null)
 
@@ -35,9 +37,17 @@ export const useAgents = () => {
     if (availableAgents.length > 0) return
     authFetch(`${API_BASE}/api/agents`)
       .then((res) => res.ok ? res.json() : Promise.reject(new Error()))
-      .then((agents: AgentSummary[]) => setAvailableAgents(agents))
+      .then((agents: AgentSummary[]) => {
+        setAvailableAgents(agents)
+        initDefaultHiredAgents(agents as Array<AgentSummary & { source: string }>).then(setHiredAgentIds)
+      })
       .catch(() => {})
   }, [availableAgents.length])
+
+  const hiredAgents = useMemo(
+    () => availableAgents.filter((a) => hiredAgentIds.includes(a.id)),
+    [availableAgents, hiredAgentIds],
+  )
 
   const currentAgentName = useMemo(() => {
     const id = targetAgentId || selectedAgentId
@@ -70,6 +80,7 @@ export const useAgents = () => {
 
   return {
     availableAgents,
+    hiredAgents,
     setAvailableAgents,
     selectedAgentId,
     targetAgentId,

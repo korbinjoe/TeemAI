@@ -59,9 +59,16 @@ const AgentSwitchMenu = ({ port, currentAgentId, onSelect, onCancel }: AgentSwit
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch(`http://localhost:${port}/api/agents`)
-        const data = await res.json()
-        setAgents(Array.isArray(data) ? data : [])
+        const [agentsRes, hiredRes] = await Promise.all([
+          fetch(`http://localhost:${port}/api/agents`),
+          fetch(`http://localhost:${port}/api/preferences/hired-agents`),
+        ])
+        const data = await agentsRes.json()
+        const allAgents: Agent[] = Array.isArray(data) ? data : []
+        const { ids: hiredIds } = hiredRes.ok
+          ? await hiredRes.json()
+          : { ids: allAgents.map((a) => a.id) }
+        setAgents(allAgents.filter((a) => hiredIds.includes(a.id)))
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load agents')
       } finally {

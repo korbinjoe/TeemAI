@@ -527,3 +527,170 @@ describe('Scorer edge cases', () => {
     expect(scoreResponse(s, 'x and y detected').grade).toBe('pass')
   })
 })
+
+// ══════════════════════════════════════════════════
+// Suite 3: E2E Lifecycle Simulation
+// ══════════════════════════════════════════════════
+
+describe('E2E Step 1: Project Kickoff — DAG Construction', () => {
+  const step: Scenario = {
+    id: 'step-1', name: 'DAG Construction',
+    passSignals: ['requirements', 'ui-design', 'design', 'fe-tech', 'be-tech', 'frontend',
+      'backend', 'parallel', 'integration', 'testing', 'test', 'review',
+      'deployment', 'deploy', 'depends', 'dependsOn', 'DAG', 'workflow',
+      'create-workflow', 'product-strategist', 'architect', 'fullstack',
+      'code-reviewer', 'devops', 'sequence', 'after'],
+    failSignals: ['handoff.sh', 'single agent', 'one agent', 'clarify', 'clarification'],
+  }
+
+  it('scores pass when Lead constructs multi-stage DAG with parallel branches', () => {
+    const response = `This requires a multi-stage DAG with create-workflow.sh:
+    1. requirements (product-strategist)
+    2. ui-design (ui-designer), depends on requirements
+    3. fe-tech-design (architect) and be-tech-design (architect) run in parallel after ui-design
+    4. fe-develop (fullstack-engineer) after fe-tech, be-develop after be-tech — also parallel
+    5. integration (fullstack-engineer) depends on both fe-develop and be-develop
+    6. testing (code-reviewer) after integration
+    7. deployment (devops-engineer) after testing`
+    expect(scoreResponse(step, response).grade).toBe('pass')
+  })
+
+  it('scores fail when Lead uses single handoff instead of DAG', () => {
+    const response = `This is a straightforward feature request. I'll use handoff.sh to dispatch to a single agent who can handle it end-to-end.`
+    expect(scoreResponse(step, response).grade).toBe('fail')
+  })
+
+  it('scores partial when Lead builds DAG but also mentions clarification', () => {
+    const response = `I'll create a DAG with requirements, design, frontend and backend in parallel, integration, testing, deployment. But first let me ask for clarification on the exact scope.`
+    expect(scoreResponse(step, response).grade).toBe('partial')
+  })
+})
+
+describe('E2E Step 2: Requirements Done — Advance', () => {
+  const step: Scenario = {
+    id: 'step-2', name: 'Clean Advance',
+    passSignals: ['advance', 'proceed', 'start', 'ui-design', 'satisfactory',
+      'PRD', 'complete', '4 modules', 'user stories', 'looks good', 'next', 'ready'],
+    failSignals: ['reject', 'missing', 'incomplete', 'insufficient'],
+  }
+
+  it('scores pass when Lead advances to ui-design', () => {
+    const response = `The PRD looks complete with 4 modules and clear user stories. I'll advance-workflow to start the ui-design task.`
+    expect(scoreResponse(step, response).grade).toBe('pass')
+  })
+
+  it('scores fail when Lead unnecessarily rejects', () => {
+    const response = `I'm not confident in this output. I'll reject it and ask the agent to redo.`
+    expect(scoreResponse(step, response).grade).toBe('fail')
+  })
+})
+
+describe('E2E Step 3: Design Boundary Violation — Reject', () => {
+  const step: Scenario = {
+    id: 'step-3', name: 'Boundary Violation',
+    passSignals: ['reject', 'boundary', 'violation', '.tsx', '.css', 'code files',
+      'should not', 'only DESIGN.md', 'implementation', 'downstream',
+      'overstepped', 'scope', 'starter files', 'not supposed to'],
+    failSignals: ['advance', 'proceed', 'looks good', 'satisfactory'],
+  }
+
+  it('scores pass when Lead rejects boundary violation', () => {
+    const response = `The ui-designer created .tsx and .css files which is a boundary violation — the design task should only produce DESIGN.md. I'll reject this and ask them to remove the implementation code files.`
+    expect(scoreResponse(step, response).grade).toBe('pass')
+  })
+
+  it('scores fail when Lead advances despite violation', () => {
+    const response = `Everything is fine here. I'll advance-workflow to proceed to the next stage.`
+    expect(scoreResponse(step, response).grade).toBe('fail')
+  })
+})
+
+describe('E2E Step 4: Design Retry OK — Parallel Dispatch', () => {
+  const step: Scenario = {
+    id: 'step-4', name: 'Parallel Dispatch',
+    passSignals: ['advance', 'proceed', 'parallel', 'both', 'fe-tech', 'be-tech',
+      'frontend', 'backend', 'start', 'corrected', 'fixed', 'clean', 'satisfactory', 'two tasks', 'ready'],
+    failSignals: ['reject', 'still', 'violation', 'boundary'],
+  }
+
+  it('scores pass when Lead advances both parallel tasks', () => {
+    const response = `The design has been corrected — clean DESIGN.md output. I'll advance to start both fe-tech-design and be-tech-design in parallel.`
+    expect(scoreResponse(step, response).grade).toBe('pass')
+  })
+
+  it('scores fail when Lead rejects the clean retry', () => {
+    const response = `I'm still concerned about a boundary violation. Let me reject this again.`
+    expect(scoreResponse(step, response).grade).toBe('fail')
+  })
+})
+
+describe('E2E Step 5: Tech Design Conflict — REST vs GraphQL', () => {
+  const step: Scenario = {
+    id: 'step-5', name: 'API Conflict',
+    passSignals: ['conflict', 'contradiction', 'mismatch', 'inconsistent',
+      'REST', 'GraphQL', 'API', 'different', 'incompatible',
+      'escalate', 'clarify', 'resolve', 'align', 'open_question', 'user', 'decide'],
+    failSignals: ['advance', 'proceed', 'looks good', 'satisfactory', 'no issues'],
+  }
+
+  it('scores pass when Lead detects REST vs GraphQL conflict', () => {
+    const response = `There's a conflict between the two tech designs: FE chose REST with React Query but BE chose GraphQL with Apollo. These are incompatible API protocols. I need to escalate this to the user to decide which approach to use.`
+    expect(scoreResponse(step, response).grade).toBe('pass')
+  })
+
+  it('scores fail when Lead blindly advances', () => {
+    const response = `Both tech designs look good. No issues found. I'll advance-workflow to proceed to development.`
+    expect(scoreResponse(step, response).grade).toBe('fail')
+  })
+})
+
+describe('E2E Step 6: Shallow Testing — Reject Review', () => {
+  const step: Scenario = {
+    id: 'step-6', name: 'Shallow Review',
+    passSignals: ['reject', 'shallow', 'insufficient', 'too few', 'only 4',
+      'tool calls', 'low cost', '$0.015', '20', 'files',
+      'thorough', 'security', 'edge cases', '2FA', 'auth',
+      'not enough', 'comprehensive', 'deeper', 'more'],
+    failSignals: ['advance', 'proceed', 'deploy', 'looks good', 'satisfactory'],
+  }
+
+  it('scores pass when Lead rejects shallow testing', () => {
+    const response = `This testing is clearly insufficient. Only 4 tool calls and $0.015 for a 20+ file application with security features like 2FA. I'll reject and demand the reviewer check auth, edge cases, and all modules thoroughly.`
+    expect(scoreResponse(step, response).grade).toBe('pass')
+  })
+
+  it('scores fail when Lead deploys with shallow review', () => {
+    const response = `Testing passed with no issues. Looks good — let's proceed to deploy.`
+    expect(scoreResponse(step, response).grade).toBe('fail')
+  })
+})
+
+describe('E2E Step 7: Workflow Complete — Final Summary', () => {
+  const step: Scenario = {
+    id: 'step-7', name: 'Final Summary',
+    passSignals: ['completed', 'summary', 'accomplished', 'delivered',
+      'rejected', 'rejection', 'boundary', 'violation',
+      'REST', 'GraphQL', 'conflict', 'resolved',
+      'shallow', 'retry', 'friction', 'ui-design', 'testing', 'deployed'],
+    failSignals: [],
+  }
+
+  it('scores pass when Lead gives comprehensive summary with friction notes', () => {
+    const response = `Workflow completed. Summary of accomplishments:
+    - Requirements: PRD with 4 modules
+    - UI Design: DESIGN.md delivered (rejected once for boundary violation — created .tsx files)
+    - Tech Design: REST/GraphQL conflict between FE and BE architects, resolved after escalation
+    - Development: Frontend and backend implemented in parallel
+    - Integration: API contracts verified
+    - Testing: Rejected first attempt for shallow review, second pass covered all modules
+    - Deployment: Deployed successfully
+
+    Friction points: ui-design boundary violation, REST vs GraphQL conflict, shallow testing rejection.`
+    expect(scoreResponse(step, response).grade).toBe('pass')
+  })
+
+  it('scores fail when Lead gives bare-bones summary', () => {
+    const response = `All tasks are done. The settings page has been built and deployed.`
+    expect(scoreResponse(step, response).grade).toBe('fail')
+  })
+})

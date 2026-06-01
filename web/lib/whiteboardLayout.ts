@@ -98,6 +98,7 @@ export interface DagEdge {
   target: string
   type: 'handoff' | 'ref' | 'causal' | 'temporal' | 'inferred'
   isCritical: boolean
+  label?: string
 }
 
 export interface DagLayout {
@@ -165,9 +166,19 @@ export const layoutWhiteboardDag = (
   const allEntries = goal ? [goal, ...active] : active
   const entryById = new Map(allEntries.map((e) => [e.id, e]))
 
+  const handoffTargetAgent = new Map<string, string>()
+  for (const e of allEntries) {
+    if (e.type !== 'handoff') continue
+    const toAgent = extractToAgent(e, entryById, normalizeAgent(e.by))
+    if (toAgent) handoffTargetAgent.set(e.id, toAgent)
+  }
+
+  const agentOf = (e: WhiteboardEntry) =>
+    handoffTargetAgent.get(e.id) ?? normalizeAgent(e.by)
+
   const byAgent = new Map<string, WhiteboardEntry[]>()
   for (const e of allEntries) {
-    const a = normalizeAgent(e.by)
+    const a = agentOf(e)
     const list = byAgent.get(a) ?? []
     list.push(e)
     byAgent.set(a, list)
@@ -210,20 +221,20 @@ export const layoutWhiteboardDag = (
   for (const e of allEntries) {
     if (e.type !== 'handoff') continue
     const fromAgent = normalizeAgent(e.by)
-    const toAgent = extractToAgent(e, entryById, fromAgent)
+    const toAgent = handoffTargetAgent.get(e.id)
     if (!toAgent) continue
 
-    const targetList = byAgent.get(toAgent) ?? []
-    const targetEntry = targetList.find(
-      (t) =>
-        t.timestamp.localeCompare(e.timestamp) > 0 && t.type !== 'handoff',
+    const fromList = byAgent.get(fromAgent) ?? []
+    const sourceEntry = [...fromList].reverse().find(
+      (s) => s.timestamp.localeCompare(e.timestamp) <= 0,
     )
-    if (targetEntry) {
-      addLayoutEdge(e.id, targetEntry.id)
+
+    if (sourceEntry) {
+      addLayoutEdge(sourceEntry.id, e.id)
       edgeList.push({
-        id: `handoff-${e.id}-${targetEntry.id}`,
-        source: e.id,
-        target: targetEntry.id,
+        id: `handoff-${sourceEntry.id}-${e.id}`,
+        source: sourceEntry.id,
+        target: e.id,
         type: 'handoff',
         isCritical: false,
       })
@@ -235,7 +246,7 @@ export const layoutWhiteboardDag = (
       if (agent === normalizeAgent(goal.by) && list[0]?.id === goal.id) {
         if (list.length > 1) {
           const first = list[1]
-          if (!childToParents.get(first.id)?.includes(goal.id)) {
+          if (!childToParents.get(first.id)?.includes(goal.id) && first.type !== 'handoff') {
             addLayoutEdge(goal.id, first.id)
             edgeList.push({
               id: `goal-fanout-${goal.id}-${first.id}`,
@@ -251,6 +262,7 @@ export const layoutWhiteboardDag = (
         if (
           first &&
           first.id !== goal.id &&
+          first.type !== 'handoff' &&
           !childToParents.get(first.id)?.includes(goal.id)
         ) {
           addLayoutEdge(goal.id, first.id)
@@ -278,12 +290,12 @@ export const layoutWhiteboardDag = (
 
   for (let i = 0; i < sorted.length; i++) {
     const src = sorted[i]
-    const srcAgent = normalizeAgent(src.by)
+    const srcAgent = agentOf(src)
     const srcTs = Date.parse(src.timestamp)
 
     for (let j = i + 1; j < sorted.length; j++) {
       const tgt = sorted[j]
-      const tgtAgent = normalizeAgent(tgt.by)
+      const tgtAgent = agentOf(tgt)
       const tgtTs = Date.parse(tgt.timestamp)
 
       if (connectedPairSet.has(`${src.id}::${tgt.id}`)) continue
@@ -406,7 +418,7 @@ export const layoutWhiteboardDag = (
     layer.sort((a, b) => {
       const cmp = a.timestamp.localeCompare(b.timestamp)
       if (cmp !== 0) return cmp
-      return normalizeAgent(a.by).localeCompare(normalizeAgent(b.by))
+      return agentOf(a).localeCompare(agentOf(b))
     })
   }
 
@@ -447,7 +459,7 @@ export const layoutWhiteboardDag = (
       nodes.push({
         id: e.id,
         by: e.by,
-        agent: normalizeAgent(e.by),
+        agent: agentOf(e),
         type: e.type,
         group: typeColorGroup(e.type),
         x,
@@ -550,8 +562,13 @@ const extractToAgent = (
     if (ref && normalizeAgent(ref.by) !== fromAgent)
       return normalizeAgent(ref.by)
   }
-  const m = handoff.summary.match(/→\s*([\w\-:]+)/)
-  return m?.[1] ? normalizeAgent(m[1]) : undefined
+  const tags = handoff.tags ?? []
+  if (tags.length >= 3 && tags[0] === 'handoff') {
+    const tagTo = normalizeAgent(tags[2])
+    if (tagTo && tagTo !== fromAgent) return tagTo
+  }
+  const m = handoff.summary.match(/→\s*([\w\-]+)/)
+  return m?.[1] ? normalizeAgent(m[1].toLowerCase()) : undefined
 }
 
 // ============================================================

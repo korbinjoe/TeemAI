@@ -274,26 +274,6 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     return firstAgent ? `group-orphan-${firstAgent.id}` : null
   }, [visibleMessages])
 
-  const setGroupActivity = useCallback((groupId: string, activity: AgentActivity) => {
-    setGroupActivities((prev) => {
-      const existing = prev[groupId]
-      if (
-        existing &&
-        existing.phase === activity.phase &&
-        existing.background === activity.background &&
-        existing.currentTool === activity.currentTool &&
-        existing.toolCount === activity.toolCount &&
-        existing.toolCompleted === activity.toolCompleted &&
-        existing.hasText === activity.hasText &&
-        existing.cost === activity.cost &&
-        existing.tokens?.output === activity.tokens?.output
-      ) {
-        return prev
-      }
-      return { ...prev, [groupId]: activity }
-    })
-  }, [])
-
   // AutoSend initialMessage. Route to the agent slot that will actually receive
   // this turn (locked agent > init agent > current selection); otherwise fall
   // back to the chat-level system slot so the message never gets lost.
@@ -328,9 +308,40 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   }, [lastUserGroupId])
 
   useEffect(() => {
-    if (!activeMergedActivity) return
-    if (lastUserGroupId) setGroupActivity(lastUserGroupId, activeMergedActivity)
-  }, [activeMergedActivity, lastUserGroupId, setGroupActivity])
+    if (groups.length === 0) return
+    const lastGroupIds = new Map<string, string>()
+    for (const g of groups) {
+      if (g.agentId) lastGroupIds.set(g.agentId, g.id)
+    }
+    setGroupActivities((prev) => {
+      const next = { ...prev }
+      let changed = false
+      for (const group of groups) {
+        const activity = group.agentId ? expertActivities[group.agentId] : activeMergedActivity
+        if (!activity) continue
+        const isLastForAgent = group.agentId ? lastGroupIds.get(group.agentId) === group.id : false
+        if (!isLastForAgent) {
+          const existing = next[group.id]
+          if (existing && ['completed', 'waiting_input', 'error'].includes(existing.phase)) continue
+        }
+        const existing = next[group.id]
+        if (
+          existing &&
+          existing.phase === activity.phase &&
+          existing.background === activity.background &&
+          existing.currentTool === activity.currentTool &&
+          existing.toolCount === activity.toolCount &&
+          existing.toolCompleted === activity.toolCompleted &&
+          existing.hasText === activity.hasText &&
+          existing.cost === activity.cost &&
+          existing.tokens?.output === activity.tokens?.output
+        ) continue
+        next[group.id] = activity
+        changed = true
+      }
+      return changed ? next : prev
+    })
+  }, [groups, expertActivities, activeMergedActivity])
 
   useEffect(() => {
     if (!isActive) return

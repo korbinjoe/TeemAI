@@ -50,6 +50,7 @@ export interface AgentActivity {
     operation: 'create' | 'edit' | 'delete' | 'read'
   }
   exitReason?: 'user_stop' | 'timeout' | 'model_switch'
+  startedAt?: number
   updatedAt: number
 }
 

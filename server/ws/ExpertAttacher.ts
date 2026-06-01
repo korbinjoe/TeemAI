@@ -116,6 +116,7 @@ export const createExpertAttacher = (deps: ExpertAttacherDeps) => {
       type: 'expert:activity',
       payload: {
         agentId, chatId, sessionId: existingSession.sessionId,
+        startedAt: existingSession.createdAt,
         activity: lastActivity ?? { phase: 'waiting_input', background: false, toolCount: 0, toolCompleted: 0, hasText: false, updatedAt: Date.now() },
       },
     })

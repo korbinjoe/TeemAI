@@ -11,7 +11,7 @@ const TemporalFlowEdgeInner = (props: EdgeProps) => {
   const { isHighlighted } = (props.data ?? {}) as TemporalFlowEdgeData
 
   const sw = isHighlighted ? 2 : 1
-  const op = isHighlighted ? 0.35 : 0.04
+  const op = isHighlighted ? 0.45 : 0.18
 
   return (
     <BezierEdge

@@ -13,7 +13,7 @@ import {
 import '@xyflow/react/dist/style.css'
 
 import {
-  Target, X, Archive, Loader2,
+  X, Archive, Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -149,12 +149,8 @@ const WhiteboardFlowViewInner = ({
   }, [detailNode, selectedNode])
 
   const visibleNodes = useMemo(() => {
-    return layout.nodes.filter((n) => {
-      if (hiddenTypes.has(n.type)) return false
-      if (goal && n.type === 'goal') return false
-      return true
-    })
-  }, [layout.nodes, hiddenTypes, goal])
+    return layout.nodes.filter((n) => !hiddenTypes.has(n.type))
+  }, [layout.nodes, hiddenTypes])
 
   const visibleIds = useMemo(() => new Set(visibleNodes.map((n) => n.id)), [visibleNodes])
 
@@ -306,27 +302,7 @@ const WhiteboardFlowViewInner = ({
 
   return (
     <div className={cn('h-full flex flex-col bg-bg-primary', className)}>
-      {/* Goal Hero */}
-      {goal && (
-        <div
-          className="mx-3 mt-2 mb-1 px-3 py-2 rounded-r-md"
-          style={{
-            background: 'rgba(var(--accent-brand), 0.06)',
-            borderLeft: '2px solid rgb(var(--accent-brand))',
-          }}
-        >
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-[rgb(var(--accent-brand))] font-semibold">
-            <Target size={10} />
-            <span>Current target</span>
-          </div>
-          <div className="mt-1 text-sm text-text-primary leading-snug break-words">{goal.summary}</div>
-          <div className="mt-1 text-[10px] text-text-muted">
-            <span className="font-mono">{goal.by}</span> · {formatRelative(goal.timestamp)}
-          </div>
-        </div>
-      )}
-
-      <div className="flex-1 min-h-0 mx-3 mb-2 rounded-md border border-border-subtle bg-bg-secondary relative whiteboard-dag">
+      <div className="flex-1 min-h-0 mx-3 my-2 rounded-md border border-border-subtle bg-bg-secondary relative whiteboard-dag">
         <ReactFlow
           nodes={flowNodes}
           edges={flowEdges}

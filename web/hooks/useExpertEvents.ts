@@ -169,13 +169,19 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
     }
   }
 
-  const handleExpertActivity = (payload: { agentId: string; chatId?: string; activity: AgentActivity }) => {
+  const handleExpertActivity = (payload: { agentId: string; chatId?: string; startedAt?: number; activity: AgentActivity }) => {
     if (!isCurrentChatEvent(payload)) return
     if (!payload?.agentId || !payload?.activity) return
+    const activity = payload.startedAt
+      ? { ...payload.activity, startedAt: payload.startedAt }
+      : payload.activity
     setExpertActivities((prev) => {
       const existing = prev[payload.agentId]
-      if (existing && isSameActivity(existing, payload.activity)) return prev
-      return { ...prev, [payload.agentId]: payload.activity }
+      if (existing && isSameActivity(existing, activity)) return prev
+      if (existing?.startedAt && !activity.startedAt) {
+        return { ...prev, [payload.agentId]: { ...activity, startedAt: existing.startedAt } }
+      }
+      return { ...prev, [payload.agentId]: activity }
     })
   }
 
@@ -260,6 +266,7 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
         toolCount: 0,
         toolCompleted: 0,
         hasText: false,
+        startedAt: Date.now(),
         updatedAt: Date.now(),
       }
       if (existing && isSameActivity(existing, next)) return prev

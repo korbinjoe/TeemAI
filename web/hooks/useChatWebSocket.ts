@@ -381,7 +381,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     }
     setExpertActivities((prev) => ({
       ...prev,
-      [agentId]: { phase: 'initializing', background: false, toolCount: 0, toolCompleted: 0, hasText: false, updatedAt: Date.now() },
+      [agentId]: { phase: 'initializing', background: false, toolCount: 0, toolCompleted: 0, hasText: false, startedAt: Date.now(), updatedAt: Date.now() },
     }))
     wsClient.send('expert:direct-input', {
       chatId,

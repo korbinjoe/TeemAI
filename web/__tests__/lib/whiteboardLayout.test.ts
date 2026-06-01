@@ -261,18 +261,19 @@ describe('layoutWhiteboardDag — critical path', () => {
     expect(nodes.find((n) => n.id === 'C')!.isCritical).toBe(false)
   })
 
-  it('handoff chain included in critical path', () => {
-    const goal = mkGoal('g1', min(0))
+  it('handoff edge connects goal to handoff node on critical path', () => {
+    const goal = mk('g1', 'goal', 'lead', min(0))
     const entries = [
-      mk('h1', 'handoff', 'lead', min(1), { refs: { entries: ['s1'] } }),
+      mk('h1', 'handoff', 'lead', min(1), { tags: ['handoff', 'lead', 'shield'] }),
       mk('s1', 'decision', 'shield', min(2)),
     ]
-    const { nodes } = layoutWhiteboardDag(entries, goal, min(5))
-    // goal-fanout → h1, handoff h1→s1, goal-fanout → s1
+    const { nodes, edges } = layoutWhiteboardDag(entries, goal, min(5))
     const h1 = nodes.find((n) => n.id === 'h1')!
-    const s1 = nodes.find((n) => n.id === 's1')!
+    expect(h1.agent).toBe('shield')
     expect(h1.isCritical).toBe(true)
-    expect(s1.isCritical).toBe(true)
+    const handoffEdge = edges.find((e) => e.type === 'handoff')!
+    expect(handoffEdge.source).toBe('g1')
+    expect(handoffEdge.target).toBe('h1')
   })
 
   it('goal-fanout edges included in critical path', () => {
@@ -318,16 +319,20 @@ describe('layoutWhiteboardDag — critical path', () => {
 // ============================================================
 
 describe('layoutWhiteboardDag — handoff edges', () => {
-  it('handoff connects to target agent next non-handoff entry', () => {
+  it('handoff creates labeled edge from source agent to handoff node', () => {
     const entries = [
-      mk('h1', 'handoff', 'forge', min(0), { refs: { entries: ['s1'] } }),
+      mk('a1', 'decision', 'forge', min(0)),
+      mk('h1', 'handoff', 'forge', min(1), { tags: ['handoff', 'forge', 'shield'] }),
       mk('s1', 'decision', 'shield', min(2)),
     ]
-    const { edges } = layoutWhiteboardDag(entries, null, min(5))
+    const { edges, nodes } = layoutWhiteboardDag(entries, null, min(5))
+    const h1 = nodes.find((n) => n.id === 'h1')!
+    expect(h1.agent).toBe('shield')
     const handoffs = edges.filter((e) => e.type === 'handoff')
     expect(handoffs).toHaveLength(1)
-    expect(handoffs[0].source).toBe('h1')
-    expect(handoffs[0].target).toBe('s1')
+    expect(handoffs[0].source).toBe('a1')
+    expect(handoffs[0].target).toBe('h1')
+    expect(handoffs[0].label).toBe('Handoff')
   })
 
   it('target agent no subsequent entry → no handoff edge created', () => {
@@ -338,15 +343,15 @@ describe('layoutWhiteboardDag — handoff edges', () => {
     expect(edges.filter((e) => e.type === 'handoff')).toEqual([])
   })
 
-  it('handoff edges participate in layout layering', () => {
+  it('handoff edge ensures handoff node layered after source', () => {
     const entries = [
-      mk('h1', 'handoff', 'forge', min(0), { refs: { entries: ['s1'] } }),
-      mk('s1', 'decision', 'shield', min(2)),
+      mk('a1', 'decision', 'forge', min(0)),
+      mk('h1', 'handoff', 'forge', min(1), { tags: ['handoff', 'forge', 'shield'] }),
     ]
     const { nodes } = layoutWhiteboardDag(entries, null, min(5))
+    const a1 = nodes.find((n) => n.id === 'a1')!
     const h1 = nodes.find((n) => n.id === 'h1')!
-    const s1 = nodes.find((n) => n.id === 's1')!
-    expect(h1.layer).toBeLessThan(s1.layer)
+    expect(a1.layer).toBeLessThan(h1.layer)
   })
 })
 

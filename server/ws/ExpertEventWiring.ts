@@ -95,6 +95,12 @@ export const wireExpertStreamHandlers = (deps: ExpertEventWiringDeps): WiredExpe
   acpClient.onUpdate((params: ACPSessionUpdateParams) => {
     const wsMsg = acpUpdateToWSMessage(params.update, bridgeCtx)
     if (wsMsg) {
+      if (wsMsg.type === 'expert:activity') {
+        const session = sessionRegistry.get(sessionId)
+        if (session?.createdAt) {
+          (wsMsg.payload as Record<string, unknown>).startedAt = session.createdAt
+        }
+      }
       sessionRegistry.sendToSession(sessionId, wsMsg as unknown as Record<string, unknown>)
     }
   })

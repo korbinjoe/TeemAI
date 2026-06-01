@@ -19,13 +19,6 @@ const TEMPLATES = [
 
 const FEED_PREVIEW_COUNT = 3
 
-const getGreeting = (): string => {
-  const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 18) return 'Good afternoon'
-  return 'Good evening'
-}
-
 const relativeTime = (dateStr: string | undefined): string => {
   if (!dateStr) return ''
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -33,6 +26,13 @@ const relativeTime = (dateStr: string | undefined): string => {
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`
   return `${Math.floor(diff / 86_400_000)}d ago`
+}
+
+const getGreeting = (): string => {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 18) return 'Good afternoon'
+  return 'Good evening'
 }
 
 const WorkspaceHome = () => {

@@ -30,7 +30,7 @@ export interface WsReceiveEventMap {
   }
 
   // Expert Agent
-  'expert:activity': { agentId: string; chatId: string; activity: AgentActivity }
+  'expert:activity': { agentId: string; chatId: string; startedAt?: number; activity: AgentActivity }
   'expert:started': { agentId: string; chatId: string; agentName: string; sessionId: string; agentIcon: string; status: 'running' | 'completed'; exitCode?: number }
   'expert:exit': { agentId: string; chatId: string; exitCode?: number }
   'expert:stopped': { agentId: string; chatId: string; exitCode?: number; exitReason?: 'user_stop' | 'timeout' | 'model_switch' }

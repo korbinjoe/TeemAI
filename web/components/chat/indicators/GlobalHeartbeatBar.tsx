@@ -239,8 +239,10 @@ const GlobalHeartbeatBar = memo(({
   }, [activeEntries])
 
   const activeIds = useMemo(() => new Set(activeEntries.map(([id]) => id)), [activeEntries])
-  for (const [id] of activeEntries) {
-    if (!agentStartTimes.has(id)) agentStartTimes.set(id, Date.now())
+  for (const [id, activity] of activeEntries) {
+    if (!agentStartTimes.has(id)) {
+      agentStartTimes.set(id, activity.startedAt ?? Date.now())
+    }
   }
   for (const id of Array.from(agentStartTimes.keys())) {
     if (!activeIds.has(id)) agentStartTimes.delete(id)

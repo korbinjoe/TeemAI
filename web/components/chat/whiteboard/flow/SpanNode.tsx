@@ -5,7 +5,7 @@ import { FileText, Link2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAgents } from '@/hooks/useAgents'
 import AgentAvatar from '@/components/ui/agent-avatar'
-import type { DagNode } from '@/lib/whiteboardLayout'
+import { normalizeAgent, type DagNode } from '@/lib/whiteboardLayout'
 import { TYPE_VISUAL } from './TypeChip'
 
 export interface SpanNodeData {
@@ -48,6 +48,13 @@ const TYPE_ACCENT: Record<string, string> = {
   handoff: 'rgb(14 165 233)',
 }
 
+const stripHandoffPrefix = (summary: string): string => {
+  const arrowMatch = summary.match(/^→\s*[\w-]+[:\s]\s*/)
+  if (arrowMatch) return summary.slice(arrowMatch[0].length) || summary
+  const colonIdx = summary.indexOf(': ')
+  return colonIdx !== -1 ? summary.slice(colonIdx + 2) : summary
+}
+
 const SpanNodeInner = ({ data }: NodeProps) => {
   const { t } = useTranslation('chat')
   const { node, isHighlighted, isDimmed, isSelected, onHover, onLeave, onClick } = data as SpanNodeData
@@ -57,6 +64,9 @@ const SpanNodeInner = ({ data }: NodeProps) => {
   const displayName = agentNames[node.agent] ?? node.agent
 
   const accentColor = TYPE_ACCENT[node.type] ?? 'rgb(var(--border))'
+  const isHandoff = node.type === 'handoff'
+  const originAgent = normalizeAgent(node.by)
+  const originName = agentNames[originAgent] ?? originAgent
 
   const handleMouseEnter = (ev: React.MouseEvent<HTMLDivElement>) => {
     onHover(node, ev.currentTarget.getBoundingClientRect())
@@ -106,8 +116,14 @@ const SpanNodeInner = ({ data }: NodeProps) => {
               background: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
             }}
           >
-            <Icon size={11} strokeWidth={2.5} aria-hidden="true" />
-            {t(visual.labelKey)}
+            {isHandoff ? (
+              <>→ {displayName}</>
+            ) : (
+              <>
+                <Icon size={11} strokeWidth={2.5} aria-hidden="true" />
+                {t(visual.labelKey)}
+              </>
+            )}
           </span>
           <span className="ml-auto text-[10px] text-text-muted font-mono shrink-0">
             {relTime}
@@ -122,12 +138,12 @@ const SpanNodeInner = ({ data }: NodeProps) => {
 
         {/* Summary */}
         <div className="text-[11.5px] text-text-primary leading-snug line-clamp-2 break-words">
-          {node.entry.summary}
+          {isHandoff ? stripHandoffPrefix(node.entry.summary) : node.entry.summary}
         </div>
 
         <div className="flex items-center gap-1.5 min-w-0">
-          <AgentAvatar name={displayName} agentId={node.agent} size="xs" />
-          <span className="text-[10.5px] text-text-muted truncate">{displayName}</span>
+          <AgentAvatar name={originName} agentId={originAgent} size="xs" />
+          <span className="text-[10.5px] text-text-muted truncate">{originName}</span>
 
           {(fileCount > 0 || refCount > 0 || tags.length > 0) && (
             <div className="ml-auto flex items-center gap-2 shrink-0">

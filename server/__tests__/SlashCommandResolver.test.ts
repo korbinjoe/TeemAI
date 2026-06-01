@@ -114,9 +114,10 @@ describe('expandSlashCommand', () => {
     expect(marker?.original).toBe(input)
   })
 
-  it('does not inject marker when command is not expanded', async () => {
+  it('does not inject marker when command is not expanded (slash stripped)', async () => {
     const out = await expandSlashCommand('/nonexistent:command args', PROJECT_CWD)
     expect(decodeMarker(out)).toBeNull()
+    expect(out).toBe('nonexistent:command args')
   })
 
   it('falls back to user-level command and substitutes $ARGUMENTS', async () => {
@@ -146,10 +147,10 @@ describe('expandSlashCommand', () => {
     expect(out).toContain('Project body here.')
   })
 
-  it('passes through unknown custom commands unchanged', async () => {
+  it('strips slash prefix for unknown custom commands (natural language fallback)', async () => {
     const input = '/nonexistent:command some args'
     const out = await expandSlashCommand(input, PROJECT_CWD)
-    expect(out).toBe(input)
+    expect(out).toBe('nonexistent:command some args')
   })
 
   it('project command wins over user command for same name', async () => {

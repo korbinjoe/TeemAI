@@ -198,12 +198,12 @@ export const expandSlashCommand = async (text: string, cwd: string): Promise<str
   try {
     const file = await resolveCommandFile(cwd, segments)
     if (!file) {
-      log.warn('No command file found for slash command — passing through raw', { name: rawName, cwd, projectRoot: _projectRoot, segments })
-      return text
+      log.warn('No command file found for custom slash command — stripping prefix for natural language fallback', { name: rawName, cwd, projectRoot: _projectRoot, segments })
+      return text.replace(/^\//, '')
     }
     const raw = await readFile(file, 'utf-8')
     const body = stripFrontmatter(raw).trim()
-    if (!body) return text
+    if (!body) return text.replace(/^\//, '')
     const expanded = applyArguments(body, rawArgs)
     log.info('Expanded slash command', { name: rawName, file, argsLen: rawArgs.length })
     const marker = encodeSlashMarker({
@@ -213,10 +213,10 @@ export const expandSlashCommand = async (text: string, cwd: string): Promise<str
     })
     return `${marker}${expanded}`
   } catch (err) {
-    log.warn('Slash command expansion failed; passing through', {
+    log.warn('Slash command expansion failed — stripping prefix for natural language fallback', {
       name: rawName,
       error: err instanceof Error ? err.message : String(err),
     })
-    return text
+    return text.replace(/^\//, '')
   }
 }

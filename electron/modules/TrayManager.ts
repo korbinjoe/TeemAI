@@ -92,7 +92,7 @@ export class TrayManager {
   }
 
   setMissionCount(count: number): void {
-    this.tray?.setTitle(count > 0 ? `${count}` : '')
+    this.tray?.setTitle(count > 0 ? `${count}` : '', { fontType: 'monospacedDigit' })
   }
 
   destroy(): void {

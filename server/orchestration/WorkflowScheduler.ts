@@ -8,6 +8,20 @@ import type { SessionRegistry } from '../terminal/SessionRegistry'
 import type { TaskResult } from '../../shared/agent-message-types'
 import type { ChatActivityPayload } from '../terminal/ActivityAggregator'
 import { createLogger } from '../lib/logger'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
+import { readFile } from 'fs/promises'
+import { resolve } from 'path'
+
+const execFileAsync = promisify(execFile)
+
+interface EnrichedTaskContext {
+  summary: string
+  artifacts: TaskResult['artifacts']
+  modifiedFiles: TaskResult['modifiedFiles']
+  gitDiffStat?: string
+  artifactSnippets?: Array<{ path: string; content: string }>
+}
 
 const log = createLogger('WorkflowScheduler')
 
@@ -70,15 +84,34 @@ export class WorkflowScheduler {
 
       if (this.wokenLeadTasks.has(taskState.taskId)) continue
 
+      const taskCompleted = !this.looksLikeHelpRequest(agentActivity.logLine)
+
       log.info('Workflow task agent entered waiting_input', {
         workflowId: engine.workflowId,
         taskId: taskState.taskId,
         agentId: agentActivity.agentId,
+        inferredCompleted: taskCompleted,
+        logLine: agentActivity.logLine?.slice(0, 120),
       })
 
       this.wokenLeadTasks.add(taskState.taskId)
-      this.recordAndNotifyLead(engine, taskState.taskId, agentActivity.agentId, true)
+      this.recordAndNotifyLead(engine, taskState.taskId, agentActivity.agentId, taskCompleted)
     }
+  }
+
+  private looksLikeHelpRequest(logLine?: string): boolean {
+    if (!logLine) return false
+    const lower = logLine.toLowerCase()
+    const signals = [
+      'need guidance', 'need help', 'need input',
+      'please provide', 'please confirm', 'please clarify',
+      'i encountered', 'i\'m blocked', 'i\'m stuck', 'i\'m unable',
+      'cannot proceed', 'can\'t proceed',
+      'error:', 'failed to',
+      'what should i', 'how should i',
+      'could you', 'would you',
+    ]
+    return signals.some(s => lower.includes(s))
   }
 
   advanceWorkflow(workflowId: string): { started: string[]; error?: string } {
@@ -98,13 +131,23 @@ export class WorkflowScheduler {
   }
 
   private recordAndNotifyLead(engine: WorkflowEngine, taskId: string, agentId: string, taskCompleted: boolean): void {
+    const session = this.deps.sessionRegistry.findByChat(engine.chatId, agentId)
+    const snapshot = session?.activitySnapshot
+
+    const summaryParts: string[] = [
+      taskCompleted
+        ? `Agent ${agentId} completed task ${taskId}`
+        : `Agent ${agentId} failed task ${taskId}`,
+    ]
+    if (snapshot?.logLine) summaryParts.push(`Last output: ${snapshot.logLine}`)
+    if (snapshot?.toolCount) summaryParts.push(`Tools used: ${snapshot.toolCompleted ?? 0}/${snapshot.toolCount}`)
+    if (snapshot?.cost != null) summaryParts.push(`Cost: $${snapshot.cost.toFixed(4)}`)
+
     const result: TaskResult = {
       taskId,
       executor: agentId,
       status: taskCompleted ? 'completed' : 'failed',
-      summary: taskCompleted
-        ? `Agent ${agentId} completed task ${taskId}`
-        : `Agent ${agentId} failed task ${taskId}`,
+      summary: summaryParts.join(' | '),
       artifacts: [],
       modifiedFiles: [],
       failureReason: taskCompleted ? undefined : `agent_failed`,
@@ -112,26 +155,70 @@ export class WorkflowScheduler {
 
     engine.recordTaskResult(taskId, result)
 
-    const readyTasks = engine.getReadyTasks()
-    const state = engine.getState()
+    this.collectEnrichedContext(engine.chatId, result).then(enriched => {
+      const readyTasks = engine.getReadyTasks()
+      const state = engine.getState()
 
-    this.wakeLeadAgent(engine.chatId, engine.workflowId, {
-      event: taskCompleted ? 'task_completed' : 'task_failed',
-      completedTaskId: taskId,
-      completedBy: agentId,
-      workflowStatus: state.status,
-      tasks: Object.values(state.tasks).map(t => ({
-        taskId: t.taskId,
-        agentId: t.agentId,
-        status: t.status,
-        summary: t.result?.summary,
-      })),
-      readyTasks: readyTasks.map(t => ({
-        taskId: t.taskId,
-        agentId: t.agentId,
-        description: t.description,
-      })),
+      this.wakeLeadAgent(engine.chatId, engine.workflowId, {
+        event: taskCompleted ? 'task_completed' : 'task_failed',
+        completedTaskId: taskId,
+        completedBy: agentId,
+        workflowStatus: state.status,
+        tasks: Object.values(state.tasks).map(t => ({
+          taskId: t.taskId,
+          agentId: t.agentId,
+          status: t.status,
+          summary: t.result?.summary,
+          rejectCount: t.rejectCount > 0 ? t.rejectCount : undefined,
+        })),
+        readyTasks: readyTasks.map(t => ({
+          taskId: t.taskId,
+          agentId: t.agentId,
+          description: t.description,
+        })),
+        enriched,
+      })
+    }).catch(err => {
+      log.warn('Failed to collect enriched context, waking Lead with basic info', {
+        workflowId: engine.workflowId, taskId,
+        error: err instanceof Error ? err.message : String(err),
+      })
+      const readyTasks = engine.getReadyTasks()
+      const state = engine.getState()
+
+      this.wakeLeadAgent(engine.chatId, engine.workflowId, {
+        event: taskCompleted ? 'task_completed' : 'task_failed',
+        completedTaskId: taskId,
+        completedBy: agentId,
+        workflowStatus: state.status,
+        tasks: Object.values(state.tasks).map(t => ({
+          taskId: t.taskId,
+          agentId: t.agentId,
+          status: t.status,
+          summary: t.result?.summary,
+        })),
+        readyTasks: readyTasks.map(t => ({
+          taskId: t.taskId,
+          agentId: t.agentId,
+          description: t.description,
+        })),
+      })
     })
+  }
+
+  notifyLead(chatId: string, prompt: string): void {
+    const leadSession = this.deps.sessionRegistry.findByChat(chatId, LEAD_AGENT_ID)
+    if (leadSession && leadSession.acpClient?.isAlive()) {
+      const phase = leadSession.activitySnapshot?.phase
+      if (phase === 'waiting_input' || phase === 'waiting_confirmation') {
+        log.info('Waking existing Lead agent with prompt', { chatId })
+        leadSession.acpClient.prompt(leadSession.sessionId, prompt).catch(err => {
+          log.error('Failed to prompt Lead agent', { chatId, error: err instanceof Error ? err.message : String(err) })
+        })
+        return
+      }
+    }
+    this.startLeadAgent(chatId, prompt)
   }
 
   private wakeLeadAgent(chatId: string, workflowId: string, progress: Record<string, unknown>): void {
@@ -155,14 +242,43 @@ export class WorkflowScheduler {
     this.startLeadAgent(chatId, prompt)
   }
 
+  private async collectEnrichedContext(chatId: string, result: TaskResult): Promise<EnrichedTaskContext> {
+    const context: EnrichedTaskContext = {
+      summary: result.summary,
+      artifacts: result.artifacts,
+      modifiedFiles: result.modifiedFiles,
+    }
+
+    const cwd = this.resolveCwd(chatId)
+    if (!cwd) return context
+
+    try {
+      const { stdout } = await execFileAsync('git', ['diff', '--stat', 'HEAD~1'], { cwd, timeout: 5000 })
+      context.gitDiffStat = stdout.slice(0, 2000)
+    } catch { /* no git changes is fine */ }
+
+    for (const artifact of result.artifacts.slice(0, 5)) {
+      try {
+        const fullPath = resolve(cwd, artifact.path)
+        const content = await readFile(fullPath, 'utf-8')
+        const lines = content.split('\n').slice(0, 80).join('\n')
+        context.artifactSnippets ??= []
+        context.artifactSnippets.push({ path: artifact.path, content: lines })
+      } catch { /* file may not exist */ }
+    }
+
+    return context
+  }
+
   private buildLeadPrompt(workflowId: string, progress: Record<string, unknown>): string {
     const p = progress as {
       event: string
       completedTaskId: string
       completedBy: string
       workflowStatus: string
-      tasks: Array<{ taskId: string; agentId: string; status: string; summary?: string }>
+      tasks: Array<{ taskId: string; agentId: string; status: string; summary?: string; rejectCount?: number }>
       readyTasks: Array<{ taskId: string; agentId: string; description: string }>
+      enriched?: EnrichedTaskContext
     }
 
     const taskLines = p.tasks.map(t => {
@@ -170,12 +286,34 @@ export class WorkflowScheduler {
                    t.status === 'running' ? '[running]' :
                    t.status === 'failed' ? '[FAILED]' :
                    t.status === 'pending' ? '[pending]' : `[${t.status}]`
-      return `  ${icon} ${t.taskId} (${t.agentId})${t.summary ? ': ' + t.summary : ''}`
+      const rejected = t.rejectCount ? ` (rejected ${t.rejectCount}x)` : ''
+      return `  ${icon} ${t.taskId} (${t.agentId})${rejected}${t.summary ? ': ' + t.summary : ''}`
     }).join('\n')
 
     const readyLines = p.readyTasks.length > 0
       ? p.readyTasks.map(t => `  - ${t.taskId} → ${t.agentId}: ${t.description.slice(0, 100)}`).join('\n')
       : '  (none)'
+
+    let enrichedSection = ''
+    const enriched = p.enriched
+
+    if (enriched?.gitDiffStat) {
+      enrichedSection += `\nGit changes:\n\`\`\`\n${enriched.gitDiffStat}\`\`\`\n`
+    }
+
+    if (enriched?.modifiedFiles?.length) {
+      enrichedSection += `\nModified files:\n`
+      for (const f of enriched.modifiedFiles) {
+        enrichedSection += `  ${f.changeType} ${f.path} (+${f.linesAdded} -${f.linesRemoved})\n`
+      }
+    }
+
+    if (enriched?.artifactSnippets?.length) {
+      enrichedSection += `\nArtifact previews:\n`
+      for (const s of enriched.artifactSnippets) {
+        enrichedSection += `--- ${s.path} ---\n${s.content}\n---\n\n`
+      }
+    }
 
     return `[Workflow progress: ${workflowId}]
 
@@ -185,14 +323,20 @@ Workflow status: ${p.workflowStatus}
 
 All tasks:
 ${taskLines}
-
+${enrichedSection}
 Ready to start:
 ${readyLines}
 
-Review the completed work, then advance the workflow:
-- Use \`team-status.sh\` to check agent states if needed
-- Use \`advance-workflow.sh '${workflowId}'\` to start all ready tasks
-- Or use \`handoff.sh\` to dispatch specific tasks with custom instructions`
+Review the completed work and choose one action:
+1. \`advance-workflow.sh '${workflowId}'\` — deliverables are satisfactory, proceed to next tasks
+2. \`reject-task.sh '${workflowId}' '${p.completedTaskId}' "<feedback>"\` — deliverables are missing or wrong, send back with specific feedback for the agent to address
+3. Write an \`open_question\` to the war-room — you need user input to decide
+
+Judgment guidance:
+- Did the agent actually modify files? (check git diff stat above)
+- Does the summary match the task's Deliverables clause?
+- Are declared artifacts present and non-empty?
+- When in doubt, advance — downstream reviewer agents provide another quality gate`
   }
 
   private startLeadAgent(chatId: string, prompt: string): void {
@@ -231,6 +375,7 @@ Review the completed work, then advance the workflow:
 
   private async startTask(engine: WorkflowEngine, taskId: string, agentId: string, description: string): Promise<void> {
     const chatId = engine.chatId
+    const taskState = engine.getState().tasks[taskId]
 
     engine.markTaskRunning(taskId, agentId)
     log.info('Starting workflow task', { workflowId: engine.workflowId, taskId, agentId })
@@ -243,9 +388,17 @@ Review the completed work, then advance the workflow:
 
       const cwd = this.resolveCwd(chatId)
 
+      let prompt = `[Workflow task: ${taskId}]\n\n${description}`
+      if (taskState?.rejectionFeedback) {
+        prompt = `[IMPORTANT — Previous attempt was rejected (attempt ${taskState.rejectCount})]\n` +
+          `Feedback from reviewer:\n${taskState.rejectionFeedback}\n\n` +
+          `Address this feedback in your new attempt.\n\n` +
+          prompt
+      }
+
       await this.deps.expertHandler.handleStart(ws, {
         agentId,
-        task: `[Workflow task: ${taskId}]\n\n${description}`,
+        task: prompt,
         chatId,
         cwd,
       }, connectionId)

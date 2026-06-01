@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { GitMerge, AlertTriangle, CheckCircle, FileText, FilePlus, FileMinus, FileEdit } from 'lucide-react'
+import { GitMerge, AlertTriangle, CheckCircle, FileText, FilePlus, FileMinus, FileEdit, Loader2 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog'
@@ -20,16 +20,18 @@ interface MergeDialogProps {
   worktreePath: string
   branch: string
   baseBranch: string
+  chatId?: string
   onClose: () => void
   onMerged: () => void
 }
 
-const MergeDialog = ({ open, worktreePath, branch, baseBranch, onClose, onMerged }: MergeDialogProps) => {
+const MergeDialog = ({ open, worktreePath, branch, baseBranch, chatId, onClose, onMerged }: MergeDialogProps) => {
   const { t } = useTranslation(['workspace', 'common'])
   const [files, setFiles] = useState<DiffEntry[]>([])
   const [loadingFiles, setLoadingFiles] = useState(false)
   const [merging, setMerging] = useState(false)
-  const [result, setResult] = useState<{ success: boolean; message?: string; conflicts?: string[] } | null>(null)
+  const [autoResolving, setAutoResolving] = useState(false)
+  const [result, setResult] = useState<{ success: boolean; message?: string; conflicts?: string[]; autoResolving?: boolean } | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -44,16 +46,22 @@ const MergeDialog = ({ open, worktreePath, branch, baseBranch, onClose, onMerged
 
   const handleMerge = async () => {
     setMerging(true)
+    setAutoResolving(false)
     try {
       const res = await authFetch(`${API_BASE}/api/worktree/merge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ worktreePath, targetBranch: baseBranch }),
+        body: JSON.stringify({ worktreePath, targetBranch: baseBranch, chatId }),
       })
       const data = await res.json()
-      setResult(data)
-      if (data.success) {
-        setTimeout(() => onMerged(), 1500)
+      if (data.autoResolving) {
+        setAutoResolving(true)
+        setResult(null)
+      } else {
+        setResult(data)
+        if (data.success) {
+          setTimeout(() => onMerged(), 1500)
+        }
       }
     } catch {
       setResult({ success: false, message: t('workspace:merge.networkError') })
@@ -81,6 +89,21 @@ const MergeDialog = ({ open, worktreePath, branch, baseBranch, onClose, onMerged
           </DialogTitle>
           <DialogDescription>{t('workspace:merge.desc')}</DialogDescription>
         </DialogHeader>
+
+        {/* Auto-resolving banner */}
+        {autoResolving && (
+          <div className="flex items-center gap-2 rounded-md border p-2.5 mb-3 bg-[rgba(59,130,246,0.1)] border-[rgba(59,130,246,0.3)]">
+            <Loader2 size={16} className="text-accent-brand shrink-0 animate-spin" />
+            <div>
+              <div className="text-[13px] font-medium text-accent-brand">
+                {t('workspace:merge.autoResolving', { defaultValue: 'Resolving conflicts...' })}
+              </div>
+              <div className="text-xs text-text-secondary mt-0.5">
+                {t('workspace:merge.autoResolvingDesc', { defaultValue: 'An agent is resolving the merge conflicts. You can close this dialog — merge will complete automatically.' })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ResultTip */}
         {result && (

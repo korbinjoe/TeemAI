@@ -14,6 +14,7 @@ const log = createLogger('WorkflowEngine')
 const ALLOWED_CONDITION_FIELDS = new Set(['status', 'summary', 'followUp'])
 const DEFAULT_TIMEOUT_MINUTES = 30
 const DEFAULT_MAX_RETRIES = 1
+const DEFAULT_MAX_REJECTS = 2
 
 export class WorkflowEngine extends EventEmitter {
   private state: WorkflowState
@@ -36,6 +37,7 @@ export class WorkflowEngine extends EventEmitter {
         agentId: t.agentId,
         status: 'pending',
         retryCount: 0,
+        rejectCount: 0,
       }
     }
 
@@ -194,6 +196,39 @@ export class WorkflowEngine extends EventEmitter {
     log.info('Task queued for retry', { workflowId: this.workflowId, taskId, retryCount: ts.retryCount })
   }
 
+  rejectTask(taskId: string, feedback: string): 'rejected' | 'cap_reached' {
+    const ts = this.state.tasks[taskId]
+    if (!ts || ts.status !== 'completed') return 'cap_reached'
+
+    const task = this.state.dag.tasks.find(t => t.taskId === taskId)
+    const maxRejects = task?.maxRejects ?? DEFAULT_MAX_REJECTS
+
+    if (ts.rejectCount >= maxRejects) {
+      return 'cap_reached'
+    }
+
+    ts.status = 'pending'
+    ts.rejectionFeedback = feedback
+    ts.rejectCount += 1
+    ts.result = undefined
+    ts.completedAt = undefined
+    ts.startedAt = undefined
+    this.state.updatedAt = new Date().toISOString()
+
+    log.info('Task rejected by Lead', {
+      workflowId: this.workflowId,
+      taskId,
+      rejectCount: ts.rejectCount,
+      maxRejects,
+    })
+
+    this.persistCheckpoint().catch(err =>
+      log.warn('Checkpoint persist failed', { workflowId: this.workflowId, taskId, error: err instanceof Error ? err.message : String(err) }),
+    )
+    this.emit('task-rejected', taskId, feedback)
+    return 'rejected'
+  }
+
   async suspendAll(): Promise<void> {
     for (const ts of Object.values(this.state.tasks)) {
       if (ts.status === 'running') {
@@ -308,6 +343,15 @@ export class WorkflowEngine extends EventEmitter {
       return
     }
 
+    if (policy === 'skip') {
+      const ts = this.state.tasks[taskId]
+      if (ts) {
+        ts.status = 'skipped'
+        log.info('Task skipped per skip policy', { workflowId: this.workflowId, taskId })
+      }
+      return
+    }
+
     if (policy === 'stop') {
       for (const ts of Object.values(this.state.tasks)) {
         if (ts.status === 'pending') {
@@ -340,7 +384,7 @@ export class WorkflowEngine extends EventEmitter {
     const ts = this.state.tasks[taskId]
     if (!ts || ts.status !== 'running') return
     log.warn('Task timed out', { workflowId: this.workflowId, taskId })
-    this.emit('task-timeout', taskId, ts.agentId)
+    this.recordTaskFailure(taskId, 'timeout')
   }
 
   private clearTimer(taskId: string): void {

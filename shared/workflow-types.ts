@@ -17,6 +17,7 @@ export interface WorkflowTask {
   inputMapping?: Record<string, string>
   onFailure: 'stop' | 'skip' | 'retry'
   maxRetries?: number
+  maxRejects?: number
   timeoutMinutes?: number
 }
 
@@ -38,6 +39,8 @@ export interface WorkflowTaskState {
   result?: TaskResult
   failureReason?: string
   retryCount: number
+  rejectCount: number
+  rejectionFeedback?: string
   startedAt?: string
   completedAt?: string
 }

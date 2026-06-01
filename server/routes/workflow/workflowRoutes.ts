@@ -116,6 +116,45 @@ export const createWorkflowRoutes = (deps: WorkflowRouteDeps): Router => {
     res.json(engine.aggregateResults())
   })
 
+  router.post('/api/workflow/:workflowId/tasks/:taskId/reject', (req, res) => {
+    const { workflowId, taskId } = req.params
+    const { feedback } = req.body as { feedback?: string }
+
+    if (!feedback) {
+      return res.status(400).json({ error: 'feedback is required' })
+    }
+
+    const engine = workflowRegistry.get(workflowId)
+    if (!engine) {
+      return res.status(404).json({ error: 'Workflow not found' })
+    }
+
+    const result = engine.rejectTask(taskId, feedback)
+    if (result === 'cap_reached') {
+      const state = engine.getState()
+      const ts = state.tasks[taskId]
+      return res.status(400).json({
+        success: false,
+        error: 'reject_cap_reached',
+        rejectCount: ts?.rejectCount ?? 0,
+      })
+    }
+
+    const state = engine.getState()
+    const ts = state.tasks[taskId]
+    const task = state.dag.tasks.find(t => t.taskId === taskId)
+
+    log.info('Task rejected via API', { workflowId, taskId, rejectCount: ts?.rejectCount })
+
+    workflowScheduler.advanceWorkflow(workflowId)
+
+    res.json({
+      success: true,
+      rejectCount: ts?.rejectCount ?? 0,
+      maxRejects: task?.maxRejects ?? 2,
+    })
+  })
+
   router.post('/api/workflow/:workflowId/advance', (req, res) => {
     const { workflowId } = req.params
     const { started, error } = workflowScheduler.advanceWorkflow(workflowId)

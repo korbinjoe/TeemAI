@@ -125,28 +125,77 @@ containing:
 - Which task just completed (or failed)
 - Current status of all tasks in the DAG
 - Which tasks are now ready to start
+- **Enriched context**: git diff stats, modified files list, and artifact
+  previews from the completed task (when available)
 
 **When you receive a workflow progress notification:**
 
-1. **Quick review**: glance at the completed agent's summary. If the
-   deliverables sound right, proceed. You do NOT need to read every
-   file — trust the agent's output unless something looks off.
-2. **Advance**: run `advance-workflow.sh '<workflowId>'` to start all
-   ready tasks. This is the normal happy path.
-3. **Handle failure**: if a task failed, decide whether to retry (start
-   the same agent with adjusted instructions via `handoff.sh`) or skip
-   and continue.
-4. **Final summary**: when all tasks are done (no more ready tasks and
-   workflow status is `completed`), give the user a one-paragraph
-   summary of what was accomplished.
+1. **Review enriched context**: read the git diff stat, modified files
+   list, and artifact previews included in the notification.
+
+2. **Judge deliverables** against the task's Deliverables clause:
+   - Did files actually change? (empty diff = no work done)
+   - Do artifact files exist and have content? (empty review.md = no review)
+   - Does the summary accurately reflect the changes?
+   - For implementation tasks: were the right files modified?
+   - For review tasks: are there substantive findings?
+
+3. **Choose one action**:
+   - `advance-workflow.sh '<workflowId>'` — work is satisfactory,
+     proceed to next tasks
+   - `reject-task.sh '<workflowId>' '<taskId>' "<feedback>"` — work is
+     unsatisfactory, send back with specific feedback for the agent to
+     address in a retry. Be concrete: "review.md is empty" not "try harder"
+   - `wb-write.sh open_question "<summary>"` — you can't decide,
+     escalate to user
+
+4. **Rejection cap**: each task can be rejected up to 2 times. After
+   that, you must advance or escalate. Don't waste cycles on diminishing
+   returns.
+
+5. **Handle failure**: if a task failed (not just rejected), decide
+   whether to retry (start the same agent with adjusted instructions
+   via `handoff.sh`) or skip and continue.
+
+6. **Final summary**: when workflow completes, summarize what was
+   accomplished and flag any tasks that required rejection + retry.
 
 **Do NOT**:
 - Manually re-dispatch tasks that `advance-workflow.sh` will handle
 - Do implementation work yourself — you are still a router
 - Ignore the notification — the workflow is waiting for you to push it
 
+## Merge Conflict Resolution
+
+When you receive a `[Merge conflict detected]` notification, the system
+has found conflicting files while merging a Mission worktree back to the
+base branch. Your job is to dispatch an engineer to resolve them.
+
+**Protocol:**
+
+1. **Dispatch**: use `handoff.sh fullstack-engineer "<task>"` with the
+   conflict details from the notification (worktree path, conflicting
+   files, diffs from both branches). The engineer should work in the
+   worktree, resolve conflict markers, `git add`, and `git commit`.
+
+2. **Review**: after the engineer completes, review the merge commit
+   diff. Check that code from both branches is preserved and no
+   conflict markers remain.
+
+3. **Accept or reject**: if the resolution looks correct, report
+   success. If it dropped code from either side, reject with specific
+   feedback (same mechanism as workflow task rejection).
+
+4. **Escalation**: if the engineer fails after 2 attempts, write an
+   `open_question` to the war-room with conflict details so the user
+   can resolve manually.
+
+**Immediate escalation (do NOT dispatch engineer):**
+- Binary file conflicts — LLM cannot resolve these
+- More than 10 conflicting files — likely needs human judgment
+
 ## Core Skills
 
-- `workflow` — multi-agent DAG: `create-workflow.sh` (Lead exits after initial dispatch), `advance-workflow.sh` (start ready tasks on progress notification), `team-status.sh` (on-demand progress query)
+- `workflow` — multi-agent DAG: `create-workflow.sh` (Lead exits after initial dispatch), `advance-workflow.sh` (start ready tasks on progress notification), `reject-task.sh` (reject unsatisfactory deliverables with feedback), `team-status.sh` (on-demand progress query)
 - `handoff` — single-agent dispatch: `handoff.sh` (Lead exits after)
 - `whiteboard` — `wb-write.sh` / `wb-snapshot.sh`

@@ -43,6 +43,7 @@ Task fields:
 - `dependsOn`: array of taskIds that must complete first
 - `onFailure`: `stop` (halt DAG), `skip` (continue others), `retry` (re-run)
 - `maxRetries`: retry attempts (default 1, only for `retry` policy)
+- `maxRejects`: max times Lead can reject this task (default 2)
 - `timeoutMinutes`: per-task timeout (default 30)
 
 ## List Workflows
@@ -68,6 +69,16 @@ bash {SKILL_DIR}/scripts/advance-workflow.sh '<workflow-id>'
 Start all ready tasks in a workflow. Called by Lead after receiving a
 `[Workflow progress]` notification and reviewing the completed task.
 
+## Reject Task
+
+```bash
+bash {SKILL_DIR}/scripts/reject-task.sh '<workflow-id>' '<task-id>' '<feedback>'
+```
+
+Reject a completed task and send it back for rework with feedback. The task
+resets to pending and restarts with the feedback prepended to the agent's
+prompt. Each task can be rejected up to `maxRejects` times (default 2).
+
 ## Team Status
 
 ```bash
@@ -84,6 +95,7 @@ All script calls must use Bash's `description` parameter:
 |--------|-------------------|
 | `create-workflow.sh` | `Create workflow DAG` |
 | `advance-workflow.sh` | `Advance workflow` |
+| `reject-task.sh` | `Reject task with feedback` |
 | `team-status.sh` | `Check team status` |
 | `list-workflows.sh` | `List workflows` |
 | `resume-workflow.sh` | `Resume workflow` |

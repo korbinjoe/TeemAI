@@ -8,7 +8,8 @@ import { createAuthMiddleware, getAuthToken } from '../middleware/auth'
 
 import directoryRoutes from '../routes/workspace/directoryRoutes'
 import conversationRoutes from '../routes/chat/conversationRoutes'
-import worktreeRoutes from '../routes/workspace/worktreeRoutes'
+import worktreeRoutes, { setConflictResolver } from '../routes/workspace/worktreeRoutes'
+import { ConflictResolver } from '../git/ConflictResolver'
 import { createAgentRoutes } from '../routes/agent/agentRoutes'
 import { createExpertRoutes } from '../routes/agent/expertRoutes'
 import { createWorkspaceApiRoutes } from '../routes/workspace/workspaceApiRoutes'
@@ -136,6 +137,7 @@ export const setupRoutes = (app: Express, d: RouteDeps) => {
 
   app.use(directoryRoutes)
   app.use(conversationRoutes)
+  setConflictResolver(new ConflictResolver(d.workflowScheduler, d.broadcastToChat))
   app.use(worktreeRoutes)
   app.use(createAgentRoutes({ agentRegistry: d.agentRegistry, agentStore: d.agentStore, skillManager: d.skillManager, senseiPromptPaths: d.senseiPromptPaths }))
   app.use(createExpertRoutes({ expertHandler: d.expertHandler, agentRegistry: d.agentRegistry, executionPlanManager: d.executionPlanManager, whiteboardManager: d.whiteboardManager, workflowRegistry: d.workflowRegistry, broadcastToChat: d.broadcastToChat }))

@@ -9,12 +9,19 @@ import { resolve } from 'path'
 import { readFile, writeFile, unlink } from 'fs/promises'
 import simpleGit from 'simple-git'
 import { WorktreeManager, detectGitRepo, type DiffEntry } from '../../git/WorktreeManager'
+import type { ConflictResolver } from '../../git/ConflictResolver'
 import { computeWorkingChanges } from '../../git/workingChanges'
 import { getGitWatchManager } from '../../git/GitWatchManager'
 import { createLogger } from '../../lib/logger'
 const log = createLogger('WorktreeRoutes')
 
 const router = Router()
+
+let conflictResolver: ConflictResolver | null = null
+
+export const setConflictResolver = (resolver: ConflictResolver) => {
+  conflictResolver = resolver
+}
 
 function isPathSafe(inputPath: string): boolean {
   const abs = resolve(inputPath)
@@ -365,7 +372,7 @@ router.post('/api/worktree/save-file', async (req, res) => {
  *  worktree
  */
 router.post('/api/worktree/merge', async (req, res) => {
-  const { worktreePath, targetBranch } = req.body
+  const { worktreePath, targetBranch, chatId } = req.body
   if (!worktreePath) return res.status(400).json({ error: 'worktreePath is required' })
   if (!isPathSafe(worktreePath)) return res.status(403).json({ error: 'path not allowed' })
 
@@ -382,6 +389,18 @@ router.post('/api/worktree/merge', async (req, res) => {
         targetBranch: targetBranch || 'main',
       })
     })
+
+    if (!result.success && result.conflicts?.length && conflictResolver && chatId) {
+      const resolution = await conflictResolver.resolve({
+        chatId,
+        worktreePath,
+        repoRoot,
+        targetBranch: targetBranch || 'main',
+      })
+      res.json({ ...result, autoResolving: resolution.autoResolving, escalationReason: resolution.escalationReason })
+      return
+    }
+
     res.json(result)
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to merge' })

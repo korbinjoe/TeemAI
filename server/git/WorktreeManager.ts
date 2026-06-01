@@ -46,6 +46,16 @@ export interface MergeResult {
   message?: string
 }
 
+export interface ConflictAnalysis {
+  conflictingFiles: string[]
+  binaryConflicts: string[]
+  baseBranch: string
+  featureBranch: string
+  tooManyConflicts: boolean
+}
+
+const MAX_AUTO_RESOLVE_FILES = 10
+
 export interface CreateResult {
   path: string
   branch: string
@@ -340,6 +350,62 @@ export class WorktreeManager {
         success: false,
         message: err instanceof Error ? err.message : 'MergeFailed',
       }
+    }
+  }
+
+  async mergeWithConflictMarkers(options: {
+    worktreePath: string
+    targetBranch: string
+  }): Promise<ConflictAnalysis> {
+    const absPath = resolve(options.worktreePath)
+    const featureBranch = await git(['rev-parse', '--abbrev-ref', 'HEAD'], absPath)
+
+    await git(['checkout', options.targetBranch], absPath)
+
+    try {
+      await git(['merge', '--no-commit', featureBranch], absPath)
+      await git(['merge', '--abort'], absPath).catch(() => {})
+      return {
+        conflictingFiles: [],
+        binaryConflicts: [],
+        baseBranch: options.targetBranch,
+        featureBranch,
+        tooManyConflicts: false,
+      }
+    } catch {
+      // Expected: conflicts exist, markers are now on disk
+    }
+
+    const unmerged = await git(['diff', '--name-only', '--diff-filter=U'], absPath).catch(() => '')
+    const allConflicts = unmerged.split('\n').filter(Boolean)
+
+    // Detect binary files via numstat (binary shows `-` for insertions/deletions)
+    const binaryConflicts: string[] = []
+    const textConflicts: string[] = []
+
+    try {
+      const numstat = await git(['diff', '--numstat', '--diff-filter=U'], absPath)
+      for (const line of numstat.split('\n')) {
+        if (!line) continue
+        const parts = line.split('\t')
+        if (parts.length < 3) continue
+        const file = parts[2]
+        if (parts[0] === '-' && parts[1] === '-') {
+          binaryConflicts.push(file)
+        } else {
+          textConflicts.push(file)
+        }
+      }
+    } catch {
+      textConflicts.push(...allConflicts)
+    }
+
+    return {
+      conflictingFiles: textConflicts,
+      binaryConflicts,
+      baseBranch: options.targetBranch,
+      featureBranch,
+      tooManyConflicts: textConflicts.length > MAX_AUTO_RESOLVE_FILES,
     }
   }
 

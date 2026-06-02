@@ -140,6 +140,13 @@ export class TrayManager {
     }
 
     template.push({
+      label: 'Connect Mobile...',
+      click: () => {
+        this.windowManager.focusMain()
+        this.windowManager.sendToAll('navigate', '/settings')
+      },
+    })
+    template.push({
       label: 'Open OpenTeam',
       click: () => this.windowManager.focusMain(),
     })

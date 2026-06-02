@@ -54,6 +54,7 @@ import { MemoryGrowthCapture } from './services/agent-evolution/MemoryGrowthCapt
 import { ExecutionPlanManager } from './mailbox/ExecutionPlanManager'
 import { WorkflowRegistry } from './orchestration/WorkflowRegistry'
 import { WorkflowScheduler } from './orchestration/WorkflowScheduler'
+import { LanAccessController } from './lan/LanAccessController'
 
 import { createLogger, getLogDir } from './lib/logger'
 import { ensureAvatarDir } from './lib/avatarStorage'
@@ -129,6 +130,7 @@ const whiteboardManager = new WhiteboardManager()
 const executionPlanManager = new ExecutionPlanManager()
 const workflowRegistry = new WorkflowRegistry()
 const chatService = new ChatService({ chatStore, workspaceStore, agentStore })
+const lanAccess = new LanAccessController()
 
 const hooksConfigManager = new HooksConfigManager()
 
@@ -242,7 +244,7 @@ const wsRouter = new WSRouter({ expertHandler, gitWatchManager, terminalViewMana
 let serverPort = PORTS.DEV_SERVER
 let asyncBootResult: AsyncBootResult | null = null
 
-const { authToken } = setupRoutes(app, {
+setupRoutes(app, {
   agentRegistry, agentStore, skillManager, senseiPromptPaths,
   expertHandler, executionPlanManager,
   workspaceStore, chatStore, chatService,
@@ -250,7 +252,7 @@ const { authToken } = setupRoutes(app, {
   cronJobStore, cronScheduler, nlCronParser,
   notificationStore, memoryStore, growthStore, eventStore,
   sessionRegistry, whiteboardManager, workflowRegistry, workflowScheduler,
-  updateManager, bundleStorage, updateMonitor,
+  updateManager, bundleStorage, updateMonitor, lanAccess,
   broadcastToChat, broadcast,
   projectRoot: PROJECT_ROOT,
   getServerPort: () => serverPort,
@@ -261,7 +263,7 @@ const { authToken } = setupRoutes(app, {
 
 const { heartbeatTimer } = setupWebSocket({
   wss, wsRouter, expertHandler, sessionRegistry, notificationStore,
-  authToken, serverVersion,
+  serverVersion,
   getEnvCheckResult: () => asyncBootResult?.envCheckResult ?? null,
   getPreflightResult: () => asyncBootResult?.preflightResult ?? null,
 })

@@ -14,6 +14,11 @@ const MentionInputDemo = lazy(() => import('./pages/MentionInputDemo'))
 const QueuedMessagesBarDemo = lazy(() => import('./pages/QueuedMessagesBarDemo'))
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'))
 
+const MobileLayout = lazy(() => import('./mobile/MobileLayout'))
+const MobileDashboard = lazy(() => import('./mobile/pages/MobileDashboard'))
+const MobileDispatch = lazy(() => import('./mobile/pages/MobileDispatch'))
+const MobileMissionDetail = lazy(() => import('./mobile/pages/MobileMissionDetail'))
+
 const AgentsHubPage = lazy(() => import('./pages/AgentsHubPage'))
 const AgentEditorPage = lazy(() => import('./pages/AgentEditorPage'))
 const CronJobsPage = lazy(() => import('./pages/CronJobsPage'))
@@ -46,6 +51,12 @@ const App = () => (
           <Route path="/demo/queue" element={<QueuedMessagesBarDemo />} />
         </>
       )}
+      {/* Mobile PWA — code-split, standalone layout */}
+      <Route path="/mobile" element={<MobileLayout />}>
+        <Route index element={<MobileDashboard />} />
+        <Route path="dispatch" element={<MobileDispatch />} />
+        <Route path="mission/:missionId" element={<MobileMissionDetail />} />
+      </Route>
       {/* Root redirect → last-visited workspace (or /workspaces if none) */}
       <Route path="/" element={<WorkspaceRedirect />} />
       {/* Workspace shell — nested params drive WorkspaceContext */}

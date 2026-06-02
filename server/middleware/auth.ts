@@ -11,13 +11,19 @@ export const isLocalhost = (ip: string): boolean =>
   ip === '::ffff:127.0.0.1' ||
   ip === 'localhost'
 
+let runtimeToken: string | null = null
+
+export const setRuntimeAuthToken = (token: string | null): void => {
+  runtimeToken = token
+}
+
 export const getAuthToken = (): string | undefined =>
-  process.env.OPENTEAM_AUTH_TOKEN || undefined
+  runtimeToken ?? process.env.OPENTEAM_AUTH_TOKEN ?? undefined
 
 /**
  * Express localhost  Bearer Token
  */
-export const createAuthMiddleware = (token: string | undefined) =>
+export const createAuthMiddleware = () =>
   (req: Request, res: Response, next: NextFunction): void => {
     if (req.path === '/api/health') {
       next()
@@ -40,6 +46,7 @@ export const createAuthMiddleware = (token: string | undefined) =>
       return
     }
 
+    const token = getAuthToken()
     if (!token) {
       res.status(403).json({
         error: 'Remote access denied. Set OPENTEAM_AUTH_TOKEN environment variable to enable remote access.',
@@ -64,10 +71,11 @@ export const createAuthMiddleware = (token: string | undefined) =>
  *  WebSocket  wss.on('connection')
  *  true false
  */
-export const verifyWsConnection = (req: IncomingMessage, token: string | undefined): boolean => {
+export const verifyWsConnection = (req: IncomingMessage): boolean => {
   const ip = req.socket.remoteAddress || ''
   if (isLocalhost(ip)) return true
 
+  const token = getAuthToken()
   if (!token) return false
 
   try {

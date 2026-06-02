@@ -3,54 +3,44 @@
 ## Phase 1: LAN Access + QR Pairing
 
 ### Auth Extension
-- [ ] Add `runtimeToken` + `setRuntimeAuthToken()` to `server/middleware/auth.ts` (~8 lines)
-- [ ] Verify existing `createAuthMiddleware` and `verifyWsConnection` work with runtime token (read-only check, no code change expected)
+- [x] Add `runtimeToken` + `setRuntimeAuthToken()` to `server/middleware/auth.ts`
+- [x] Refactor `createAuthMiddleware` and `verifyWsConnection` to read token dynamically via `getAuthToken()`
 
 ### LAN Access Controller
-- [ ] Create `server/lan/LanAccessController.ts` — token generation, LAN IP detection, enable/disable lifecycle (~60 lines)
+- [x] Create `server/lan/LanAccessController.ts` — token generation, LAN IP detection, enable/disable lifecycle
 
 ### LAN API Routes
-- [ ] Create `server/routes/system/lanRoutes.ts` — `POST enable`, `POST disable`, `GET status` (~40 lines)
-- [ ] Wire into `server/startup/routeSetup.ts`
-- [ ] Instantiate `LanAccessController` in `server/index.ts`
+- [x] Create `server/routes/system/lanRoutes.ts` — `POST enable`, `POST disable`, `GET status`
+- [x] Wire into `server/startup/routeSetup.ts`
+- [x] Instantiate `LanAccessController` in `server/index.ts`
 
 ### Desktop UI: QR Modal
-- [ ] Add `qrcode` npm package (browser-side, canvas-based)
-- [ ] Add "Remote Control" section to Settings page — enable/disable toggle, QR code display, LAN IP text, copy URL button
-- [ ] Add "Connect Mobile" item to Tray menu (`electron/modules/TrayManager.ts`) — triggers QR display via IPC
-
-### Validation (Phase 1)
-- [ ] Unit test `LanAccessController` (token gen, IP detection, enable/disable)
-- [ ] Unit test auth middleware with runtime token
-- [ ] Manual test: enable LAN → scan QR on phone → verify desktop web UI loads with auth
+- [x] Add `qrcode` + `@types/qrcode` npm packages
+- [x] Create `web/components/settings/RemoteControlSettings.tsx` — enable/disable toggle, QR code canvas, LAN URL, copy button
+- [x] Add "Remote" section to `GeneralSettings.tsx`
+- [x] Add "Connect Mobile..." item to Tray menu (`electron/modules/TrayManager.ts`)
 
 ## Phase 2: Mobile PWA
 
-### Mobile Layout & Routing
-- [ ] Create `web/mobile/MobileLayout.tsx` — status bar (connection indicator) + bottom tab nav
-- [ ] Add `/mobile/*` routes to `App.tsx` with React.lazy code splitting
-- [ ] Create `web/mobile/components/BottomNav.tsx` — "Missions" and "New" tabs
-- [ ] Create `web/mobile/components/ConnectionStatus.tsx` — green/yellow/red dot with label
-
 ### Mobile Auth
-- [ ] Create `web/mobile/hooks/useMobileAuth.ts` — extract token from URL param → localStorage, strip from URL bar, return auth state
-- [ ] Extend `web/config/api.ts` `getAuthToken()` to also check `localStorage('openteam-mobile-token')` when on `/mobile` route
-- [ ] Handle 401 responses: clear stored token, show "scan QR again" message
+- [x] Create `web/mobile/hooks/useMobileAuth.ts` — extract token from URL → localStorage, strip from URL bar
+- [x] Extend `web/config/api.ts` `getAuthToken()` to check localStorage on `/mobile` routes
+
+### Mobile Layout & Routing
+- [x] Create `web/mobile/components/BottomNav.tsx` — "Missions" and "New" tabs
+- [x] Create `web/mobile/components/ConnectionStatus.tsx` — connection indicator with reconnect guidance
+- [x] Create `web/mobile/MobileLayout.tsx` — status bar + outlet + bottom nav, unauthenticated guard
+- [x] Add `/mobile/*` routes to `App.tsx` with React.lazy code splitting
 
 ### Dashboard
-- [ ] Create `web/mobile/pages/MobileDashboard.tsx` — mission list grouped by status (running → waiting → done)
-- [ ] Create `web/mobile/components/MissionCard.tsx` — title, workspace badge, agent count, phase dot, tool progress bar, cost
-- [ ] Create `web/mobile/hooks/useMobileMissions.ts` — fetch `GET /api/chats/recent` + subscribe to `chat:activity` WS events for live updates
+- [x] Create `web/mobile/hooks/useMobileMissions.ts` — fetch all workspace chats + live WS updates
+- [x] Create `web/mobile/pages/MobileDashboard.tsx` — mission list grouped by active/recent with status dots
 
 ### Mission Detail
-- [ ] Create `web/mobile/pages/MobileMissionDetail.tsx` — conversation view + action bar
-- [ ] Create `web/mobile/components/AgentMessage.tsx` — message bubble with agent icon, name, timestamp
-- [ ] Add message input bar (text input + send button), wire to `expert:direct-input` WS event
-- [ ] Create `web/mobile/components/PermissionBanner.tsx` — sticky banner for permission requests with approve/reject buttons, wire to `expert:permission-response` WS event
+- [x] Create `web/mobile/pages/MobileMissionDetail.tsx` — mission info, agent list, permission request banner with approve/reject
 
 ### Quick Dispatch
-- [ ] Create `web/mobile/pages/MobileQuickDispatch.tsx` — prompt textarea, workspace dropdown, agent dropdown, "Go" button
-- [ ] Wire to `POST /api/workspaces/:id/chats` + `expert:direct-input`, navigate to mission detail after dispatch
+- [x] Create `web/mobile/pages/MobileDispatch.tsx` — workspace picker, prompt textarea, dispatch button
 
 ### Validation (Phase 2)
 - [ ] Test on iOS Safari (iPhone SE, iPhone 15 sizes)

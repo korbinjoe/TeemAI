@@ -23,7 +23,6 @@ interface WsDeps {
   expertHandler: ExpertHandler
   sessionRegistry: SessionRegistry
   notificationStore: NotificationStore
-  authToken: string | null
   serverVersion: string
   getEnvCheckResult: () => CliAutoInstallResult | null
   getPreflightResult: () => PreflightResult | null
@@ -47,7 +46,7 @@ export const setupWebSocket = (d: WsDeps) => {
   d.wss.on('close', () => clearInterval(heartbeatTimer))
 
   d.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
-    if (!verifyWsConnection(req, d.authToken)) {
+    if (!verifyWsConnection(req)) {
       log.warn('Rejected unauthorized WebSocket connection', { from: req.socket.remoteAddress })
       ws.close(4001, 'Unauthorized')
       return

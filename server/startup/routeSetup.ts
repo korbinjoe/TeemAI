@@ -1,6 +1,7 @@
 import express, { type Express } from 'express'
 import { join } from 'path'
 import { existsSync, readFileSync } from 'fs'
+import { PORTS } from '../../shared/ports'
 import { createLogger } from '../lib/logger'
 import { trackEvent } from '../lib/eventTracker'
 import { requestLogger } from '../middleware/requestLogger'
@@ -28,6 +29,7 @@ import { createEventRoutes } from '../routes/system/eventRoutes'
 import { createLogRoutes } from '../routes/system/logRoutes'
 import { createUpdateRoutes } from '../routes/system/updateRoutes'
 import { createTrayRoutes } from '../routes/system/trayRoutes'
+import { createLanRoutes } from '../routes/system/lanRoutes'
 import { createWorkflowRoutes } from '../routes/workflow/workflowRoutes'
 import geminiRoutes from '../routes/system/geminiRoutes'
 import fileRoutes from '../routes/workspace/fileRoutes'
@@ -67,6 +69,7 @@ interface RouteDeps {
   signatureVerifier: Parameters<typeof createUpdateRoutes>[0]['signatureVerifier']
   workflowRegistry: Parameters<typeof createWorkflowRoutes>[0]['workflowRegistry']
   workflowScheduler: Parameters<typeof createWorkflowRoutes>[0]['workflowScheduler']
+  lanAccess: Parameters<typeof createLanRoutes>[0]
   broadcastToChat: (chatId: string, msg: Record<string, unknown>) => void
   broadcast: (msg: Record<string, unknown>) => void
   projectRoot: string
@@ -90,12 +93,12 @@ export const setupRoutes = (app: Express, d: RouteDeps) => {
   })
   app.options('*', (_req, res) => res.sendStatus(204))
 
+  app.use(createAuthMiddleware())
   const authToken = getAuthToken()
-  app.use(createAuthMiddleware(authToken))
   if (authToken) {
     log.info('Token authentication enabled for remote access')
   } else {
-    log.info('No auth token set — remote API access will be denied')
+    log.info('No auth token set — remote API access will be denied (enable via LAN or OPENTEAM_AUTH_TOKEN)')
   }
 
   const serverVersion: string = (() => {
@@ -158,13 +161,15 @@ export const setupRoutes = (app: Express, d: RouteDeps) => {
   app.use(createUpdateRoutes({ updateManager: d.updateManager, bundleStorage: d.bundleStorage, updateMonitor: d.updateMonitor, signatureVerifier: d.signatureVerifier }))
   app.use(createTrayRoutes({ chatStore: d.chatStore, workspaceStore: d.workspaceStore, sessionRegistry: d.sessionRegistry }))
   app.use(createWorkflowRoutes({ workflowRegistry: d.workflowRegistry, workflowScheduler: d.workflowScheduler }))
+  app.use(createLanRoutes(d.lanAccess))
   app.use(geminiRoutes)
   app.use(fileRoutes)
 
   app.use('/avatars', express.static(join(d.projectRoot, 'ai-assets', 'avatars')))
 
   const distPath = join(d.projectRoot, 'dist')
-  if (existsSync(distPath)) {
+  const hasDistIndex = existsSync(join(distPath, 'index.html'))
+  if (hasDistIndex) {
     log.info('Serving static files', { from: distPath })
     app.use(express.static(distPath))
     app.get('*', async (req, res, next) => {
@@ -172,9 +177,13 @@ export const setupRoutes = (app: Express, d: RouteDeps) => {
       const indexPath = join(distPath, 'index.html')
       res.type('html').send(readFileSync(indexPath, 'utf-8'))
     })
+  } else {
+    app.get('/mobile*', (req, res) => {
+      const viteUrl = `http://${req.hostname}:${PORTS.DEV_UI}${req.originalUrl}`
+      res.redirect(302, viteUrl)
+    })
   }
 
   app.use(errorResponder)
 
-  return { authToken }
 }

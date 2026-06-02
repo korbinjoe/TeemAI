@@ -7,6 +7,7 @@ import { useTheme, COLOR_THEMES, type ColorTheme } from '../../contexts/ThemeCon
 import { isElectron } from '../../utils/env'
 import UpdateSettings from './UpdateSettings'
 import PreflightStatus from './PreflightStatus'
+import RemoteControlSettings from './RemoteControlSettings'
 
 const Section = ({ title }: { title: string }) => (
   <div className="my-5 flex items-center gap-2.5 text-xs font-semibold uppercase tracking-wider text-text-secondary">
@@ -151,6 +152,9 @@ const GeneralSettings = () => {
           </div>
         </>
       )}
+
+      <Section title="Remote" />
+      <RemoteControlSettings />
 
       <Section title={t('settings:featureToggles', { defaultValue: 'Status' })} />
       <PreflightStatus />

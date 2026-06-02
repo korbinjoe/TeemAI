@@ -14,7 +14,12 @@ export const API_BASE = ''
 export const getAuthToken = (): string | null => {
   try {
     const params = new URLSearchParams(window.location.search)
-    return params.get('token')
+    const urlToken = params.get('token')
+    if (urlToken) return urlToken
+    if (window.location.pathname.startsWith('/mobile')) {
+      return localStorage.getItem('openteam-mobile-token')
+    }
+    return null
   } catch {
     return null
   }

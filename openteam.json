@@ -20,11 +20,9 @@
         "description": "Intelligent task router. Answers questions directly (T0), hands off single-agent tasks to the right Expert, or creates Workflow DAGs for multi-step orchestration.",
         "workspace": "./ai-assets/agents/lead",
         "role": "lead",
+        "systemPromptMode": "replace",
         "skills": ["handoff", "workflow", "whiteboard"],
-        "allowedTools": [
-          "Read", "Glob", "Grep", "Bash", "AskUserQuestion",
-          "TaskCreate", "TaskUpdate", "TaskList", "TaskGet"
-        ],
+        "allowedTools": ["Bash", "AskUserQuestion"],
         "disallowedTools": ["Skill"],
         "subAgentNames": [
           "fullstack-engineer",

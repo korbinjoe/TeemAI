@@ -22,6 +22,7 @@ interface AgentJsonConfig {
   subAgentNames?: string[]
   expertAgentIds?: string[]
   provider?: string
+  systemPromptMode?: 'replace' | 'append'
   heartbeat?: HeartbeatConfig
   boot?: BootConfig
   mcpServers?: Record<string, McpServerConfig>
@@ -106,7 +107,7 @@ async function loadAgentDir(
     description: config.description ?? '',
     icon: identity.emoji ?? '🤖',
     subAgentNames: config.subAgentNames ?? config.expertAgentIds,
-    systemPrompt: { mode: 'append', content },
+    systemPrompt: { mode: config.systemPromptMode || 'append', content },
     skills: config.skills ?? [],
     mcpServers: config.mcpServers ?? {},
     allowedTools: config.allowedTools,

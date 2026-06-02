@@ -185,6 +185,9 @@ export class ConfigCompiler {
         if (tool.startsWith('mcp__handoff__')) continue
         args.push('--allowedTools', tool)
       }
+      if (!agent.allowedTools.includes('AskUserQuestion')) {
+        args.push('--allowedTools', 'AskUserQuestion')
+      }
       if (agent.mcpServers?.playwright) {
         const playwrightTools = [
           'mcp__playwright__browser_navigate',

@@ -166,6 +166,10 @@ export class WorkflowEngine extends EventEmitter {
     this.persistCheckpoint().catch(() => {})
   }
 
+  getTask(taskId: string): WorkflowTask | undefined {
+    return this.state.dag.tasks.find(t => t.taskId === taskId)
+  }
+
   findTaskByCurrentAgent(agentId: string): WorkflowTaskState | undefined {
     return Object.values(this.state.tasks).find(t => t.agentId === agentId && t.status === 'running')
   }

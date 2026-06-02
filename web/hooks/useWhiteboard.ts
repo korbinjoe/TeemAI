@@ -110,11 +110,31 @@ export const useWhiteboard = (chatId: string | undefined): UseWhiteboardResult =
       }))
     }
 
+    const handleTaskUpdated = (payload: { chatId: string; taskId: string; status: string; agentId: string }) => {
+      if (payload.chatId !== chatId) return
+      setSnapshot((prev) => {
+        if (!prev.workflow) return prev
+        return {
+          ...prev,
+          workflow: {
+            ...prev.workflow,
+            tasks: prev.workflow.tasks.map((t) =>
+              t.taskId === payload.taskId
+                ? { ...t, status: payload.status, agentId: payload.agentId }
+                : t,
+            ),
+          },
+        }
+      })
+    }
+
     wsClient.on('whiteboard:entry-added', handleAdded)
     wsClient.on('whiteboard:entry-archived', handleArchived)
+    wsClient.on('workflow:task-updated', handleTaskUpdated)
     return () => {
       wsClient.off('whiteboard:entry-added', handleAdded)
       wsClient.off('whiteboard:entry-archived', handleArchived)
+      wsClient.off('workflow:task-updated', handleTaskUpdated)
     }
   }, [chatId])
 

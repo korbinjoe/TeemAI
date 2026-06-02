@@ -19,6 +19,7 @@ export interface WorkflowTask {
   maxRetries?: number
   maxRejects?: number
   timeoutMinutes?: number
+  autoAdvance?: boolean
 }
 
 export interface TaskCondition {

@@ -180,7 +180,6 @@ const WhiteboardFlowViewInner = ({
             description: wfTask.description,
             entryCount: wfTask.entryCount,
             entrySummary: wfTask.entrySummary,
-            isExpanded: wfTask.status === 'running',
             onHover: handleNodeHover,
             onLeave: handleNodeLeave,
             onClick: handleNodeClick,

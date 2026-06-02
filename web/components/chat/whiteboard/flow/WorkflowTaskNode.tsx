@@ -44,7 +44,6 @@ export interface WorkflowTaskNodeData {
   description: string
   entryCount: number
   entrySummary: Record<string, number>
-  isExpanded: boolean
   onHover: (node: DagNode, rect: DOMRect) => void
   onLeave: () => void
   onClick: (node: DagNode) => void

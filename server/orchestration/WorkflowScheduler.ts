@@ -27,6 +27,9 @@ const log = createLogger('WorkflowScheduler')
 
 const API_CONNECTION_ID = '__api__'
 const LEAD_AGENT_ID = 'lead'
+const MAX_QUEUE_PER_CHAT = 20
+const DEFAULT_WATCHDOG_INTERVAL_MS = 60_000
+const WATCHDOG_STALE_THRESHOLD_MS = 90_000
 
 export interface WorkflowSchedulerDeps {
   workflowRegistry: WorkflowRegistry
@@ -35,14 +38,25 @@ export interface WorkflowSchedulerDeps {
   workspaceStore: WorkspaceStore
   sessionRegistry: SessionRegistry
   broadcastToChat: (chatId: string, msg: Record<string, unknown>) => void
+  watchdogIntervalMs?: number
 }
 
 export class WorkflowScheduler {
   private deps: WorkflowSchedulerDeps
   private wokenLeadTasks = new Set<string>()
+  private pendingNotifications = new Map<string, string[]>()
+  private watchdogTimer: ReturnType<typeof setInterval> | null = null
 
   constructor(deps: WorkflowSchedulerDeps) {
     this.deps = deps
+    this.startWatchdog()
+  }
+
+  destroy(): void {
+    if (this.watchdogTimer) {
+      clearInterval(this.watchdogTimer)
+      this.watchdogTimer = null
+    }
   }
 
   scheduleWorkflow(engine: WorkflowEngine): void {
@@ -75,6 +89,12 @@ export class WorkflowScheduler {
 
     for (const agentActivity of payload.agentActivities) {
       if (agentActivity.phase !== 'waiting_input') continue
+
+      // L1: If this is the Lead agent becoming idle, drain pending notifications
+      if (agentActivity.agentId === LEAD_AGENT_ID) {
+        this.drainPendingNotifications(payload.chatId)
+        continue
+      }
 
       const engine = this.deps.workflowRegistry.findByAgent(agentActivity.agentId)
       if (!engine) continue
@@ -154,6 +174,12 @@ export class WorkflowScheduler {
     }
 
     engine.recordTaskResult(taskId, result)
+
+    const resolvedStatus = taskCompleted ? 'completed' : 'failed'
+    this.deps.broadcastToChat(engine.chatId, {
+      type: 'workflow:task-updated',
+      payload: { chatId: engine.chatId, workflowId: engine.workflowId, taskId, status: resolvedStatus, agentId },
+    })
 
     this.collectEnrichedContext(engine.chatId, result).then(enriched => {
       const readyTasks = engine.getReadyTasks()
@@ -380,6 +406,11 @@ Judgment guidance:
     engine.markTaskRunning(taskId, agentId)
     log.info('Starting workflow task', { workflowId: engine.workflowId, taskId, agentId })
 
+    this.deps.broadcastToChat(chatId, {
+      type: 'workflow:task-updated',
+      payload: { chatId, workflowId: engine.workflowId, taskId, status: 'running', agentId },
+    })
+
     try {
       const connections = this.deps.expertHandler.getConnectionsViewingChat(chatId)
       const connectionId = connections[0] || API_CONNECTION_ID
@@ -412,6 +443,10 @@ Judgment guidance:
       this.deps.broadcastToChat(chatId, {
         type: 'workflow:task-start-failed',
         payload: { workflowId: engine.workflowId, taskId, agentId, error: errorMsg },
+      })
+      this.deps.broadcastToChat(chatId, {
+        type: 'workflow:task-updated',
+        payload: { chatId, workflowId: engine.workflowId, taskId, status: 'failed', agentId },
       })
     }
   }

@@ -19,6 +19,7 @@ import AskUserQuestionCard from '../messages/AskUserQuestionCard'
 import PlanApprovalCard from '../messages/PlanApprovalCard'
 import TodoWriteCard from '../messages/TodoWriteCard'
 import FileDiffView from '../messages/FileDiffView'
+import WorkflowProgressCard, { isWorkflowProgress } from '../messages/WorkflowProgressCard'
 import ImageLightbox from '../messages/ImageLightbox'
 import {
   type TimelineEntry, type ToolGroup, type ExpertProgressGroup,
@@ -403,7 +404,12 @@ const renderTimelineItem = (item: TimelineEntry | ToolGroup | ExpertProgressGrou
       return <TimelineToolRow key={entry.id} entry={entry} />
     }
     case 'thinking': return <TimelineThinkingRow key={entry.id} entry={entry} />
-    case 'text': return <TimelineTextBlock key={entry.id} entry={entry} />
+    case 'text': {
+      if (entry.textContent && isWorkflowProgress(entry.textContent)) {
+        return <WorkflowProgressCard key={entry.id} text={entry.textContent} />
+      }
+      return <TimelineTextBlock key={entry.id} entry={entry} />
+    }
     case 'error': return (
       <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px 3px 17px' }}>
         <AlertCircle size={11} style={{ color: 'rgb(var(--accent-red))' }} />

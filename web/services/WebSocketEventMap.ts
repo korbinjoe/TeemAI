@@ -96,6 +96,13 @@ export interface WsReceiveEventMap {
     supersededId?: string
   }
   'whiteboard:entry-archived': { chatId: string; entryId: string; archivedCount: number }
+  'workflow:task-updated': {
+    chatId: string
+    workflowId: string
+    taskId: string
+    status: string
+    agentId: string
+  }
 
   // Notification
   'notification:init': { unreadCount: number }

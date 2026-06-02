@@ -622,7 +622,6 @@ export interface WorkflowDagTaskNode {
 const WORKFLOW_DAG = {
   NODE_W: 240,
   NODE_H: 80,
-  NODE_EXPANDED_H: 200,
   GAP_X: 60,
   GAP_Y: 24,
   PADDING_X: 40,
@@ -667,8 +666,7 @@ export const layoutWorkflowDag = (
       const task = taskIndex.get(taskId)
       if (!task) continue
 
-      const isExpanded = task.status === 'running'
-      const h = isExpanded ? WORKFLOW_DAG.NODE_EXPANDED_H : WORKFLOW_DAG.NODE_H
+      const h = WORKFLOW_DAG.NODE_H
 
       taskPositions.set(taskId, { x, y, h })
 

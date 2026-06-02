@@ -1,17 +1,19 @@
 # OpenTeam
 
-**The operating system for AI super-individuals — one person, the output of a whole team.**
+**Your AI teammates — with names, memory, and growing expertise.**
+
+You already use Claude Code or Codex. But every session starts from zero. Your agent doesn't remember your stack, your conventions, or the 20 times you told it "we use Tailwind, not CSS modules." And when you need three things done at once, you're stuck in one terminal, waiting.
+
+OpenTeam turns disposable AI sessions into a **persistent, professional team** — agents that know your project, work in parallel, and keep going while you're away.
 
 ```
-You:   "Build the auth module, add tests, and update the docs"
-       ↓ Lead decomposes into a DAG
-       ↓ dispatches 3 expert agents in parallel
-       ↓ each works in its own git worktree
-       ↓ you go grab coffee
-       ↓ come back, review 3 PRs, ship
-```
+You:    "Build the auth module, add tests, and update the docs."
 
-One config file. A full AI team. Walk away and come back to finished work.
+        ✦ Lead breaks it into 3 tasks
+        ✦ Engineer, Reviewer, and Tech Writer work simultaneously
+        ✦ You go grab coffee
+        ✦ Come back — 3 PRs ready for review
+```
 
 [![Watch the demo](https://github.com/user-attachments/assets/5f7b0993-b334-4e62-8114-3a24c6bd7a2c)](https://www.youtube.com/watch?v=VPqUtZZcyZk)
 
@@ -19,14 +21,29 @@ One config file. A full AI team. Walk away and come back to finished work.
 
 ## Why OpenTeam?
 
-You already use Claude Code or Codex. But you're stuck running **one agent at a time** — context-switching, waiting, babysitting.
+### Your agents start from zero every time
 
-OpenTeam gives you a team that works while you don't:
+Every Claude Code session is a blank slate. No memory of your project, no awareness of your coding standards, no specialization. You re-explain the same context over and over.
 
-- **Parallel execution** — multiple agents work simultaneously on different parts of your task
-- **Bring your own CLI** — first-class Claude Code & Codex support; add any backend by implementing two interfaces
-- **Walk-away orchestration** — Lead decomposes, dispatches, drives workflow to completion. You come back to results
-- **Skill-powered agents** — not just prompts; agents carry executable skills (browser automation, image generation, code review checklists, war-room coordination)
+**OpenTeam fix**: Each agent has a persistent identity (IDENTITY.md), defined expertise (AGENTS.md), and personality (SOUL.md). They accumulate memory across sessions. A built-in coach (Sensei) analyzes their task history and automatically optimizes their capabilities.
+
+### You're stuck running one agent at a time
+
+You have three things to do, but your single terminal blocks you from doing any of them in parallel.
+
+**OpenTeam fix**: Dispatch multiple agents simultaneously. Engineer writes code while Reviewer audits while Designer prototypes — each in its own isolated git worktree, no merge conflicts.
+
+### You have to babysit every step
+
+Context-switch between agents, relay information manually, confirm every small decision. Managing AI is more exhausting than doing the work yourself.
+
+**OpenTeam fix**: Agents coordinate through a shared War Room — they see each other's goals, decisions, and artifacts. They self-decide when possible and only escalate when human judgment is genuinely needed.
+
+### When you leave, everything stops
+
+You go to a meeting, and your AI stops working. Your time away is wasted productivity.
+
+**OpenTeam fix**: Pulse-mode — batch-dispatch tasks, walk away, come back to results. The workflow engine handles dependencies, retries, and failure policies. When you return: "You were away for 2 hours. 3 completed, 1 needs your review."
 
 ---
 
@@ -44,13 +61,24 @@ npm run dev
 npm run dev:electron
 ```
 
-**Prerequisites**: Node.js ≥ 18, npm, and a Claude Code or Codex CLI installed.
+**Prerequisites**: Node.js >= 18, npm, and a Claude Code or Codex CLI installed.
 
 ---
 
 ## How It Works
 
-### 1. Define your team in `openteam.json`
+### 1. Define your team
+
+Each agent is a directory with markdown files that define who it is:
+
+```
+ai-assets/agents/code-reviewer/
+├── IDENTITY.md    ← name, provider, tools
+├── AGENTS.md      ← system prompt, expertise, workflows
+└── SOUL.md        ← personality, tone, collaboration style
+```
+
+Or configure via `openteam.json`:
 
 ```jsonc
 {
@@ -60,75 +88,85 @@ npm run dev:electron
       { "id": "fullstack-product-engineer", "name": "Fullstack Engineer" },
       { "id": "code-reviewer", "name": "Code Reviewer" },
       { "id": "ui-designer", "name": "UI Designer" }
-      // Add your own — just point to a directory with a SOUL.md
     ]
   }
 }
 ```
 
-### 2. Dispatch a task
+### 2. Start a mission
 
-Tell the Lead what you need. It decides whether to answer directly, hand off to one expert, or create a multi-step DAG workflow across several agents.
+Tell the Lead what you need. It decides whether to answer directly, hand off to one specialist, or decompose into a multi-step workflow across several agents.
 
 ### 3. Walk away
 
-Agents work in isolated git worktrees. The workflow engine handles dependencies, retries, and failure policies. You come back to review results.
+Agents work in isolated git worktrees. The workflow engine handles task dependencies, retries, and failure policies. When you come back, review the results and ship.
 
 ---
 
-## Features
+## Your Built-in Team
 
-### Orchestration Engine
+| Agent | Role | What makes it special |
+|-------|------|----------------------|
+| **Lead** | Orchestrator | Routes, decomposes, creates DAG workflows |
+| **Fullstack Engineer** | Builder | End-to-end feature delivery |
+| **Code Reviewer** | Quality gate | Multi-language review with structured reports |
+| **UI Designer** | Visual + code | Design + implementation, browser-verified |
+| **DevOps Engineer** | Infrastructure | CI/CD, deployment, monitoring |
+| **Architect** | Structure | Architecture assessment, dependency governance |
+| **Product Strategist** | Direction | Competitive analysis, PRDs, wireframes |
+| **Image Creator** | Visual assets | AI image generation via Gemini |
+| **Growth Marketer** | Distribution | Social media, promotion content |
+| **Sensei** | Coach | Analyzes team performance, optimizes agent prompts |
 
-- **DAG Workflows** — Lead decomposes tasks into dependency graphs and dispatches agents in optimal order
-- **Handoff Protocol** — agents route work to the right specialist automatically
-- **Workspace Isolation** — each agent works in its own git worktree, no merge conflicts
-- **Failure Policies** — per-task `stop`, `skip`, or `retry` with configurable attempts and timeouts
-- **Heartbeat Monitoring** — keeps long-running agents on track
+Every agent remembers. Sensei watches their task history and evolves their capabilities over time. The team gets better the more you use it.
+
+Adding a custom agent = create a directory with a `SOUL.md` and add one entry to `openteam.json`.
+
+---
+
+## Key Capabilities
+
+### Session Management
+- Unified view of all CLI AI sessions (Claude Code, Codex) — status visible at a glance
+- Session history recovery — never lose a conversation
+- Cross-session agent memory — your agents remember what they learned
+
+### Orchestration
+- DAG workflows — Lead decomposes tasks into dependency graphs
+- Handoff protocol — agents route work to the right specialist
+- Workspace isolation — each agent works in its own git worktree
+- Failure policies — per-task `stop`, `skip`, or `retry` with configurable timeouts
+
+### Collaboration
+- War Room — shared context board where agents post goals, decisions, and blockers
+- Agent-to-agent coordination without user as relay
+- Attention-first — agents self-decide, only escalate when necessary
+
+### Transparency
+- Real-time token tracking by model and conversation
+- Permission interception — approve or reject agent tool calls live
+- DevPanel — 5-tab dashboard with protocol timeline and workflow DAG inspector
+- Cron scheduler — recurring agent tasks with natural-language time parsing
+
+### Agent Growth
+- DNA metrics — task count, success rate, first-pass rate, quality score per agent
+- Evolution log — visible growth trajectory over time
+- Sensei — automatic prompt optimization based on task history
 
 ### Web IDE
-
 - File tree + Monaco editor + multi-tab terminal
 - Built-in browser preview for frontend work
 - Git diff viewer and commit panel
-- Inline code review for agent changes
-
-### War Room
-
-A shared context board where agents post goals, decisions, artifacts, and blockers — visible to the whole team. No agent works in a vacuum.
-
-### Observability
-
-- **DevPanel** — 5-tab dashboard: Overview, Agents, Events, Protocol timeline, Workflow DAG inspector
-- **Real-time token tracking** by model and conversation
-- **Permission interception** — approve or reject agent tool calls live
-- **Cron scheduler** — recurring agent tasks with natural-language time parsing
-
-### Developer Experience
-
-- Dark / light mode
-- i18n (English / Chinese)
-- Desktop app via Electron (macOS)
-- CLI mode for headless operation
 
 ---
 
-## Built-in Agent Team
+## Use Cases
 
-| Agent | What it does |
-|-------|-------------|
-| **Lead** | Routes tasks — answers directly, hands off, or creates DAG workflows |
-| **Fullstack Engineer** | End-to-end feature delivery from design to implementation |
-| **Code Reviewer** | Multi-language code review, quality analysis, root-cause analysis |
-| **UI Designer** | Visual design + implementation with browser-verified screenshots |
-| **DevOps Engineer** | CI/CD, deployment, and infrastructure |
-| **Architect** | Architecture assessment, layering, dependency governance |
-| **Product Strategist** | Competitive analysis, PRDs, wireframes |
-| **Image Creator** | AI image generation via Gemini |
-| **Growth Marketer** | Project promotion and social media content |
-| **Sensei** | Agent team evolution and prompt optimization |
+**Solo Founder** — You have a product idea. "Build the landing page, implement the signup API, and write the copy." Three agents work in parallel. You review one PR with all the pieces. Next week, they already know your tech stack.
 
-Adding a custom agent = create a directory with a `SOUL.md` and add one entry to `openteam.json`.
+**Open Source Maintainer** — A contributor submits a large PR. Dispatch Code Reviewer across backend, frontend, and config simultaneously. Get a structured review report in minutes. The reviewer remembers your project's conventions for next time.
+
+**Freelancer** — Client wants a feature + tests + docs. Dispatch once, go work on another client. Come back to a complete deliverable. Your agents have been learning your client's codebase with each task.
 
 ---
 
@@ -143,23 +181,10 @@ Agents aren't just prompts — they carry executable skills:
 | `whiteboard` | Read/write shared War Room context |
 | `playwright-cli` | Browser automation and screenshot verification |
 | `image-generator` | AI image generation |
-| `x-promoter` | Social media content creation |
-| `code-reviewer-*` | Language-specific review checklists (React, TypeScript, Node.js) |
-| `api-integrator` | API contract implementation |
-| `product-design` | PRD and wireframe generation |
+| `code-reviewer-*` | Language-specific review checklists |
 | `skill-creator` | Create new skills dynamically |
 
 Skills are composable — any agent can carry any combination. Build your own by dropping a script into the skills directory.
-
----
-
-## Use Cases
-
-**Solo Founder** — You have a product idea. Tell Lead to "build the landing page, implement the signup API, and write the copy." Three agents work in parallel. You review one PR with all the pieces.
-
-**Open Source Maintainer** — A contributor submits a large PR. Dispatch Code Reviewer across backend, frontend, and config in parallel. Get a structured review report in minutes, not hours.
-
-**Freelancer** — Client wants a feature + tests + docs. Dispatch once, go work on another client. Come back to a complete deliverable.
 
 ---
 

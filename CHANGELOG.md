@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.1.0-beta.2] - 2026-06-02
+
+### Features
+
+- **Mobile remote control**: add PWA with LAN access, QR pairing, real-time streaming, agent name display, and message grouping in mission detail
+- **Mobile dashboard**: agent names, Rocket icon, enhanced home page, sidebar team row, and agent stats
+- **Workflow scheduler**: add notification queue, watchdog, and autoAdvance for server-driven workflow progression
+- **War room visuals**: differentiate timeline card styles, improve causal flow edges, file tree auto-scroll, and whiteboard layout edges
+
+### Bug Fixes
+
+- Fix War Room DAG not reflecting real-time workflow task status
+- Fix second handoff to same agent silently failing
+- Fix AskUserQuestion tool not available when allowedTools is configured
+- Fix message area running status color to match global blue convention
+- Fix queued messages lost on Mission switch by persisting to global store
+- Fix New Mission button UI freeze by removing useWorkspace() from memo-wrapped MissionRow
+- Fix handoff task being silently dropped when target agent is already running
+- Fix Lead agent bypassing multi-agent dispatch by using replace prompt mode and tightening tools
+- Fix empty state logo to use theme-aware OpenTeamLogo component
+- Fix war room misclassifying internal subagent spawns as handoffs
+
+### Improvements
+
+- Rewrite UI Designer prompts to eliminate AI-taste output
+- Split dialog state from WorkspaceContext into dedicated DialogContext
+- Change default IDE editor font size from M to S for visual consistency
+- Revise mobile remote control spec to LAN-only and add workspace visibility tracking
+
 ## [0.1.0-beta.1] - 2026-06-02
 
 ### Features

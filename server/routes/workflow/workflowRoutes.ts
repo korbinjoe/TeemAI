@@ -140,6 +140,8 @@ export const createWorkflowRoutes = (deps: WorkflowRouteDeps): Router => {
       })
     }
 
+    workflowScheduler.onTaskRejected(taskId)
+
     const state = engine.getState()
     const ts = state.tasks[taskId]
     const task = state.dag.tasks.find(t => t.taskId === taskId)

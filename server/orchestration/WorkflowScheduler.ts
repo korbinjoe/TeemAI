@@ -29,7 +29,7 @@ const API_CONNECTION_ID = '__api__'
 const LEAD_AGENT_ID = 'lead'
 const MAX_QUEUE_PER_CHAT = 20
 const DEFAULT_WATCHDOG_INTERVAL_MS = 60_000
-const WATCHDOG_STALE_THRESHOLD_MS = 90_000
+const WATCHDOG_STALE_THRESHOLD_MS = 180_000
 
 export interface WorkflowSchedulerDeps {
   workflowRegistry: WorkflowRegistry
@@ -45,6 +45,7 @@ export class WorkflowScheduler {
   private deps: WorkflowSchedulerDeps
   private wokenLeadTasks = new Set<string>()
   private pendingNotifications = new Map<string, string[]>()
+  private startingTasks = new Set<string>()
   private watchdogTimer: ReturnType<typeof setInterval> | null = null
 
   constructor(deps: WorkflowSchedulerDeps) {
@@ -175,9 +176,10 @@ export class WorkflowScheduler {
 
     engine.recordTaskResult(taskId, result)
 
-    // L1: Clear queue if workflow just completed
+    // L1: Clear queue and wokenLeadTasks if workflow just completed
     if (engine.status === 'completed' || engine.status === 'stopped') {
       this.clearQueueForChat(engine.chatId)
+      this.clearWokenTasksForWorkflow(engine)
     }
 
     const resolvedStatus = taskCompleted ? 'completed' : 'failed'
@@ -188,7 +190,8 @@ export class WorkflowScheduler {
 
     // L3: If task has autoAdvance and completed successfully, advance immediately
     const taskDef = engine.getTask(taskId)
-    if (taskCompleted && taskDef?.autoAdvance) {
+    const didAutoAdvance = taskCompleted && !!taskDef?.autoAdvance
+    if (didAutoAdvance) {
       log.info('autoAdvance: immediately advancing downstream tasks', { workflowId: engine.workflowId, taskId })
       this.advanceEngine(engine)
     }
@@ -202,6 +205,7 @@ export class WorkflowScheduler {
         completedTaskId: taskId,
         completedBy: agentId,
         workflowStatus: state.status,
+        autoAdvanced: didAutoAdvance,
         tasks: Object.values(state.tasks).map(t => ({
           taskId: t.taskId,
           agentId: t.agentId,
@@ -229,6 +233,7 @@ export class WorkflowScheduler {
         completedTaskId: taskId,
         completedBy: agentId,
         workflowStatus: state.status,
+        autoAdvanced: didAutoAdvance,
         tasks: Object.values(state.tasks).map(t => ({
           taskId: t.taskId,
           agentId: t.agentId,
@@ -316,6 +321,7 @@ export class WorkflowScheduler {
       completedTaskId: string
       completedBy: string
       workflowStatus: string
+      autoAdvanced?: boolean
       tasks: Array<{ taskId: string; agentId: string; status: string; summary?: string; rejectCount?: number }>
       readyTasks: Array<{ taskId: string; agentId: string; description: string }>
       enriched?: EnrichedTaskContext
@@ -355,12 +361,16 @@ export class WorkflowScheduler {
       }
     }
 
+    const autoAdvanceNote = p.autoAdvanced
+      ? '\n\nNote: downstream tasks were auto-advanced per workflow config. No action needed for advancement.\n'
+      : ''
+
     return `[Workflow progress: ${workflowId}]
 
 Event: ${p.event === 'task_completed' ? 'Task completed' : 'Task failed'}
 Task: ${p.completedTaskId} by ${p.completedBy}
 Workflow status: ${p.workflowStatus}
-
+${autoAdvanceNote}
 All tasks:
 ${taskLines}
 ${enrichedSection}
@@ -418,8 +428,8 @@ Judgment guidance:
   private enqueueNotification(chatId: string, prompt: string): void {
     const queue = this.pendingNotifications.get(chatId) ?? []
     if (queue.length >= MAX_QUEUE_PER_CHAT) {
-      log.warn('Notification queue full, dropping oldest', { chatId, queueSize: queue.length })
-      queue.shift()
+      const dropped = queue.shift()
+      log.warn('Notification queue full, dropping oldest', { chatId, queueSize: queue.length, droppedContent: dropped?.slice(0, 200) })
     }
     queue.push(prompt)
     this.pendingNotifications.set(chatId, queue)
@@ -439,15 +449,29 @@ Judgment guidance:
     const prompts = [...queue]
     this.pendingNotifications.delete(chatId)
 
-    for (const prompt of prompts) {
-      leadSession.acpClient.prompt(leadSession.sessionId, prompt).catch(err => {
-        log.error('Failed to deliver queued notification', { chatId, error: err instanceof Error ? err.message : String(err) })
-      })
-    }
+    const merged = prompts.length === 1
+      ? prompts[0]
+      : `[Batched workflow updates: ${prompts.length} notifications]\n\n` +
+        prompts.map((p, i) => `--- Update ${i + 1} ---\n${p}`).join('\n\n')
+
+    leadSession.acpClient.prompt(leadSession.sessionId, merged).catch(err => {
+      log.error('Failed to deliver queued notification', { chatId, error: err instanceof Error ? err.message : String(err) })
+    })
   }
 
-  clearQueueForChat(chatId: string): void {
+  private clearQueueForChat(chatId: string): void {
     this.pendingNotifications.delete(chatId)
+  }
+
+  onTaskRejected(taskId: string): void {
+    this.wokenLeadTasks.delete(taskId)
+  }
+
+  private clearWokenTasksForWorkflow(engine: WorkflowEngine): void {
+    const taskIds = Object.keys(engine.getState().tasks)
+    for (const id of taskIds) {
+      this.wokenLeadTasks.delete(id)
+    }
   }
 
   // ── L2: Watchdog Timer ──
@@ -489,6 +513,12 @@ Judgment guidance:
   }
 
   private async startTask(engine: WorkflowEngine, taskId: string, agentId: string, description: string): Promise<void> {
+    if (this.startingTasks.has(taskId)) {
+      log.debug('Task already being started, skipping duplicate', { taskId, agentId })
+      return
+    }
+    this.startingTasks.add(taskId)
+
     const chatId = engine.chatId
     const taskState = engine.getState().tasks[taskId]
 
@@ -537,6 +567,8 @@ Judgment guidance:
         type: 'workflow:task-updated',
         payload: { chatId, workflowId: engine.workflowId, taskId, status: 'failed', agentId },
       })
+    } finally {
+      this.startingTasks.delete(taskId)
     }
   }
 }

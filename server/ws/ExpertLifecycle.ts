@@ -158,6 +158,13 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
               status: 'running',
             },
           }))
+          if (task?.trim()) {
+            const expandedTask = existing.provider !== 'codex'
+              ? await expandSlashCommand(task.trim(), existing.cwd)
+              : task.trim()
+            existing.acpClient.write(expandedTask, payload.images)
+            log.info('Wrote task to already-running agent', { agentId, taskLen: expandedTask.length })
+          }
           return
         }
         log.warn('Agent in store but process is dead, cleaning up', { agentId })

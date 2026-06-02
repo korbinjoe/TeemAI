@@ -208,7 +208,7 @@ export class ExpertHandler {
     ws: WebSocket,
     payload: { agentId: string; task?: string; images?: Array<{ data: string; mediaType: string }>; cwd?: string; repositories?: Array<{ path: string }>; resumeSessionId?: string; chatId?: string; cols?: number; rows?: number; previousContext?: { agentName: string; lastMessage?: string; jsonlPath?: string }; executionMode?: 't0' | 't1' | 't2' },
     connectionId: string,
-  ): Promise<void> {
+  ): Promise<{ started: boolean; sessionId?: string; method?: string }> {
     return this.lifecycle.handleStart(ws, payload, connectionId)
   }
 

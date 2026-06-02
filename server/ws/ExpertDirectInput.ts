@@ -33,7 +33,7 @@ export interface ExpertDirectInputDeps {
   broadcastToChat: (chatId: string, msg: Record<string, unknown>) => void
   ensureAttachedRunning: (ws: WebSocket, chatId: string, agentId: string, connectionId: string) => ExpertEntry | undefined
   trackParticipant: (agentId: string, connectionId: string, chatId: string) => void
-  handleStart: (ws: WebSocket, payload: StartPayload, connectionId: string) => Promise<void>
+  handleStart: (ws: WebSocket, payload: StartPayload, connectionId: string) => Promise<{ started: boolean; sessionId?: string; method?: string }>
 }
 
 export const createExpertDirectInput = (deps: ExpertDirectInputDeps) => {

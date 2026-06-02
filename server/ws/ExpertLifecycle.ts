@@ -84,7 +84,7 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
     ws: WebSocket,
     payload: { agentId: string; task?: string; images?: Array<{ data: string; mediaType: string }>; cwd?: string; repositories?: Array<{ path: string }>; resumeSessionId?: string; chatId?: string; cols?: number; rows?: number; previousContext?: { agentName: string; lastMessage?: string; jsonlPath?: string }; executionMode?: 't0' | 't1' | 't2' },
     connectionId: string,
-  ): Promise<void> => {
+  ): Promise<{ started: boolean; sessionId?: string; method?: 'spawned' | 'existing' | 'attached' | 'skipped' }> => {
     try {
       const { agentId, task } = payload
       const executionMode = payload.executionMode
@@ -95,7 +95,7 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
           type: 'expert:error',
           payload: { agentId, chatId: '', error: 'missing_chat_id', message: 'expert:start payload must carry chatId' },
         }))
-        return
+        return { started: false }
       }
       const key = compositeKey(connectionId, chatId, agentId)
 
@@ -119,7 +119,7 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
             upgradeUrl: policy?.upgradeUrl,
           },
         }))
-        return
+        return { started: false }
       }
 
       const crossSession = sessionRegistry.findByChat(chatId, agentId)
@@ -139,13 +139,13 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
         // so do not enqueue it again. Direct user input arriving during
         // starting goes through ExpertDirectInput, which does enqueue.
         log.info('Agent already starting, skipping duplicate', { agentId })
-        return
+        return { started: true, method: 'skipped' as const }
       }
 
       const existing = store.get(key)
       if (existing) {
         if (existing.acpClient.isAlive()) {
-          log.info('Agent already running', { agentId, sessionId: existing.sessionId })
+          log.info('Agent already running, sending task via prompt', { agentId, sessionId: existing.sessionId })
           ws.send(JSON.stringify({
             type: 'expert:already-running',
             payload: {
@@ -162,10 +162,18 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
             const expandedTask = existing.provider !== 'codex'
               ? await expandSlashCommand(task.trim(), existing.cwd)
               : task.trim()
-            existing.acpClient.write(expandedTask, payload.images)
-            log.info('Wrote task to already-running agent', { agentId, taskLen: expandedTask.length })
+            const promptImages = payload.images?.map(i => ({ data: i.data, mimeType: i.mediaType }))
+            existing.acpClient.prompt(existing.sessionId, expandedTask, promptImages).catch(err => {
+              const errorMsg = err instanceof Error ? err.message : String(err)
+              log.warn('ACP prompt to already-running agent failed', { agentId, chatId, error: errorMsg })
+              sendTo(connectionId, {
+                type: 'expert:error',
+                payload: { agentId, chatId, error: 'acp_prompt_failed', message: `Failed to send task to running agent: ${errorMsg}` },
+              })
+            })
+            log.info('Sent task to already-running agent via prompt', { agentId, taskLen: expandedTask.length })
           }
-          return
+          return { started: true, sessionId: existing.sessionId, method: 'existing' as const }
         }
         log.warn('Agent in store but process is dead, cleaning up', { agentId })
         store.cleanup(key)
@@ -189,7 +197,7 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
             attached.acpClient.write(expandedAttachedTask, payload.images)
           }
         }
-        return
+        return { started: true, sessionId: attached.sessionId, method: 'attached' as const }
       }
 
       store.markStarting(key)
@@ -202,7 +210,7 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
           payload: { agentId, chatId, message: `Expert ${agentId} not found` },
         }))
         store.clearStarting(key)
-        return
+        return { started: false }
       }
 
       const agent = agentDef ? agentDefToAgent(agentDef) : storedAgent!
@@ -237,7 +245,7 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
           type: 'expert:start-failed',
           payload: { agentId, chatId, message: `Refused: cwd "${cwd}" is outside allowed workspace` },
         }))
-        return
+        return { started: false }
       }
 
       let acpClient: ACPClient
@@ -422,6 +430,8 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
         log.warn('Failed to create execution log', { agentId, error: err instanceof Error ? err.message : String(err) })
       })
 
+      return { started: true, sessionId, method: 'spawned' as const }
+
     } catch (error) {
       const chatId = payload.chatId || ''
       const key = compositeKey(connectionId, chatId, payload.agentId)
@@ -451,6 +461,8 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
         type: 'expert:list-updated',
         payload: { experts: store.getExpertListForConnection(connectionId, chatId), chatId },
       })
+
+      return { started: false }
     }
   }
 

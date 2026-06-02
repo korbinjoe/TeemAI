@@ -348,13 +348,18 @@ ${expandedTask}`
         task,
       ].filter(Boolean).join('\n')
 
-      await expertHandler.handleStart(ws, {
+      const startResult = await expertHandler.handleStart(ws, {
         agentId: to,
         task: handoffTask,
         chatId,
         cwd: sourceEntry.cwd,
         previousContext,
       }, connectionId)
+
+      if (!startResult.started) {
+        log.error('Handoff target agent failed to start', { from, to, chatId })
+        return res.status(500).json({ status: 'error', reason: `Target agent ${to} failed to start` })
+      }
 
       const targetEntry = store.findRunning(to, connectionId, chatId)
       if (targetEntry) {

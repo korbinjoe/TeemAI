@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenTeam — Desktop Remote Control Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-primary:    rgb(10,10,16);
+    --bg-secondary:  rgb(16,16,24);
+    --bg-tertiary:   rgb(22,22,32);
+    --bg-hover:      rgb(30,30,42);
+    --bg-elevated:   rgb(24,24,36);
+    --bg-input:      rgb(18,18,28);
+    --text-primary:  rgb(226,228,240);
+    --text-secondary:rgb(148,156,172);
+    --text-muted:    rgb(90,100,120);
+    --accent-brand:  rgb(198,162,118);
+    --accent-brand-light: rgb(222,192,156);
+    --accent-brand-deep:  rgb(172,132,88);
+    --accent-green:  rgb(52,211,153);
+    --accent-yellow: rgb(251,191,36);
+    --accent-red:    rgb(239,68,68);
+    --accent-running:rgb(96,165,250);
+    --border-color:  rgb(38,38,54);
+    --border-subtle: rgb(28,28,42);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 220px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-subtle);
+    padding: 16px 0;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  .sidebar-logo {
+    padding: 0 16px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--accent-brand);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sidebar-logo svg { width: 20px; height: 20px; }
+  .sidebar-section {
+    padding: 6px 8px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-muted);
+  }
+  .sidebar-item {
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s;
+    border-radius: 0;
+    margin: 0 4px;
+    border-radius: var(--radius-sm);
+  }
+  .sidebar-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .sidebar-item.active {
+    background: var(--bg-hover);
+    color: var(--accent-brand-light);
+  }
+  .sidebar-item svg { width: 16px; height: 16px; opacity: 0.6; }
+  .sidebar-item.active svg { opacity: 1; }
+
+  /* ── Main Content ── */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 40px 48px;
+    max-width: 720px;
+  }
+  .page-title {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 32px;
+    color: var(--text-primary);
+  }
+
+  /* ── Section Card ── */
+  .section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  /* ── Toggle Switch ── */
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .toggle {
+    width: 40px;
+    height: 22px;
+    background: var(--bg-hover);
+    border-radius: 11px;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+    border: 1px solid var(--border-color);
+  }
+  .toggle.on {
+    background: var(--accent-brand);
+    border-color: var(--accent-brand);
+  }
+  .toggle-knob {
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s;
+  }
+  .toggle.on .toggle-knob { transform: translateX(18px); }
+  .toggle-label {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* ── LAN Status Panel (hidden by default) ── */
+  .lan-panel { display: none; }
+  .lan-panel.visible { display: block; }
+  .lan-panel-inner {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  /* ── QR Code ── */
+  .qr-container {
+    background: white;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .qr-canvas {
+    width: 140px;
+    height: 140px;
+    display: block;
+  }
+
+  /* ── Connection Info ── */
+  .conn-info { flex: 1; min-width: 0; }
+  .conn-url {
+    font-family: 'SF Mono', 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent-brand-light);
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    word-break: break-all;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--accent-brand);
+  }
+  .copy-btn.copied {
+    color: var(--accent-green);
+    border-color: var(--accent-green);
+  }
+
+  .conn-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .conn-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+  }
+  .conn-meta-label {
+    color: var(--text-muted);
+    min-width: 80px;
+  }
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .status-dot.green { background: var(--accent-green); }
+  .status-dot.yellow { background: var(--accent-yellow); }
+  .status-dot.gray { background: var(--text-muted); }
+
+  .conn-hint {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .conn-hint svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
+
+  /* ── Disable Button ── */
+  .disable-btn {
+    margin-top: 16px;
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--accent-red);
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .disable-btn:hover {
+    background: rgba(239,68,68,0.1);
+    border-color: var(--accent-red);
+  }
+
+  /* ── Tray Preview ── */
+  .tray-section {
+    margin-top: 32px;
+  }
+  .tray-preview-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+  .tray-mockup {
+    background: rgb(36,36,36);
+    border-radius: var(--radius-md);
+    width: 240px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .tray-item {
+    padding: 7px 14px;
+    font-size: 13px;
+    color: rgb(220,220,225);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .tray-item:hover { background: rgb(56,100,220); color: white; }
+  .tray-item.disabled { color: rgb(120,120,130); }
+  .tray-sep { height: 1px; background: rgba(255,255,255,0.1); margin: 4px 12px; }
+  .tray-shortcut { font-size: 12px; color: rgb(120,120,130); }
+  .tray-item:hover .tray-shortcut { color: rgba(255,255,255,0.7); }
+  .tray-badge {
+    font-size: 10px;
+    background: var(--accent-brand);
+    color: rgb(10,10,16);
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  .tray-item.highlight { color: var(--accent-brand-light); }
+  .tray-item.highlight:hover { color: white; }
+
+  /* ── Modal Overlay ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  }
+  .modal-title {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .modal-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+  }
+  .modal .qr-container {
+    margin: 0 auto 20px;
+    width: fit-content;
+  }
+  .modal-url {
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--bg-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    word-break: break-all;
+    margin-bottom: 20px;
+  }
+  .modal-close {
+    background: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 8px 24px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .modal-close:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+
+  /* ── Misc ── */
+  .spacer { flex: 1; }
+  .badge-new {
+    font-size: 9px;
+    background: var(--accent-brand);
+    color: rgb(10,10,16);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    OpenTeam
+  </div>
+  <div class="sidebar-section">Workspace</div>
+  <div class="sidebar-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Dashboard
+  </div>
+  <div class="sidebar-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+    Missions
+  </div>
+  <div class="sidebar-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Agents
+  </div>
+  <div class="spacer"></div>
+  <div class="sidebar-section">System</div>
+  <div class="sidebar-item active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </div>
+</nav>
+
+<!-- Main Content -->
+<div class="main">
+  <h1 class="page-title">Settings</h1>
+
+  <!-- Remote Control Section -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-brand)" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        Remote Control
+        <span class="badge-new">New</span>
+      </div>
+      <div class="toggle-wrap">
+        <span class="toggle-label" id="toggleLabel">Off</span>
+        <div class="toggle" id="lanToggle" onclick="toggleLAN()">
+          <div class="toggle-knob"></div>
+        </div>
+      </div>
+    </div>
+    <p class="section-desc">
+      Control OpenTeam from your phone. Enable LAN access, scan the QR code with your phone, and manage missions on the go.
+    </p>
+
+    <!-- LAN Panel (shown when enabled) -->
+    <div class="lan-panel" id="lanPanel">
+      <div class="lan-panel-inner">
+        <!-- QR Code -->
+        <div class="qr-container">
+          <canvas class="qr-canvas" id="qrCanvas"></canvas>
+        </div>
+
+        <!-- Connection Info -->
+        <div class="conn-info">
+          <div class="conn-url">
+            <span id="lanUrlText">http://192.168.1.100:13001/mobile?token=a3f8...</span>
+            <button class="copy-btn" id="copyBtn" onclick="copyUrl()">Copy</button>
+          </div>
+
+          <div class="conn-meta">
+            <div class="conn-meta-row">
+              <span class="conn-meta-label">LAN IP</span>
+              <span>192.168.1.100</span>
+            </div>
+            <div class="conn-meta-row">
+              <span class="conn-meta-label">Port</span>
+              <span>13001</span>
+            </div>
+            <div class="conn-meta-row">
+              <span class="conn-meta-label">Status</span>
+              <span class="status-dot green"></span>
+              <span style="color: var(--accent-green)">1 device connected</span>
+            </div>
+          </div>
+
+          <div class="conn-hint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>Your phone must be on the same Wi-Fi network. The token resets when you disable access or restart OpenTeam.</span>
+          </div>
+
+          <button class="disable-btn" onclick="toggleLAN()">Disable LAN Access</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Other Settings (context) -->
+  <div class="section" style="opacity: 0.5;">
+    <div class="section-header">
+      <div class="section-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707"/><circle cx="12" cy="12" r="4"/></svg>
+        Appearance
+      </div>
+    </div>
+    <p class="section-desc">Theme, color, and display preferences.</p>
+  </div>
+
+  <div class="section" style="opacity: 0.5;">
+    <div class="section-header">
+      <div class="section-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Security
+      </div>
+    </div>
+    <p class="section-desc">API keys, authentication, and access control.</p>
+  </div>
+
+  <!-- Tray Preview -->
+  <div class="tray-section">
+    <div class="tray-preview-label">Tray Menu Preview</div>
+    <div class="tray-mockup">
+      <div class="tray-item" style="font-weight: 600; font-size: 12px; color: var(--text-muted); padding-top: 10px;">
+        OpenTeam
+        <span class="tray-badge" id="trayBadge" style="display:none">LAN</span>
+      </div>
+      <div class="tray-sep"></div>
+      <div class="tray-item">Show Window<span class="tray-shortcut">&#8984;&#8679;O</span></div>
+      <div class="tray-item highlight" id="trayConnectItem" onclick="showModal()">
+        Connect Mobile...
+      </div>
+      <div class="tray-sep"></div>
+      <div class="tray-item">● 2 missions running</div>
+      <div class="tray-sep"></div>
+      <div class="tray-item">Check for Updates...</div>
+      <div class="tray-item" style="color: var(--accent-red);">Quit OpenTeam<span class="tray-shortcut">&#8984;Q</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal (QR Code popup from Tray) -->
+<div class="modal-overlay" id="modalOverlay" onclick="hideModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">Connect Mobile</div>
+    <div class="modal-desc">Scan this QR code with your phone camera</div>
+    <div class="qr-container">
+      <canvas class="qr-canvas" id="qrCanvasModal"></canvas>
+    </div>
+    <div class="modal-url">http://192.168.1.100:13001/mobile?token=a3f8c9...</div>
+    <button class="modal-close" onclick="hideModal()">Done</button>
+  </div>
+</div>
+
+<script>
+// ── QR Code Generator (simplified visual) ──
+function drawQR(canvasId) {
+  const canvas = document.getElementById(canvasId)
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  const size = 140
+  canvas.width = size
+  canvas.height = size
+  const cellSize = 4
+  const modules = Math.floor(size / cellSize)
+
+  // Seeded pseudo-random for consistent pattern
+  let seed = 42
+  const rand = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 }
+
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, size, size)
+
+  // Draw finder patterns (3 corners)
+  const drawFinder = (x, y) => {
+    ctx.fillStyle = '#000'
+    ctx.fillRect(x, y, 28, 28)
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(x + 4, y + 4, 20, 20)
+    ctx.fillStyle = '#000'
+    ctx.fillRect(x + 8, y + 8, 12, 12)
+  }
+  drawFinder(0, 0)
+  drawFinder(size - 28, 0)
+  drawFinder(0, size - 28)
+
+  // Draw data modules
+  ctx.fillStyle = '#000'
+  for (let row = 0; row < modules; row++) {
+    for (let col = 0; col < modules; col++) {
+      const x = col * cellSize
+      const y = row * cellSize
+      // Skip finder pattern areas
+      if ((x < 32 && y < 32) || (x > size - 32 && y < 32) || (x < 32 && y > size - 32)) continue
+      if (rand() > 0.5) {
+        ctx.fillRect(x, y, cellSize, cellSize)
+      }
+    }
+  }
+
+  // Center logo area
+  const logoSize = 24
+  const logoX = (size - logoSize) / 2
+  ctx.fillStyle = '#fff'
+  ctx.fillRect(logoX - 4, logoX - 4, logoSize + 8, logoSize + 8)
+  ctx.fillStyle = 'rgb(198,162,118)'
+  ctx.beginPath()
+  ctx.arc(size/2, size/2, logoSize/2 - 2, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = '#fff'
+  ctx.font = 'bold 10px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('OT', size/2, size/2)
+}
+
+// ── Toggle Logic ──
+let lanEnabled = false
+function toggleLAN() {
+  lanEnabled = !lanEnabled
+  const toggle = document.getElementById('lanToggle')
+  const panel = document.getElementById('lanPanel')
+  const label = document.getElementById('toggleLabel')
+  const badge = document.getElementById('trayBadge')
+
+  toggle.classList.toggle('on', lanEnabled)
+  panel.classList.toggle('visible', lanEnabled)
+  label.textContent = lanEnabled ? 'On' : 'Off'
+  badge.style.display = lanEnabled ? 'inline' : 'none'
+
+  if (lanEnabled) {
+    drawQR('qrCanvas')
+  }
+}
+
+function copyUrl() {
+  const btn = document.getElementById('copyBtn')
+  btn.textContent = 'Copied!'
+  btn.classList.add('copied')
+  setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied') }, 1500)
+}
+
+function showModal() {
+  document.getElementById('modalOverlay').classList.add('visible')
+  drawQR('qrCanvasModal')
+}
+function hideModal(e) {
+  if (e && e.target !== document.getElementById('modalOverlay')) return
+  document.getElementById('modalOverlay').classList.remove('visible')
+}
+
+// Init
+drawQR('qrCanvas')
+drawQR('qrCanvasModal')
+</script>
+</body>
+</html>

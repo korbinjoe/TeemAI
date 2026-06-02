@@ -13,6 +13,7 @@ export interface Workspace {
   repositories: Repository[]
   agentTeam?: { primaryAgentId: string; teamAgentIds: string[] }
   worktreeEnabled?: boolean
+  hiddenAt?: number | null
   lastAccessedAt: string
   createdAt: string
 }

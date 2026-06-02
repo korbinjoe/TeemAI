@@ -35,7 +35,7 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
   const isSearching = q.length > 0
 
   const { pinnedIds, pinnedAt, archivedIds, togglePin, toggleArchive, archiveAll } = useMissionPinArchive(chats)
-  const { hiddenIds, toggleHide } = useWorkspaceVisibility()
+  const { hiddenIds, toggleHide } = useWorkspaceVisibility(workspaces)
 
   // Global pinned chats — extracted from all workspaces, rendered at the top.
   const wsNameById = useMemo(() => {

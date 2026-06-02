@@ -1,8 +1,9 @@
 # Mobile PWA
 
-Mobile-optimized Progressive Web App for remotely controlling the desktop
-OpenTeam instance. Covers the pulse-mode loop: glance at status, read
-output, approve permissions, send messages, dispatch new missions.
+Mobile-optimized UI route group (`/mobile/*`) for remotely controlling
+the desktop OpenTeam instance over LAN. Covers the pulse-mode loop:
+glance at status, read output, approve permissions, send messages,
+dispatch new missions.
 
 ## ADDED Requirements
 
@@ -15,33 +16,32 @@ agent count, top phase, tool progress, and cost.
 #### Scenario: View running missions
 
 - **Given** 2 missions are running and 1 is completed
-- **When** the user opens the mobile dashboard
-- **Then** the running missions appear at the top with live phase
-  indicators, followed by the completed mission in a muted style.
+- **When** the user opens `/mobile`
+- **Then** running missions appear at the top with live phase indicators,
+  followed by completed missions in a muted style.
 
 #### Scenario: Live status updates
 
 - **Given** the dashboard is open
 - **When** a `chat:activity` WebSocket event arrives for a mission
 - **Then** the mission card updates its phase, tool progress, and cost
-  in real-time without full page reload.
+  in real-time without page reload.
 
 ### REQ-PWA-02: Mission Detail View
 
 The mobile app SHALL display a mission's conversation as a scrollable
-message list showing agent output, with an input bar for sending
-follow-up messages.
+message list with an input bar for sending follow-up messages.
 
 #### Scenario: Read agent conversation
 
-- **Given** a mission with 3 agent messages
+- **Given** a mission with agent messages
 - **When** the user navigates to `/mobile/mission/:id`
-- **Then** the messages are displayed in chronological order with agent
-  name, icon, and formatted text content.
+- **Then** messages are displayed chronologically with agent name, icon,
+  and formatted text content.
 
 #### Scenario: Send a follow-up message
 
-- **Given** a mission detail view is open
+- **Given** mission detail is open for a running mission
 - **When** the user types a message and taps send
 - **Then** the message is sent via `expert:direct-input` WebSocket event
   and appears in the conversation.
@@ -55,16 +55,15 @@ banner and allow the user to approve or reject them.
 
 - **Given** the dashboard or mission detail is open
 - **When** a `chat:permission-request` event arrives
-- **Then** a banner appears showing the tool call details and
+- **Then** a banner appears showing the tool call title and
   approve/reject buttons.
 
 #### Scenario: Approve permission
 
 - **Given** a permission banner is showing
 - **When** the user taps "Allow"
-- **Then** an `expert:permission-response` event is sent with
-  `outcome: "selected"` and the appropriate `optionId`, and the banner
-  dismisses.
+- **Then** an `expert:permission-response` event is sent with the
+  appropriate `optionId`, and the banner dismisses.
 
 ### REQ-PWA-04: Quick Dispatch
 
@@ -75,59 +74,43 @@ prompt, workspace selector, and optional agent selector.
 
 - **Given** the user opens `/mobile/dispatch`
 - **When** they enter a prompt, select a workspace, and tap "Go"
-- **Then** a new chat is created via `POST /api/workspaces/:id/chats`
-  and an agent is started via `expert:direct-input`, and the user is
+- **Then** a new chat is created via `POST /api/workspaces/:id/chats`,
+  an agent is started via `expert:direct-input`, and the user is
   navigated to the mission detail view.
 
-### REQ-PWA-05: PWA Installable
+### REQ-PWA-05: Mobile Auth from QR
 
-The mobile app SHALL include a Web App Manifest and service worker
-enabling "Add to Home Screen" on iOS and Android.
+When the mobile app is opened via a QR link, it SHALL extract the auth
+token from the URL, store it in localStorage, strip it from the URL bar,
+and use it for all subsequent API and WebSocket requests.
 
-#### Scenario: Install on iOS
+#### Scenario: First open via QR scan
 
-- **Given** the user visits `/mobile` in Safari on iOS
-- **When** they tap "Share → Add to Home Screen"
-- **Then** the app appears as a standalone icon on the home screen,
-  opens without Safari chrome, and uses the OpenTeam icon and theme.
-
-### REQ-PWA-06: Mobile Notification Center
-
-The mobile app SHALL display a notification center showing recent events:
-permission requests, mission completions, and agent errors.
-
-#### Scenario: Mission completed while on dashboard
-
-- **Given** the dashboard is open
-- **When** a mission's status changes to `done`
-- **Then** a brief toast notification appears and the mission card moves
-  to the "done" section.
-
-### REQ-PWA-07: Pairing Handshake Screen
-
-When the mobile app is opened via a QR pairing link, it SHALL display
-a pairing screen that exchanges the one-time token for a session token
-and transitions to the dashboard.
-
-#### Scenario: First-time pairing via QR
-
-- **Given** the user scans a QR code and opens
-  `https://<tunnel>/mobile?pair=<token>`
+- **Given** the user scans a QR code containing
+  `http://192.168.1.100:13001/mobile?token=abc123`
 - **When** the page loads
-- **Then** the pairing screen shows "Connecting to <machine-name>...",
-  exchanges the token, stores the session token, and navigates to the
-  dashboard.
+- **Then** the token is stored in localStorage, the URL is rewritten to
+  `/mobile` (no token visible), and the dashboard loads with
+  authenticated data.
 
-#### Scenario: Already paired
+#### Scenario: Subsequent visit
 
-- **Given** the user has a valid session token in localStorage
-- **When** they open `/mobile`
-- **Then** they go directly to the dashboard without re-pairing.
+- **Given** a token exists in localStorage
+- **When** the user opens `/mobile` without a URL token
+- **Then** the stored token is used for authentication and the dashboard
+  loads normally.
 
-### REQ-PWA-08: Connection Status Indicator
+#### Scenario: Invalid or revoked token
 
-The mobile app SHALL show a persistent connection indicator (connected /
-reconnecting / disconnected) and gracefully handle WebSocket drops.
+- **Given** the stored token is no longer valid (LAN access was disabled)
+- **When** any API call returns 401
+- **Then** the mobile app clears the stored token and shows a
+  "Connection lost — scan QR code again" message.
+
+### REQ-PWA-06: Connection Status Indicator
+
+The mobile app SHALL show a persistent connection indicator and
+gracefully handle WebSocket disconnects.
 
 #### Scenario: WebSocket disconnects
 
@@ -136,3 +119,28 @@ reconnecting / disconnected) and gracefully handle WebSocket drops.
 - **Then** the status bar shows "Reconnecting..." and the client
   auto-reconnects with exponential backoff (existing `WebSocketClient`
   behavior).
+
+#### Scenario: Connected state
+
+- **Given** WebSocket is open
+- **When** the user views any mobile screen
+- **Then** a green indicator shows the connected machine name or IP.
+
+### REQ-PWA-07: Mobile-Optimized Layout
+
+The mobile app SHALL render a touch-friendly layout with a bottom
+tab navigation bar, optimized for screens under 430px wide.
+
+#### Scenario: Bottom navigation
+
+- **Given** the mobile app is open
+- **When** the user views any screen
+- **Then** a bottom tab bar shows two tabs: "Missions" (dashboard) and
+  "New" (quick dispatch), with the active tab highlighted.
+
+#### Scenario: Responsive sizing
+
+- **Given** the mobile app is open on an iPhone SE (375px wide)
+- **When** the dashboard renders
+- **Then** mission cards fill the width with appropriate padding, text
+  is readable, and touch targets are at least 44px.

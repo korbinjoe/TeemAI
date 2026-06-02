@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS workspaces (
   repositories     TEXT NOT NULL,
   agent_team       TEXT,
   worktree_enabled INTEGER DEFAULT 0,
+  hidden_at        INTEGER,
   last_accessed_at TEXT NOT NULL,
   created_at       TEXT NOT NULL
 );

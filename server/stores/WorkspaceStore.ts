@@ -151,6 +151,7 @@ export class WorkspaceStore extends SqliteBaseStore<Workspace> {
       repositories: JSON.parse(row.repositories as string),
       agentTeam: row.agent_team ? JSON.parse(row.agent_team as string) : undefined,
       worktreeEnabled: row.worktree_enabled === 1,
+      hiddenAt: typeof row.hidden_at === 'number' ? row.hidden_at : null,
       lastAccessedAt: row.last_accessed_at as string,
       createdAt: row.created_at as string,
     }
@@ -163,6 +164,7 @@ export class WorkspaceStore extends SqliteBaseStore<Workspace> {
       repositories: JSON.stringify(entity.repositories),
       agent_team: entity.agentTeam ? JSON.stringify(entity.agentTeam) : null,
       worktree_enabled: entity.worktreeEnabled ? 1 : 0,
+      hidden_at: entity.hiddenAt ?? null,
       last_accessed_at: entity.lastAccessedAt,
       created_at: entity.createdAt,
     }

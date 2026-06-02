@@ -84,6 +84,7 @@ export interface Workspace {
   }
   /**  Chat  Git Worktree  false */
   worktreeEnabled?: boolean
+  hiddenAt?: number | null
   lastAccessedAt: string
   createdAt: string
 }

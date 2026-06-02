@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>OpenTeam Mobile Remote</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg-primary:    rgb(10,10,16);
+    --bg-secondary:  rgb(16,16,24);
+    --bg-tertiary:   rgb(22,22,32);
+    --bg-hover:      rgb(30,30,42);
+    --bg-elevated:   rgb(24,24,36);
+    --bg-input:      rgb(18,18,28);
+    --text-primary:  rgb(226,228,240);
+    --text-secondary:rgb(148,156,172);
+    --text-emphasis: rgb(248,250,252);
+    --text-muted:    rgb(90,100,120);
+    --accent-brand:  rgb(198,162,118);
+    --accent-brand-light: rgb(222,192,156);
+    --accent-brand-deep: rgb(172,132,88);
+    --accent-green:  rgb(52,211,153);
+    --accent-yellow: rgb(251,191,36);
+    --accent-red:    rgb(239,68,68);
+    --accent-running:rgb(96,165,250);
+    --accent-purple: rgb(167,139,250);
+    --border-color:  rgb(38,38,54);
+    --border-subtle: rgb(28,28,42);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* ── Phone Frame ── */
+  .phone-frame {
+    width: 375px;
+    height: 812px;
+    background: var(--bg-primary);
+    border-radius: 40px;
+    border: 3px solid rgb(48,48,60);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow: 0 0 0 8px rgb(20,20,28), 0 24px 80px rgba(0,0,0,0.6);
+  }
+
+  /* ── Status Bar (iOS style) ── */
+  .ios-status-bar {
+    height: 54px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 24px 8px;
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .ios-time { letter-spacing: 0.5px; }
+  .ios-icons { display: flex; gap: 5px; align-items: center; }
+  .ios-icons svg { width: 16px; height: 16px; }
+
+  /* ── App Header ── */
+  .app-header {
+    padding: 8px 20px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .app-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .conn-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--accent-green);
+    background: rgba(52,211,153,0.1);
+    padding: 4px 10px;
+    border-radius: 12px;
+  }
+  .conn-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* ── Tab Switcher ── */
+  .screen-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 20px;
+    margin-bottom: 4px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    background: var(--bg-primary);
+  }
+  .screen-tab {
+    padding: 6px 0;
+    margin-right: 20px;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .screen-tab.active {
+    color: var(--accent-brand-light);
+    border-bottom-color: var(--accent-brand);
+  }
+
+  /* ── Scrollable Content ── */
+  .screen-content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .screen { display: none; padding: 8px 20px 100px; }
+  .screen.active { display: block; }
+
+  /* ── Mission Card ── */
+  .mission-group-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-muted);
+    padding: 16px 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mission-group-count {
+    background: var(--bg-hover);
+    padding: 1px 7px;
+    border-radius: 8px;
+    font-size: 10px;
+    color: var(--text-secondary);
+  }
+
+  .mission-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .mission-card:active { transform: scale(0.98); background: var(--bg-tertiary); }
+  .mission-card.has-permission {
+    border-color: var(--accent-yellow);
+    box-shadow: 0 0 0 1px rgba(251,191,36,0.15);
+  }
+
+  .mc-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .mc-title {
+    font-size: 14px;
+    font-weight: 600;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 8px;
+  }
+  .mc-workspace {
+    font-size: 10px;
+    color: var(--text-muted);
+    background: var(--bg-hover);
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .mc-agents {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .mc-agent {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .mc-agent-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+  .mc-phase {
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .phase-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .phase-dot.running { background: var(--accent-running); animation: pulse 1.5s infinite; }
+  .phase-dot.waiting { background: var(--accent-yellow); }
+  .phase-dot.done { background: var(--accent-green); opacity: 0.5; }
+  .phase-dot.error { background: var(--accent-red); }
+
+  .mc-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .mc-progress {
+    flex: 1;
+    height: 3px;
+    background: var(--bg-hover);
+    border-radius: 2px;
+    margin-right: 12px;
+    overflow: hidden;
+  }
+  .mc-progress-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+  .mc-progress-bar.running { background: var(--accent-running); }
+  .mc-progress-bar.done { background: var(--accent-green); opacity: 0.5; }
+  .mc-cost {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'SF Mono', monospace;
+    flex-shrink: 0;
+  }
+
+  .mc-permission-tag {
+    position: absolute;
+    top: -1px;
+    right: 12px;
+    background: var(--accent-yellow);
+    color: rgb(10,10,16);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 0 0 4px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .mc-done { opacity: 0.55; }
+  .mc-done .mc-title { font-weight: 500; }
+
+  /* ── Mission Detail ── */
+  .detail-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+  .detail-back {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--accent-brand);
+    border-radius: 50%;
+  }
+  .detail-back:active { background: var(--bg-hover); }
+  .detail-title-area { flex: 1; min-width: 0; }
+  .detail-title { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .detail-subtitle { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+  /* ── Permission Banner ── */
+  .permission-banner {
+    background: rgba(251,191,36,0.08);
+    border-bottom: 1px solid rgba(251,191,36,0.2);
+    padding: 12px 20px;
+    flex-shrink: 0;
+    display: none;
+  }
+  .permission-banner.visible { display: block; }
+  .pb-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent-yellow);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pb-tool {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    font-family: 'SF Mono', monospace;
+    background: var(--bg-input);
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+  }
+  .pb-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .pb-btn {
+    flex: 1;
+    padding: 8px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .pb-btn.allow {
+    background: var(--accent-brand);
+    color: rgb(10,10,16);
+  }
+  .pb-btn.allow:active { background: var(--accent-brand-deep); }
+  .pb-btn.reject {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+  }
+  .pb-btn.reject:active { background: var(--bg-tertiary); }
+
+  /* ── Conversation ── */
+  .conversation {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 20px 16px;
+  }
+  .msg {
+    margin-bottom: 16px;
+    display: flex;
+    gap: 10px;
+  }
+  .msg-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .msg-body { flex: 1; min-width: 0; }
+  .msg-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 3px;
+  }
+  .msg-name { font-size: 12px; font-weight: 600; }
+  .msg-time { font-size: 10px; color: var(--text-muted); }
+  .msg-text {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+  }
+  .msg-text code {
+    background: rgba(99,102,241,0.1);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: 'SF Mono', monospace;
+    font-size: 12px;
+    color: var(--accent-purple);
+  }
+  .msg.user .msg-text {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+  }
+
+  /* ── Tool Activity Indicator ── */
+  .tool-activity {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(96,165,250,0.06);
+    border: 1px solid rgba(96,165,250,0.15);
+    border-radius: var(--radius-sm);
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--accent-running);
+  }
+  .tool-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(96,165,250,0.3);
+    border-top-color: var(--accent-running);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Message Input ── */
+  .msg-input-bar {
+    padding: 10px 20px;
+    padding-bottom: calc(10px + var(--safe-bottom));
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    flex-shrink: 0;
+    background: var(--bg-secondary);
+  }
+  .msg-input {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: var(--text-primary);
+    outline: none;
+    resize: none;
+    min-height: 40px;
+    max-height: 100px;
+    font-family: inherit;
+  }
+  .msg-input::placeholder { color: var(--text-muted); }
+  .msg-input:focus { border-color: var(--accent-brand); }
+  .send-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--accent-brand);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .send-btn:active { transform: scale(0.92); background: var(--accent-brand-deep); }
+  .send-btn svg { width: 18px; height: 18px; color: rgb(10,10,16); }
+
+  /* ── Quick Dispatch ── */
+  .dispatch-form { padding: 20px; }
+  .form-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    display: block;
+  }
+  .form-textarea {
+    width: 100%;
+    min-height: 120px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    font-size: 15px;
+    color: var(--text-primary);
+    outline: none;
+    resize: vertical;
+    font-family: inherit;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .form-textarea::placeholder { color: var(--text-muted); }
+  .form-textarea:focus { border-color: var(--accent-brand); }
+  .form-select {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text-primary);
+    outline: none;
+    appearance: none;
+    margin-bottom: 16px;
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%235a6478' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+  }
+  .dispatch-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent-brand);
+    color: rgb(10,10,16);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
+  }
+  .dispatch-btn:active { transform: scale(0.98); background: var(--accent-brand-deep); }
+  .dispatch-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+    transform: none;
+  }
+
+  /* ── Bottom Nav ── */
+  .bottom-nav {
+    display: flex;
+    border-top: 1px solid var(--border-subtle);
+    background: var(--bg-secondary);
+    padding-bottom: var(--safe-bottom);
+    flex-shrink: 0;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0 6px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 10px;
+    gap: 3px;
+    transition: color 0.15s;
+    user-select: none;
+  }
+  .nav-item.active { color: var(--accent-brand-light); }
+  .nav-item svg { width: 22px; height: 22px; }
+  .nav-item:active { opacity: 0.7; }
+  .nav-badge {
+    position: relative;
+  }
+  .nav-badge::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -6px;
+    width: 7px;
+    height: 7px;
+    background: var(--accent-yellow);
+    border-radius: 50%;
+    border: 1.5px solid var(--bg-secondary);
+  }
+
+  /* ── Screen Views ── */
+  .view { display: none; flex-direction: column; height: 100%; }
+  .view.active { display: flex; }
+
+  /* ── Pairing Screen ── */
+  .pairing-view {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    padding: 40px;
+    gap: 16px;
+  }
+  .pairing-view.active { display: flex; }
+  .pairing-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent-brand);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 8px;
+  }
+  .pairing-title { font-size: 20px; font-weight: 700; }
+  .pairing-subtitle { font-size: 14px; color: var(--text-secondary); }
+  .pairing-machine {
+    font-size: 13px;
+    color: var(--accent-brand-light);
+    background: rgba(198,162,118,0.1);
+    padding: 6px 16px;
+    border-radius: 20px;
+    margin-top: 4px;
+  }
+
+  /* ── Disconnect Screen ── */
+  .disconnected-view {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    padding: 40px;
+    gap: 12px;
+  }
+  .disconnected-view.active { display: flex; }
+  .disconnected-icon {
+    width: 56px;
+    height: 56px;
+    background: rgba(239,68,68,0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+  }
+  .disconnected-icon svg { width: 28px; height: 28px; color: var(--accent-red); }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+
+  <!-- ═══ Pairing Screen ═══ -->
+  <div class="pairing-view" id="pairingView">
+    <div class="pairing-spinner"></div>
+    <div class="pairing-title">Connecting...</div>
+    <div class="pairing-subtitle">Pairing with your desktop</div>
+    <div class="pairing-machine">Joe's MacBook Pro</div>
+  </div>
+
+  <!-- ═══ Disconnected Screen ═══ -->
+  <div class="disconnected-view" id="disconnectedView">
+    <div class="disconnected-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
+    </div>
+    <div class="pairing-title">Connection Lost</div>
+    <div class="pairing-subtitle">Scan the QR code again to reconnect</div>
+  </div>
+
+  <!-- ═══ Main App ═══ -->
+  <div class="view active" id="mainView">
+
+    <!-- iOS Status Bar -->
+    <div class="ios-status-bar">
+      <span class="ios-time">9:41</span>
+      <div class="ios-icons">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.24 4.24 0 00-6 0zm-4-4l2 2a7.07 7.07 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="6" width="3" height="12" rx="1"/><rect x="6" y="4" width="3" height="14" rx="1"/><rect x="11" y="2" width="3" height="16" rx="1"/><rect x="16" y="6" width="3" height="12" rx="1"/></svg>
+        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="7" width="18" height="10" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/><rect x="4" y="9" width="12" height="6" rx="1"/><path d="M22 11v2a1 1 0 01-1 1h0v-4h0a1 1 0 011 1z"/></svg>
+      </div>
+    </div>
+
+    <!-- App Header -->
+    <div class="app-header">
+      <span class="app-title" id="appTitle">Missions</span>
+      <div class="conn-badge">
+        <span class="conn-dot"></span>
+        Connected
+      </div>
+    </div>
+
+    <!-- Screen Tabs (Dashboard only) -->
+    <div class="screen-tabs" id="dashTabs">
+      <div class="screen-tab active" onclick="switchDashTab(this, 'all')">All</div>
+      <div class="screen-tab" onclick="switchDashTab(this, 'running')">Running</div>
+      <div class="screen-tab" onclick="switchDashTab(this, 'done')">Done</div>
+    </div>
+
+    <!-- ═══ Dashboard Screen ═══ -->
+    <div class="screen-content">
+      <div class="screen active" id="dashboardScreen">
+        <!-- Running -->
+        <div class="mission-group-label">
+          Running <span class="mission-group-count">2</span>
+        </div>
+
+        <div class="mission-card has-permission" onclick="showDetail('refactor')">
+          <div class="mc-permission-tag">Needs Approval</div>
+          <div class="mc-top">
+            <span class="mc-title">Refactor auth middleware</span>
+            <span class="mc-workspace">backend</span>
+          </div>
+          <div class="mc-agents">
+            <div class="mc-agent">
+              <div class="mc-agent-icon" style="background: rgba(96,165,250,0.15); color: var(--accent-running);">S</div>
+              <div>
+                <div style="font-size: 12px;">Scout</div>
+                <div class="mc-phase"><span class="phase-dot waiting"></span> <span style="color: var(--accent-yellow); font-size: 11px;">waiting</span></div>
+              </div>
+            </div>
+            <div class="mc-agent">
+              <div class="mc-agent-icon" style="background: rgba(167,139,250,0.15); color: var(--accent-purple);">B</div>
+              <div>
+                <div style="font-size: 12px;">Builder</div>
+                <div class="mc-phase"><span class="phase-dot running"></span> <span style="color: var(--accent-running); font-size: 11px;">editing</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="mc-bottom">
+            <div class="mc-progress"><div class="mc-progress-bar running" style="width: 65%"></div></div>
+            <span class="mc-cost">$0.42</span>
+          </div>
+        </div>
+
+        <div class="mission-card" onclick="showDetail('api')">
+          <div class="mc-top">
+            <span class="mc-title">Add pagination to /api/users</span>
+            <span class="mc-workspace">backend</span>
+          </div>
+          <div class="mc-agents">
+            <div class="mc-agent">
+              <div class="mc-agent-icon" style="background: rgba(167,139,250,0.15); color: var(--accent-purple);">B</div>
+              <div>
+                <div style="font-size: 12px;">Builder</div>
+                <div class="mc-phase"><span class="phase-dot running"></span> <span style="color: var(--accent-running); font-size: 11px;">tool_running</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="mc-bottom">
+            <div class="mc-progress"><div class="mc-progress-bar running" style="width: 30%"></div></div>
+            <span class="mc-cost">$0.18</span>
+          </div>
+        </div>
+
+        <!-- Done -->
+        <div class="mission-group-label">
+          Done <span class="mission-group-count">2</span>
+        </div>
+
+        <div class="mission-card mc-done">
+          <div class="mc-top">
+            <span class="mc-title">Fix login redirect loop</span>
+            <span class="mc-workspace">frontend</span>
+          </div>
+          <div class="mc-agents">
+            <div class="mc-agent">
+              <div class="mc-agent-icon" style="background: rgba(52,211,153,0.1); color: var(--accent-green);">B</div>
+              <div>
+                <div style="font-size: 12px;">Builder</div>
+                <div class="mc-phase"><span class="phase-dot done"></span> <span style="color: var(--text-muted); font-size: 11px;">done</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="mc-bottom">
+            <div class="mc-progress"><div class="mc-progress-bar done" style="width: 100%"></div></div>
+            <span class="mc-cost">$0.31</span>
+          </div>
+        </div>
+
+        <div class="mission-card mc-done">
+          <div class="mc-top">
+            <span class="mc-title">Write unit tests for UserStore</span>
+            <span class="mc-workspace">backend</span>
+          </div>
+          <div class="mc-agents">
+            <div class="mc-agent">
+              <div class="mc-agent-icon" style="background: rgba(52,211,153,0.1); color: var(--accent-green);">S</div>
+              <div>
+                <div style="font-size: 12px;">Scout</div>
+                <div class="mc-phase"><span class="phase-dot done"></span> <span style="color: var(--text-muted); font-size: 11px;">done</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="mc-bottom">
+            <div class="mc-progress"><div class="mc-progress-bar done" style="width: 100%"></div></div>
+            <span class="mc-cost">$0.56</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Quick Dispatch Screen ═══ -->
+      <div class="screen" id="dispatchScreen">
+        <div class="dispatch-form">
+          <label class="form-label">What should agents do?</label>
+          <textarea class="form-textarea" id="dispatchPrompt" placeholder="Describe the task..." oninput="updateDispatchBtn()"></textarea>
+
+          <label class="form-label">Workspace</label>
+          <select class="form-select">
+            <option>backend</option>
+            <option>frontend</option>
+            <option>infra</option>
+          </select>
+
+          <label class="form-label">Agent</label>
+          <select class="form-select">
+            <option>Auto (let Lead decide)</option>
+            <option>Scout</option>
+            <option>Builder</option>
+            <option>Reviewer</option>
+          </select>
+
+          <button class="dispatch-btn" id="dispatchBtn" disabled onclick="handleDispatch()">Start Mission</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Detail View (overlays main) ═══ -->
+    <div class="view" id="detailView">
+      <div class="detail-header">
+        <div class="detail-back" onclick="hideDetail()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+        </div>
+        <div class="detail-title-area">
+          <div class="detail-title" id="detailTitle">Refactor auth middleware</div>
+          <div class="detail-subtitle">backend &middot; 2 agents &middot; $0.42</div>
+        </div>
+      </div>
+
+      <!-- Permission Banner -->
+      <div class="permission-banner visible" id="permBanner">
+        <div class="pb-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Permission Request — Scout
+        </div>
+        <div class="pb-tool">Edit: server/middleware/auth.ts</div>
+        <div class="pb-actions">
+          <button class="pb-btn reject" onclick="dismissPermission()">Reject</button>
+          <button class="pb-btn allow" onclick="dismissPermission()">Allow</button>
+        </div>
+      </div>
+
+      <!-- Conversation -->
+      <div class="conversation">
+        <div class="msg user">
+          <div class="msg-avatar" style="background: rgba(198,162,118,0.15); color: var(--accent-brand);">J</div>
+          <div class="msg-body">
+            <div class="msg-header">
+              <span class="msg-name">You</span>
+              <span class="msg-time">2 min ago</span>
+            </div>
+            <div class="msg-text">Refactor the auth middleware to support runtime tokens in addition to the env var. The token should be settable via a function call, not just OPENTEAM_AUTH_TOKEN.</div>
+          </div>
+        </div>
+
+        <div class="msg">
+          <div class="msg-avatar" style="background: rgba(96,165,250,0.15); color: var(--accent-running);">S</div>
+          <div class="msg-body">
+            <div class="msg-header">
+              <span class="msg-name">Scout</span>
+              <span class="msg-time">1 min ago</span>
+            </div>
+            <div class="msg-text">I've analyzed <code>server/middleware/auth.ts</code>. The current <code>getAuthToken()</code> only reads from <code>process.env</code>. I'll add a module-level <code>runtimeToken</code> variable with a setter function. The existing middleware functions already call <code>getAuthToken()</code>, so they'll pick up the change automatically.</div>
+          </div>
+        </div>
+
+        <div class="msg">
+          <div class="msg-avatar" style="background: rgba(167,139,250,0.15); color: var(--accent-purple);">B</div>
+          <div class="msg-body">
+            <div class="msg-header">
+              <span class="msg-name">Builder</span>
+              <span class="msg-time">30s ago</span>
+            </div>
+            <div class="msg-text">Working on the implementation. Adding <code>setRuntimeAuthToken()</code> and modifying <code>getAuthToken()</code> to check the runtime value first.</div>
+            <div class="tool-activity">
+              <div class="tool-spinner"></div>
+              Editing server/middleware/auth.ts
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Message Input -->
+      <div class="msg-input-bar">
+        <textarea class="msg-input" placeholder="Send a message..." rows="1"></textarea>
+        <button class="send-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="bottom-nav" id="bottomNav">
+      <div class="nav-item active" onclick="switchTab('dashboard')">
+        <div class="nav-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </div>
+        <span>Missions</span>
+      </div>
+      <div class="nav-item" onclick="switchTab('dispatch')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        <span>New</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Tab switching ──
+function switchTab(tab) {
+  const dashboard = document.getElementById('dashboardScreen')
+  const dispatch = document.getElementById('dispatchScreen')
+  const tabs = document.getElementById('dashTabs')
+  const title = document.getElementById('appTitle')
+  const navItems = document.querySelectorAll('.nav-item')
+
+  dashboard.classList.toggle('active', tab === 'dashboard')
+  dispatch.classList.toggle('active', tab === 'dispatch')
+  tabs.style.display = tab === 'dashboard' ? 'flex' : 'none'
+  title.textContent = tab === 'dashboard' ? 'Missions' : 'New Mission'
+
+  navItems[0].classList.toggle('active', tab === 'dashboard')
+  navItems[1].classList.toggle('active', tab === 'dispatch')
+
+  // Hide detail if switching tabs
+  hideDetail()
+}
+
+function switchDashTab(el, filter) {
+  document.querySelectorAll('.screen-tab').forEach(t => t.classList.remove('active'))
+  el.classList.add('active')
+  // In real app, would filter mission cards. For mockup, no-op.
+}
+
+// ── Detail view ──
+function showDetail(id) {
+  const main = document.getElementById('mainView')
+  const detail = document.getElementById('detailView')
+  const nav = document.getElementById('bottomNav')
+
+  // Hide main content, show detail
+  main.querySelector('.app-header').style.display = 'none'
+  main.querySelector('.screen-tabs').style.display = 'none'
+  main.querySelector('.screen-content').style.display = 'none'
+  nav.style.display = 'none'
+
+  detail.classList.add('active')
+}
+
+function hideDetail() {
+  const main = document.getElementById('mainView')
+  const detail = document.getElementById('detailView')
+  const nav = document.getElementById('bottomNav')
+
+  detail.classList.remove('active')
+  main.querySelector('.app-header').style.display = 'flex'
+  main.querySelector('.screen-tabs').style.display = 'flex'
+  main.querySelector('.screen-content').style.display = 'block'
+  nav.style.display = 'flex'
+}
+
+// ── Permission ──
+function dismissPermission() {
+  const banner = document.getElementById('permBanner')
+  banner.style.transition = 'all 0.3s'
+  banner.style.maxHeight = '0'
+  banner.style.padding = '0 20px'
+  banner.style.opacity = '0'
+  setTimeout(() => { banner.classList.remove('visible') }, 300)
+}
+
+// ── Dispatch ──
+function updateDispatchBtn() {
+  const btn = document.getElementById('dispatchBtn')
+  const prompt = document.getElementById('dispatchPrompt')
+  btn.disabled = !prompt.value.trim()
+}
+
+function handleDispatch() {
+  const btn = document.getElementById('dispatchBtn')
+  btn.textContent = 'Starting...'
+  btn.disabled = true
+  setTimeout(() => {
+    btn.textContent = 'Start Mission'
+    switchTab('dashboard')
+  }, 1500)
+}
+
+// ── Demo: show pairing then main ──
+function showPairingDemo() {
+  const pairing = document.getElementById('pairingView')
+  const main = document.getElementById('mainView')
+  pairing.classList.add('active')
+  main.classList.remove('active')
+  setTimeout(() => {
+    pairing.classList.remove('active')
+    main.classList.add('active')
+  }, 2000)
+}
+// Uncomment to see pairing animation on load:
+// showPairingDemo()
+</script>
+</body>
+</html>

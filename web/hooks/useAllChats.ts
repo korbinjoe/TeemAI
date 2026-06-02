@@ -17,6 +17,7 @@ import { ACTIVE_PHASES, reconcileMembersFromActivity } from '@/lib/memberStatus'
 export interface WorkspaceLite {
   id: string
   name: string
+  hiddenAt?: number | null
 }
 
 export interface V2AllChatsResult {
@@ -37,7 +38,7 @@ export const useAllChats = (): V2AllChatsResult => {
       const wsRes = await authFetch(`${API_BASE}/api/workspaces`)
       if (!wsRes.ok) return
       const wsData: Workspace[] = await wsRes.json()
-      const wsLite: WorkspaceLite[] = wsData.map((w) => ({ id: w.id, name: w.name }))
+      const wsLite: WorkspaceLite[] = wsData.map((w) => ({ id: w.id, name: w.name, hiddenAt: w.hiddenAt }))
       setWorkspaces(wsLite)
 
       const chatResults = await Promise.all(

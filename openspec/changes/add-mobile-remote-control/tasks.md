@@ -1,106 +1,79 @@
-# Tasks — Mobile Remote Control
+# Tasks — Mobile Remote Control (LAN)
 
-## Phase 1: Relay Tunnel + Pairing
+## Phase 1: LAN Access + QR Pairing
 
-### Cloudflared Binary Management
-- [ ] Create `server/tunnel/CloudflaredInstaller.ts` — auto-download platform binary to `~/.openteam/bin/cloudflared`
-- [ ] Add checksum verification for downloaded binary
-- [ ] Support platforms: `darwin-arm64`, `darwin-amd64`, `linux-amd64`, `windows-amd64`
+### Auth Extension
+- [ ] Add `runtimeToken` + `setRuntimeAuthToken()` to `server/middleware/auth.ts` (~8 lines)
+- [ ] Verify existing `createAuthMiddleware` and `verifyWsConnection` work with runtime token (read-only check, no code change expected)
 
-### Tunnel Lifecycle
-- [ ] Create `server/tunnel/TunnelManager.ts` — spawn/kill cloudflared child process, parse public URL from stderr
-- [ ] Implement idle auto-stop (configurable, default 30 min)
-- [ ] Handle process crash detection and state cleanup
-- [ ] Add `tunnel:status-changed` WS event to broadcast tunnel state
+### LAN Access Controller
+- [ ] Create `server/lan/LanAccessController.ts` — token generation, LAN IP detection, enable/disable lifecycle (~60 lines)
 
-### Device Pairing & Auth
-- [ ] Create DB migration for `paired_devices` table (`id, name, session_token_hash, paired_at, last_seen_at, expires_at, revoked_at`)
-- [ ] Create `server/stores/PairedDeviceStore.ts` for device CRUD
-- [ ] Implement pairing token generation (32-byte random, 5-min TTL)
-- [ ] Implement token exchange endpoint (`POST /api/tunnel/pair/exchange`)
-- [ ] Add rate limiting on pairing endpoint (5 attempts/min/IP)
-- [ ] Extend `createAuthMiddleware` to check per-device session tokens
-- [ ] Extend `verifyWsConnection` to check per-device session tokens
-- [ ] Update device `lastSeenAt` on each authenticated request
+### LAN API Routes
+- [ ] Create `server/routes/system/lanRoutes.ts` — `POST enable`, `POST disable`, `GET status` (~40 lines)
+- [ ] Wire into `server/startup/routeSetup.ts`
+- [ ] Instantiate `LanAccessController` in `server/index.ts`
 
-### Tunnel API Routes
-- [ ] Create `server/routes/system/tunnelRoutes.ts` with endpoints: `start`, `stop`, `status`, `pair`, `pair/exchange`, `devices`, `devices/:id` (DELETE)
-- [ ] Wire routes into `server/startup/routeSetup.ts`
+### Desktop UI: QR Modal
+- [ ] Add `qrcode` npm package (browser-side, canvas-based)
+- [ ] Add "Remote Control" section to Settings page — enable/disable toggle, QR code display, LAN IP text, copy URL button
+- [ ] Add "Connect Mobile" item to Tray menu (`electron/modules/TrayManager.ts`) — triggers QR display via IPC
 
-### Desktop UI: Tunnel Control
-- [ ] Add "Remote Control" section to Settings page — toggle tunnel, show URL, QR code button
-- [ ] Create QR code modal component (use `qrcode` npm package for generation)
-- [ ] Add connected devices list with revoke buttons
-- [ ] Add "Connect Mobile" tray menu item (Electron `TrayManager`)
-
-### Validation
-- [ ] Write integration tests for TunnelManager (mock cloudflared process)
-- [ ] Write tests for pairing flow (token gen → exchange → auth)
-- [ ] Write tests for device revocation
-- [ ] Manual test: scan QR on phone, verify tunnel connectivity
+### Validation (Phase 1)
+- [ ] Unit test `LanAccessController` (token gen, IP detection, enable/disable)
+- [ ] Unit test auth middleware with runtime token
+- [ ] Manual test: enable LAN → scan QR on phone → verify desktop web UI loads with auth
 
 ## Phase 2: Mobile PWA
 
 ### Mobile Layout & Routing
-- [ ] Create `web/mobile/MobileLayout.tsx` — shell with status bar + bottom tab nav
-- [ ] Add `/mobile/*` routes to `App.tsx`
-- [ ] Create `web/mobile/components/BottomNav.tsx` — Dashboard / Dispatch tabs
-- [ ] Add viewport meta tag and PWA manifest (`public/manifest.json`)
-- [ ] Add basic service worker for offline shell
+- [ ] Create `web/mobile/MobileLayout.tsx` — status bar (connection indicator) + bottom tab nav
+- [ ] Add `/mobile/*` routes to `App.tsx` with React.lazy code splitting
+- [ ] Create `web/mobile/components/BottomNav.tsx` — "Missions" and "New" tabs
+- [ ] Create `web/mobile/components/ConnectionStatus.tsx` — green/yellow/red dot with label
 
-### Pairing Handshake Screen
-- [ ] Create `web/mobile/pages/MobilePairing.tsx` — detect `?pair=` param, exchange token, store in localStorage
-- [ ] Create `web/mobile/hooks/useMobileAuth.ts` — manage session token lifecycle, redirect to pairing if missing
+### Mobile Auth
+- [ ] Create `web/mobile/hooks/useMobileAuth.ts` — extract token from URL param → localStorage, strip from URL bar, return auth state
+- [ ] Extend `web/config/api.ts` `getAuthToken()` to also check `localStorage('openteam-mobile-token')` when on `/mobile` route
+- [ ] Handle 401 responses: clear stored token, show "scan QR again" message
 
 ### Dashboard
-- [ ] Create `web/mobile/pages/MobileDashboard.tsx` — mission list grouped by status
-- [ ] Create `web/mobile/components/MissionCard.tsx` — compact card with title, workspace, agents, phase, cost
-- [ ] Wire WebSocket `chat:activity` events for live updates
-- [ ] Fetch initial data from `GET /api/chats/recent`
+- [ ] Create `web/mobile/pages/MobileDashboard.tsx` — mission list grouped by status (running → waiting → done)
+- [ ] Create `web/mobile/components/MissionCard.tsx` — title, workspace badge, agent count, phase dot, tool progress bar, cost
+- [ ] Create `web/mobile/hooks/useMobileMissions.ts` — fetch `GET /api/chats/recent` + subscribe to `chat:activity` WS events for live updates
 
 ### Mission Detail
-- [ ] Create `web/mobile/pages/MobileMissionDetail.tsx` — conversation view
-- [ ] Create `web/mobile/components/AgentMessage.tsx` — message bubble with agent icon
-- [ ] Create message input bar with send button
-- [ ] Wire `expert:direct-input` for sending messages
-- [ ] Create `web/mobile/components/PermissionBanner.tsx` — inline approve/reject
+- [ ] Create `web/mobile/pages/MobileMissionDetail.tsx` — conversation view + action bar
+- [ ] Create `web/mobile/components/AgentMessage.tsx` — message bubble with agent icon, name, timestamp
+- [ ] Add message input bar (text input + send button), wire to `expert:direct-input` WS event
+- [ ] Create `web/mobile/components/PermissionBanner.tsx` — sticky banner for permission requests with approve/reject buttons, wire to `expert:permission-response` WS event
 
 ### Quick Dispatch
-- [ ] Create `web/mobile/pages/MobileQuickDispatch.tsx` — prompt input + workspace/agent selector
-- [ ] Wire `POST /api/workspaces/:id/chats` + `expert:direct-input` for dispatch
-- [ ] Navigate to mission detail after dispatch
+- [ ] Create `web/mobile/pages/MobileQuickDispatch.tsx` — prompt textarea, workspace dropdown, agent dropdown, "Go" button
+- [ ] Wire to `POST /api/workspaces/:id/chats` + `expert:direct-input`, navigate to mission detail after dispatch
 
-### Connection Status
-- [ ] Add connection indicator to MobileLayout status bar
-- [ ] Reuse existing `WebSocketClient` reconnection logic
-
-### Validation
-- [ ] Mobile responsive testing on iOS Safari + Android Chrome
-- [ ] Test PWA install on both platforms
+### Validation (Phase 2)
+- [ ] Test on iOS Safari (iPhone SE, iPhone 15 sizes)
+- [ ] Test on Android Chrome
 - [ ] Test permission approval flow end-to-end from phone
-
-## Phase 3: Push Notifications (Future)
-
-- [ ] Investigate Web Push API viability on mobile browsers
-- [ ] Add notification permission request flow
-- [ ] Server-side push for permission requests and mission completion
-- [ ] Fallback to WebSocket in-app notifications when push unavailable
+- [ ] Test quick dispatch creates and starts a mission
+- [ ] Test WebSocket reconnection on network switch (Wi-Fi toggle)
 
 ## Dependencies
 
 | Task | Depends On |
 |------|-----------|
-| Tunnel API Routes | TunnelManager, PairedDeviceStore |
-| Desktop UI: Tunnel Control | Tunnel API Routes |
-| Mobile Pairing Screen | Tunnel API Routes (exchange endpoint) |
-| Mobile Dashboard | Mobile Layout, Mobile Auth |
-| Mission Detail | Mobile Dashboard (navigation) |
+| LAN API Routes | LanAccessController, Auth Extension |
+| Desktop QR Modal | LAN API Routes, `qrcode` package |
+| Mobile Auth | Auth Extension (runtime token) |
+| Mobile Layout | Mobile Auth |
+| Dashboard | Mobile Layout, `useMobileMissions` hook |
+| Mission Detail | Dashboard (navigation from card) |
 | Quick Dispatch | Mobile Layout, Mobile Auth |
-| Phase 3 | Phase 2 complete |
 
 ## Parallelizable Work
 
-- **Phase 1**: CloudflaredInstaller + DB migration can run in parallel
-- **Phase 1**: Tunnel routes + auth middleware extension can run in parallel after TunnelManager
+- **Phase 1**: Auth extension + LanAccessController can be built in parallel
+- **Phase 1**: QR Modal (frontend) + LAN routes (backend) can be built in parallel after LanAccessController
 - **Phase 2**: Dashboard + Quick Dispatch can be built in parallel after MobileLayout
-- **Phase 2**: PermissionBanner is independent of other mobile components
+- **Phase 2**: PermissionBanner is independent of AgentMessage

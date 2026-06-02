@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ChevronRight, Pin, PinOff, Archive, Plus, Trash } from './icons'
 import { cn } from '../../lib/utils'
-import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { buildMissionUrl } from './urls'
 import { removeAgentFromChat, deleteChatWithJsonl, formatPurgeFailures } from '../../services/chatService'
 import { ApiError } from '../../services/api'
@@ -103,11 +102,11 @@ interface MissionRowProps {
   onAddAgent: () => void
   isPinned?: boolean
   badge?: string
+  selectedAgentId?: string | null
 }
 
-export const MissionRow = memo(({ chat, isSelected, agentNames, onPin, onArchive, onAddAgent, isPinned = false, badge }: MissionRowProps) => {
+export const MissionRow = memo(({ chat, isSelected, agentNames, onPin, onArchive, onAddAgent, isPinned = false, badge, selectedAgentId }: MissionRowProps) => {
   const navigate = useNavigate()
-  const { selectedAgentId } = useWorkspace()
   const [expanded, setExpanded] = useState(false)
 
   const toggle = useCallback((e: React.MouseEvent) => {

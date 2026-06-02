@@ -26,7 +26,7 @@ interface MissionSessionListProps {
 }
 
 const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
-  const { workspaceId, activeChatId, openAddAgent, openNewMission } = useWorkspace()
+  const { workspaceId, activeChatId, selectedAgentId, openAddAgent, openNewMission } = useWorkspace()
   const { chats, workspaces, loading } = useAllChats()
   const { unmatchedDirs } = useExternalCwds()
   const { agentNames } = useAgents()
@@ -140,6 +140,7 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
         <PinnedSection
           chats={visiblePinned}
           activeChatId={activeChatId}
+          selectedAgentId={selectedAgentId}
           agentNames={agentNames}
           wsNameById={wsNameById}
           onPin={togglePin}
@@ -162,6 +163,7 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
             expanded={expanded}
             isCurrent={ws.id === workspaceId}
             activeChatId={activeChatId}
+            selectedAgentId={selectedAgentId}
             agentNames={agentNames}
             query={q}
             wsNameMatches={wsNameMatches}
@@ -207,9 +209,10 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
 }
 
 // ── Global pinned section ──────────────────────────────────────────────────
-const PinnedSection = ({ chats, activeChatId, agentNames, wsNameById, onPin, onArchive, onAddAgent }: {
+const PinnedSection = ({ chats, activeChatId, selectedAgentId, agentNames, wsNameById, onPin, onArchive, onAddAgent }: {
   chats: Chat[]
   activeChatId: string | null
+  selectedAgentId: string | null
   agentNames: Record<string, string>
   wsNameById: Record<string, string>
   onPin: (chatId: string) => void
@@ -227,6 +230,7 @@ const PinnedSection = ({ chats, activeChatId, agentNames, wsNameById, onPin, onA
           key={`pin:${c.id}`}
           chat={c}
           isSelected={activeChatId === c.id}
+          selectedAgentId={selectedAgentId}
           agentNames={agentNames}
           onPin={() => onPin(c.id)}
           onArchive={() => onArchive(c.id)}
@@ -246,7 +250,7 @@ const PinnedSection = ({ chats, activeChatId, agentNames, wsNameById, onPin, onA
 // workspace the URL currently points at so its header gets a subtle marker.
 const WorkspaceGroup = ({
   wsId, name, chats, pinnedIds, pinnedAt, archivedIds,
-  expanded, isCurrent, activeChatId, agentNames,
+  expanded, isCurrent, activeChatId, selectedAgentId, agentNames,
   query, wsNameMatches, hidePinnedSection = false,
   onToggle, onPin, onArchive, onArchiveAll, onAddAgent, onNewTask, onHide,
 }: {
@@ -259,6 +263,7 @@ const WorkspaceGroup = ({
   expanded: boolean
   isCurrent: boolean
   activeChatId: string | null
+  selectedAgentId: string | null
   agentNames: Record<string, string>
   query: string
   wsNameMatches: boolean
@@ -476,6 +481,7 @@ const WorkspaceGroup = ({
                   key={`p:${c.id}`}
                   chat={c}
                   isSelected={activeChatId === c.id}
+                  selectedAgentId={selectedAgentId}
                   agentNames={agentNames}
                   onPin={() => onPin(c.id)}
                   onArchive={() => onArchive(c.id)}
@@ -495,6 +501,7 @@ const WorkspaceGroup = ({
                 key={`c:${it.chat.id}`}
                 chat={it.chat}
                 isSelected={activeChatId === it.chat.id}
+                selectedAgentId={selectedAgentId}
                 agentNames={agentNames}
                 onPin={() => onPin(it.chat.id)}
                 onArchive={() => onArchive(it.chat.id)}

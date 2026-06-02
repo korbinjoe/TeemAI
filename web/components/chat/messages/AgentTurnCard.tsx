@@ -242,7 +242,7 @@ const AgentTurnCard = ({ group, activity, agentName, agentNames, agentPersonalit
           gap: 8,
           padding: '4px 16px',
           cursor: hasDetails ? 'pointer' : 'default',
-          borderLeft: `2px solid ${isError ? 'rgb(var(--accent-red))' : isCompleted ? 'rgb(var(--accent-green))' : 'rgb(var(--accent-purple))'}`,
+          borderLeft: `2px solid ${isError ? 'rgb(var(--accent-red))' : isCompleted ? 'rgb(var(--accent-green))' : 'rgb(var(--accent-brand))'}`,
           marginLeft: 16,
           transition: 'background 0.1s',
           overflow: 'hidden',
@@ -260,7 +260,7 @@ const AgentTurnCard = ({ group, activity, agentName, agentNames, agentPersonalit
         ) : isCompleted ? (
           <CheckCircle2 size={13} style={{ color: 'rgb(var(--accent-green))', flexShrink: 0 }} />
         ) : (
-          <Loader2 size={13} style={{ color: 'rgb(var(--accent-purple))', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+          <Loader2 size={13} style={{ color: 'rgb(var(--accent-brand))', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
         )}
 
         <span style={{
@@ -345,7 +345,7 @@ const AgentTurnCard = ({ group, activity, agentName, agentNames, agentPersonalit
             alignItems: 'center',
             gap: 3,
             fontSize: 11,
-            color: 'rgb(var(--accent-purple))',
+            color: 'rgb(var(--accent-brand))',
             fontFamily: 'monospace',
             fontWeight: 600,
             flexShrink: 1,

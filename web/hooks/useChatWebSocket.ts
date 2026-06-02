@@ -48,6 +48,8 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
   isActiveRef.current = isActive
 
   const initialAgentSetRef = useRef(false)
+  const isNewChatRef = useRef(isNewChat)
+  isNewChatRef.current = isNewChat
   const selectedAgentIdRef = useRef(selectedAgentId)
   selectedAgentIdRef.current = selectedAgentId
 
@@ -136,12 +138,16 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       if (!currentChatId || !wsClient.isConnected()) return
       if (!isActiveRef.current) return
       if (sendContextTimerRef.current) clearTimeout(sendContextTimerRef.current)
-      sendContextTimerRef.current = setTimeout(() => {
-        sendContextTimerRef.current = null
+      const fire = () => {
         const cid = chatIdRef.current
         if (!cid || !wsClient.isConnected() || !isActiveRef.current) return
         wsClient.send('chat:set-context', { chatId: cid })
-        wsClient.send('chat:resume-experts', { chatId: cid })
+        if (!isNewChatRef.current) wsClient.send('chat:resume-experts', { chatId: cid })
+      }
+      if (isNewChatRef.current) { fire(); return }
+      sendContextTimerRef.current = setTimeout(() => {
+        sendContextTimerRef.current = null
+        fire()
       }, 300)
     },
   })
@@ -157,12 +163,16 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     if (!currentChatId || !wsClient.isConnected()) return
     if (!isActiveRef.current) return
     if (sendContextTimerRef.current) clearTimeout(sendContextTimerRef.current)
-    sendContextTimerRef.current = setTimeout(() => {
-      sendContextTimerRef.current = null
+    const fire = () => {
       const cid = chatIdRef.current
       if (!cid || !wsClient.isConnected() || !isActiveRef.current) return
       wsClient.send('chat:set-context', { chatId: cid })
-      wsClient.send('chat:resume-experts', { chatId: cid })
+      if (!isNewChatRef.current) wsClient.send('chat:resume-experts', { chatId: cid })
+    }
+    if (isNewChatRef.current) { fire(); return }
+    sendContextTimerRef.current = setTimeout(() => {
+      sendContextTimerRef.current = null
+      fire()
     }, 300)
   }
 
@@ -173,11 +183,11 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
 
     const init = async () => {
       try {
-        const fetches: [Promise<Response>, Promise<Response | null>] = [
+        const [wsRes, chatRes, agentsRes] = await Promise.all([
           authFetch(`${API_BASE}/api/workspaces/${workspaceId}`),
-          chatId ? authFetch(`${API_BASE}/api/chats/${chatId}`) : Promise.resolve(null),
-        ]
-        const [wsRes, chatRes] = await Promise.all(fetches)
+          (chatId && !isNewChat) ? authFetch(`${API_BASE}/api/chats/${chatId}`) : Promise.resolve(null),
+          authFetch(`${API_BASE}/api/agents`),
+        ])
         if (!wsRes.ok) throw new Error('Workspace not found')
         const ws = await wsRes.json()
         if (cancelled) return
@@ -190,8 +200,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
           setWsRepositories(ws.repositories)
         }
 
-        const agents: AgentSummary[] = await authFetch(`${API_BASE}/api/agents`)
-          .then((r) => r.ok ? r.json() : [])
+        const agents: AgentSummary[] = agentsRes.ok ? await agentsRes.json() : []
         if (cancelled) return
         if (agents.length > 0) setAvailableAgents(agents)
 

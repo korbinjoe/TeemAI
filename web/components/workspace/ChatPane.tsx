@@ -1,9 +1,12 @@
+import { useLocation } from 'react-router-dom'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
 import ChatInstance from '../chat/ChatInstance'
 import WorkspaceHome from './WorkspaceHome'
 
 const ChatPane = () => {
   const { workspaceId, activeChatId, ideMountNode } = useWorkspace()
+  const location = useLocation()
+  const navState = location.state as { isNew?: boolean; agentId?: string } | null
 
   if (!workspaceId) {
     return (
@@ -24,6 +27,8 @@ const ChatPane = () => {
       chatId={activeChatId}
       workspaceId={workspaceId}
       isActive
+      isNewChat={navState?.isNew}
+      initAgentId={navState?.agentId}
       hideRightPanel
       rightPanelMountNode={ideMountNode}
     />

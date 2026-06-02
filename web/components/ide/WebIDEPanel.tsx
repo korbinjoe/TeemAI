@@ -75,7 +75,7 @@ const WebIDEPanel = ({ chatId, roots, gitStatus, multiGitStatus, onMultiOptimist
     } catch {
       // ignore parse errors — fall back to default
     }
-    return 'M'
+    return 'S'
   })
 
   useEffect(() => {

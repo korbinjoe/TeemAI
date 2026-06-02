@@ -7,6 +7,7 @@ import type { WebSocketClient } from '../services/WebSocketClient'
 import { sendAESEvent } from '@/lib/aes'
 import { API_BASE, authFetch } from '@/config/api'
 import { isPlaceholderTitle } from '../../shared/placeholderTitles'
+import { chatQueueStore } from '@/lib/chatQueueStore'
 
 interface UseChatActionsParams {
   chatId: string
@@ -42,9 +43,14 @@ export const useChatActions = ({
   setExpertActivities, setTargetAgentId, setLoading, chatTitle, setChatTitle,
   openDirPicker,
 }: UseChatActionsParams) => {
-  const [queuedMessages, setQueuedMessages] = useState<QueuedMessage[]>([])
-  const queuedMessagesRef = useRef<QueuedMessage[]>([])
+  const [queuedMessages, setQueuedMessages] = useState<QueuedMessage[]>(() => chatQueueStore.get(chatId))
+  const queuedMessagesRef = useRef<QueuedMessage[]>(queuedMessages)
   queuedMessagesRef.current = queuedMessages
+  const restoredFromStoreRef = useRef(queuedMessages.length > 0)
+
+  useEffect(() => {
+    chatQueueStore.set(chatId, queuedMessages)
+  }, [chatId, queuedMessages])
 
   const expertActivitiesRef = useRef(expertActivities)
   expertActivitiesRef.current = expertActivities
@@ -262,8 +268,16 @@ export const useChatActions = ({
   // Flush the queue head whenever its *target agent* is idle. Per-agent gating
   // prevents cross-agent interference: Agent A finishing does not flush a
   // message queued for still-busy Agent B, and vice versa.
+  //
+  // When the queue was restored from the global store (Mission switch), skip
+  // the first effect invocation to let the backend sync expert activities via
+  // chat:resume-experts. The polling fallback (below) will catch it within 2s.
   useEffect(() => {
     if (queuedMessages.length === 0) return
+    if (restoredFromStoreRef.current) {
+      restoredFromStoreRef.current = false
+      return
+    }
     const can = canFlushHead()
     console.debug('[QueueFlush] effect fired: queueLen=%d canFlush=%s mergedPhase=%s activities=%o',
       queuedMessages.length, can, currentMergedActivity?.phase,

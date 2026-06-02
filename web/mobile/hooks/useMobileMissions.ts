@@ -8,13 +8,24 @@ import { ACTIVE_PHASES, reconcileMembersFromActivity } from '@/lib/memberStatus'
 export const useMobileMissions = () => {
   const [missions, setMissions] = useState<Chat[]>([])
   const [workspaceNames, setWorkspaceNames] = useState<Record<string, string>>({})
+  const [agentNames, setAgentNames] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(async () => {
     try {
-      const wsRes = await authFetch(`${API_BASE}/api/workspaces`)
+      const [wsRes, agentsRes] = await Promise.all([
+        authFetch(`${API_BASE}/api/workspaces`),
+        authFetch(`${API_BASE}/api/agents`),
+      ])
       if (!wsRes.ok) return
       const workspaces: { id: string; name: string }[] = await wsRes.json()
+
+      if (agentsRes.ok) {
+        const agents: { id: string; name: string }[] = await agentsRes.json()
+        const map: Record<string, string> = {}
+        for (const a of agents) map[a.id] = a.name
+        setAgentNames(map)
+      }
 
       const nameMap: Record<string, string> = {}
       for (const w of workspaces) nameMap[w.id] = w.name
@@ -90,5 +101,5 @@ export const useMobileMissions = () => {
     }
   }, [refresh])
 
-  return { missions, loading, refresh, workspaceNames }
+  return { missions, loading, refresh, workspaceNames, agentNames }
 }

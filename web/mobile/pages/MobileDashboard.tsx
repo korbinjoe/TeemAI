@@ -53,7 +53,7 @@ const hasPermissionWaiting = (chat: Chat): boolean =>
   (chat.members ?? []).some((m) => m.status === 'waiting')
 
 const MobileDashboard = () => {
-  const { missions, loading, workspaceNames } = useMobileMissions()
+  const { missions, loading, workspaceNames, agentNames } = useMobileMissions()
   const navigate = useNavigate()
   const [tab, setTab] = useState<DashTab>('all')
 
@@ -102,6 +102,7 @@ const MobileDashboard = () => {
                 key={m.id}
                 chat={m}
                 workspaceName={workspaceNames[m.workspaceId]}
+                agentNames={agentNames}
                 onClick={() => navigate(`/mobile/mission/${m.id}`)}
               />
             ))}
@@ -116,6 +117,7 @@ const MobileDashboard = () => {
                 key={m.id}
                 chat={m}
                 workspaceName={workspaceNames[m.workspaceId]}
+                agentNames={agentNames}
                 isDone
                 onClick={() => navigate(`/mobile/mission/${m.id}`)}
               />
@@ -134,9 +136,10 @@ const GroupLabel = ({ label, count }: { label: string; count: number }) => (
   </div>
 )
 
-const MissionCard = ({ chat, workspaceName, isDone, onClick }: {
+const MissionCard = ({ chat, workspaceName, agentNames, isDone, onClick }: {
   chat: Chat
   workspaceName?: string
+  agentNames: Record<string, string>
   isDone?: boolean
   onClick: () => void
 }) => {
@@ -178,7 +181,7 @@ const MissionCard = ({ chat, workspaceName, isDone, onClick }: {
       {members.length > 0 && (
         <div className="flex items-center gap-2.5 mb-1.5">
           {members.map((m) => (
-            <AgentBadge key={m.agentId} member={m} />
+            <AgentBadge key={m.agentId} member={m} name={agentNames[m.agentId]} />
           ))}
         </div>
       )}
@@ -201,9 +204,10 @@ const MissionCard = ({ chat, workspaceName, isDone, onClick }: {
   )
 }
 
-const AgentBadge = ({ member }: { member: ChatMember }) => {
+const AgentBadge = ({ member, name }: { member: ChatMember; name?: string }) => {
+  const displayName = name || member.agentId
   const color = getAgentColor(member.agentId)
-  const initial = (member.agentId.charAt(0) || '?').toUpperCase()
+  const initial = displayName.charAt(0).toUpperCase()
   const label = phaseLabel(member.status)
 
   return (
@@ -214,7 +218,7 @@ const AgentBadge = ({ member }: { member: ChatMember }) => {
       >
         {initial}
       </div>
-      <span className="text-[11px]">{member.agentId}</span>
+      <span className="text-[11px]">{displayName}</span>
       <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', memberStatusDot(member.status))} />
       <span className={cn('text-[11px]', phaseColor(member.status))}>{label}</span>
     </div>

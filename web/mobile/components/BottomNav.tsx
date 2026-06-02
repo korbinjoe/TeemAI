@@ -1,9 +1,9 @@
-import { LayoutGrid, PlusCircle } from 'lucide-react'
+import { Rocket, PlusCircle } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
 const tabs = [
-  { path: '/mobile', label: 'Missions', icon: LayoutGrid },
+  { path: '/mobile', label: 'Missions', icon: Rocket },
   { path: '/mobile/dispatch', label: 'New', icon: PlusCircle },
 ] as const
 

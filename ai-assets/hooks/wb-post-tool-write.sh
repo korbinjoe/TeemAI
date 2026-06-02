@@ -142,11 +142,8 @@ case "$TOOL_NAME" in
     fi
     ;;
   Task|Agent)
-    DESCRIPTION=$(echo "$INPUT" | jq -r '.tool_input.description // empty' 2>/dev/null || echo "")
-    SUBAGENT=$(echo "$INPUT" | jq -r '.tool_input.subagent_type // "agent"' 2>/dev/null || echo "agent")
-    if [ -n "$DESCRIPTION" ]; then
-      write_wb "handoff" "→ ${SUBAGENT} ${DESCRIPTION}"
-    fi
+    # Internal subagent spawns (Explore, general-purpose, etc.) are not handoffs.
+    # Real handoffs go through handoff.sh and are caught by the Bash case below.
     ;;
   Bash)
     CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || echo "")

@@ -131,20 +131,16 @@ if [ -z "$HAS_GOAL" ]; then
   fi
 fi
 
-# -- Rule 2: handoff (Task/Agent tool call or Bash calling start-expert.sh) --
+# -- Rule 2: handoff (only real handoffs via handoff.sh / start-expert.sh) --
+# Agent/Task tool calls are internal subagent spawns, not handoffs.
 HANDOFF=$(printf "%s\n" "$LAST_CHUNK" \
-  | jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="tool_use" and (.name=="Task" or .name=="Agent")) | "→ \(.input.subagent_type // "agent") \(.input.description // "task")"' 2>/dev/null \
-  | tail -n 1)
-
-if [ -z "$HANDOFF" ]; then
-  HANDOFF=$(printf "%s\n" "$LAST_CHUNK" \
-    | jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="tool_use" and .name=="Bash") | .input.command // empty' 2>/dev/null \
-    | grep -E 'start-expert\.sh|send-to-expert\.sh' \
-    | head -n 1 \
-    | sed -E 's/.*start-expert\.sh\s+(\S+)\s+"?([^"]*)"?.*/→ \1 \2/' \
-    | sed -E 's/.*send-to-expert\.sh\s+(\S+)\s+"?([^"]*)"?.*/→ \1 \2/' \
-    | head -n 1)
-fi
+  | jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="tool_use" and .name=="Bash") | .input.command // empty' 2>/dev/null \
+  | grep -E 'start-expert\.sh|send-to-expert\.sh|handoff\.sh' \
+  | head -n 1 \
+  | sed -E 's/.*handoff\.sh\s+(\S+)\s+"?([^"]*)"?.*/→ \1 \2/' \
+  | sed -E 's/.*start-expert\.sh\s+(\S+)\s+"?([^"]*)"?.*/→ \1 \2/' \
+  | sed -E 's/.*send-to-expert\.sh\s+(\S+)\s+"?([^"]*)"?.*/→ \1 \2/' \
+  | head -n 1)
 
 if [ -n "$HANDOFF" ]; then
   write_wb "handoff" "$HANDOFF"

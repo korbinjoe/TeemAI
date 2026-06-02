@@ -1,51 +1,59 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ShieldCheck, Target, Lightbulb, FileText, Activity, HelpCircle, ArrowRightLeft, MessageSquare, BarChart3 } from 'lucide-react'
+import { ChevronLeft, AlertTriangle, Send } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
 import { API_BASE, authFetch } from '@/config/api'
 import { getWebSocketClient } from '@/services/WebSocketClient'
-import { memberStatusDot } from '@/components/workspace/MissionSessionRows'
-import type { Chat, ChatMember } from '@/components/workspace/types'
+import type { Chat } from '@/components/workspace/types'
 import type { Message } from '@/types/chat'
 import type { ExpertPermissionRequestPayload } from '@shared/ws-types'
-import type { WhiteboardEntry } from '@shared/whiteboard-types'
 
-const ENTRY_ICONS: Record<string, typeof Target> = {
-  goal: Target,
-  decision: Lightbulb,
-  artifact: FileText,
-  progress: Activity,
-  open_question: HelpCircle,
-  handoff: ArrowRightLeft,
-  constraint: Target,
+const HIDDEN_TYPES = new Set(['toolUse', 'toolResult', 'thinking', 'stats', 'plan'])
+
+const isVisibleMessage = (m: Message): boolean =>
+  !HIDDEN_TYPES.has(m.type ?? '') && !!m.content?.trim()
+
+const AGENT_COLORS: Record<string, string> = {
+  lead: '#6B8DB5',
+  'fullstack-engineer': '#C87941',
+  'code-reviewer': '#5BA0A8',
+  'ui-designer': '#C76B8A',
+  'devops-engineer': '#7BA056',
+  architect: '#5878B0',
+  sensei: '#9B6BC0',
+  'image-creator': '#D4A03C',
 }
 
-type Tab = 'messages' | 'activity'
+const FALLBACK_COLORS = ['#8B6BAE', '#5C9E72', '#B87850', '#6898B8', '#C0728A', '#8FA84E']
+
+const getAgentColor = (agentId: string): string => {
+  if (AGENT_COLORS[agentId]) return AGENT_COLORS[agentId]
+  let h = 0
+  for (let i = 0; i < agentId.length; i++) h = ((h << 5) - h + agentId.charCodeAt(i)) | 0
+  return FALLBACK_COLORS[Math.abs(h) % FALLBACK_COLORS.length]
+}
+
+const getInitial = (name: string): string =>
+  (name.charAt(0) || '?').toUpperCase()
 
 const MobileMissionDetail = () => {
   const { missionId } = useParams<{ missionId: string }>()
   const navigate = useNavigate()
   const [chat, setChat] = useState<Chat | null>(null)
-  const [entries, setEntries] = useState<WhiteboardEntry[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [permRequest, setPermRequest] = useState<ExpertPermissionRequestPayload | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [activeTab, setActiveTab] = useState<Tab>('messages')
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [inputText, setInputText] = useState('')
+  const conversationEndRef = useRef<HTMLDivElement>(null)
 
   const fetchData = useCallback(async () => {
     if (!missionId) return
     try {
-      const [chatRes, wbRes] = await Promise.all([
-        authFetch(`${API_BASE}/api/chats/${missionId}`),
-        authFetch(`${API_BASE}/api/chats/${missionId}/whiteboard/entries`),
-      ])
-      if (chatRes.ok) setChat(await chatRes.json())
-      if (wbRes.ok) {
-        const data = await wbRes.json()
-        setEntries(data.entries ?? [])
-      }
+      const res = await authFetch(`${API_BASE}/api/chats/${missionId}`)
+      if (res.ok) setChat(await res.json())
     } finally {
       setLoading(false)
     }
@@ -59,26 +67,16 @@ const MobileMissionDetail = () => {
     const ws = getWebSocketClient()
     ws.connect().catch(() => {})
 
-    const handleStructuredMessage = (payload: { agentId: string; chatId: string; messages: Message[]; type?: 'full' | 'delta' }) => {
+    const handleStructuredMessage = (payload: { agentId: string; chatId: string; messages: Message[] }) => {
       if (payload.chatId !== missionId) return
-      if (payload.type === 'full') {
-        setMessages((prev) => {
-          const incoming = payload.messages.filter((m) => m.type !== 'toolUse' && m.type !== 'toolResult' && m.type !== 'thinking')
-          const existing = new Set(prev.map((m) => m.id))
-          const newMsgs = incoming.filter((m) => !existing.has(m.id))
-          if (newMsgs.length === 0) return prev
-          return [...prev, ...newMsgs].sort((a, b) => a.timestamp - b.timestamp)
-        })
-      } else {
-        const incoming = payload.messages.filter((m) => m.type !== 'toolUse' && m.type !== 'toolResult' && m.type !== 'thinking')
-        if (incoming.length === 0) return
-        setMessages((prev) => {
-          const existing = new Set(prev.map((m) => m.id))
-          const newMsgs = incoming.filter((m) => !existing.has(m.id))
-          if (newMsgs.length === 0) return prev
-          return [...prev, ...newMsgs].sort((a, b) => a.timestamp - b.timestamp)
-        })
-      }
+      const incoming = payload.messages.filter(isVisibleMessage)
+      if (incoming.length === 0) return
+      setMessages((prev) => {
+        const existing = new Set(prev.map((m) => m.id))
+        const newMsgs = incoming.filter((m) => !existing.has(m.id))
+        if (newMsgs.length === 0) return prev
+        return [...prev, ...newMsgs].sort((a, b) => a.timestamp - b.timestamp)
+      })
     }
 
     const handlePermission = (payload: ExpertPermissionRequestPayload) => {
@@ -97,17 +95,10 @@ const MobileMissionDetail = () => {
       }
     }
 
-    const handleWhiteboardEntry = (payload: { chatId: string; entry: WhiteboardEntry }) => {
-      if (payload.chatId === missionId) {
-        setEntries((prev) => [...prev, payload.entry])
-      }
-    }
-
     ws.on('expert:structured-message', handleStructuredMessage)
     ws.on('expert:permission-request', handlePermission)
     ws.on('chat:permission-resolved', handlePermResolved)
     ws.on('chat:status-changed', handleStatusChanged)
-    ws.on('whiteboard:entry-added', handleWhiteboardEntry)
 
     ws.send('chat:set-context', { chatId: missionId })
     ws.send('chat:resume-experts', { chatId: missionId })
@@ -117,15 +108,12 @@ const MobileMissionDetail = () => {
       ws.off('expert:permission-request', handlePermission)
       ws.off('chat:permission-resolved', handlePermResolved)
       ws.off('chat:status-changed', handleStatusChanged)
-      ws.off('whiteboard:entry-added', handleWhiteboardEntry)
     }
   }, [missionId])
 
   useEffect(() => {
-    if (activeTab === 'messages') {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [messages, activeTab])
+    conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   const sendPermResponse = (outcome: { outcome: 'selected'; optionId: string } | { outcome: 'cancelled' }) => {
     if (!permRequest || submitting) return
@@ -141,9 +129,16 @@ const MobileMissionDetail = () => {
     setSubmitting(false)
   }
 
+  const handleSendMessage = () => {
+    const text = inputText.trim()
+    if (!text || !missionId) return
+    getWebSocketClient().send('expert:user-input', { chatId: missionId, text })
+    setInputText('')
+  }
+
   if (loading) {
     return (
-      <div className="px-4 pt-4">
+      <div className="flex items-center justify-center h-full">
         <p className="text-sm text-text-secondary">Loading mission...</p>
       </div>
     )
@@ -151,13 +146,9 @@ const MobileMissionDetail = () => {
 
   if (!chat) {
     return (
-      <div className="px-4 pt-4">
+      <div className="flex flex-col items-center justify-center h-full gap-3">
         <p className="text-sm text-text-secondary">Mission not found.</p>
-        <button
-          type="button"
-          onClick={() => navigate('/mobile')}
-          className="mt-3 text-sm text-accent-brand"
-        >
+        <button type="button" onClick={() => navigate('/mobile')} className="text-sm text-accent-brand">
           Back to missions
         </button>
       </div>
@@ -165,185 +156,190 @@ const MobileMissionDetail = () => {
   }
 
   const members = chat.members ?? []
-  const activeEntries = entries.filter((e) => e.status === 'active')
+  const agentCount = members.length
+  const subtitle = [
+    agentCount > 0 ? `${agentCount} agent${agentCount > 1 ? 's' : ''}` : null,
+    chat.totalCost != null ? `$${chat.totalCost.toFixed(2)}` : null,
+  ].filter(Boolean).join(' · ')
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-4 pt-3 pb-2 border-b border-border-subtle">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-5 py-3 border-b border-border-subtle shrink-0">
         <button
           type="button"
           onClick={() => navigate('/mobile')}
-          className="flex items-center gap-1 text-sm text-text-muted mb-2"
+          className="w-8 h-8 flex items-center justify-center rounded-full text-accent-brand active:bg-bg-hover"
         >
-          <ArrowLeft size={16} />
-          <span>Missions</span>
+          <ChevronLeft size={20} />
         </button>
-
-        <h1 className="text-base font-semibold text-text-primary mb-0.5">
-          {chat.title || 'Untitled Mission'}
-        </h1>
-        <div className="text-xs text-text-muted mb-3">
-          {chat.status === 'running' ? 'Running' : chat.status === 'stopped' ? 'Completed' : 'Idle'}
-          {chat.totalCost != null && ` · $${chat.totalCost.toFixed(4)}`}
-        </div>
-
-        <div className="flex gap-1">
-          <TabButton active={activeTab === 'messages'} onClick={() => setActiveTab('messages')}>
-            <MessageSquare size={13} />
-            <span>Messages</span>
-          </TabButton>
-          <TabButton active={activeTab === 'activity'} onClick={() => setActiveTab('activity')}>
-            <BarChart3 size={13} />
-            <span>Activity</span>
-          </TabButton>
+        <div className="flex-1 min-w-0">
+          <div className="text-[16px] font-semibold text-text-primary truncate">
+            {chat.title || 'Untitled Mission'}
+          </div>
+          {subtitle && (
+            <div className="text-[11px] text-text-muted mt-px">{subtitle}</div>
+          )}
         </div>
       </div>
 
+      {/* Permission Banner */}
       {permRequest && (
-        <div className="mx-4 mt-3 rounded-xl border border-accent-yellow/40 bg-accent-yellow/10 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <ShieldCheck size={16} className="text-accent-yellow" />
-            <span className="text-sm font-semibold text-text-primary">Permission Request</span>
+        <div className="shrink-0 bg-accent-yellow/[0.08] border-b border-accent-yellow/20 px-5 py-3">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-accent-yellow mb-1">
+            <AlertTriangle size={14} />
+            Permission Request — {permRequest.agentId}
           </div>
-          <div className="text-[13px] text-text-primary mb-3 break-all">
+          <div className="text-xs text-text-secondary font-mono bg-bg-input border border-border-subtle rounded-md px-2.5 py-1.5 mb-2.5">
             {permRequest.toolCall.title}
           </div>
-          <div className="flex flex-col gap-2">
-            {permRequest.options.map((opt) => (
-              <button
-                key={opt.optionId}
-                disabled={submitting}
-                onClick={() => sendPermResponse({ outcome: 'selected', optionId: opt.optionId })}
-                className={cn(
-                  'rounded-lg px-4 py-2.5 text-sm font-medium transition-colors',
-                  opt.kind === 'allow_once' || opt.kind === 'allow_always'
-                    ? 'bg-accent-brand text-white'
-                    : 'bg-bg-secondary text-text-primary border border-border-subtle',
-                )}
-              >
-                {opt.name}
-              </button>
-            ))}
+          <div className="flex gap-2">
+            {permRequest.options.map((opt) => {
+              const isAllow = opt.kind === 'allow_once' || opt.kind === 'allow_always'
+              return (
+                <button
+                  key={opt.optionId}
+                  disabled={submitting}
+                  onClick={() => sendPermResponse({ outcome: 'selected', optionId: opt.optionId })}
+                  className={cn(
+                    'flex-1 py-2 rounded-md text-[13px] font-semibold transition-colors text-center',
+                    isAllow
+                      ? 'bg-accent-brand text-bg-primary'
+                      : 'bg-bg-hover text-text-secondary border border-border-subtle',
+                  )}
+                >
+                  {opt.name}
+                </button>
+              )
+            })}
           </div>
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4">
-        {activeTab === 'messages' && (
-          <MessagesTab messages={messages} members={members} messagesEndRef={messagesEndRef} />
+      {/* Conversation */}
+      <div className="flex-1 overflow-y-auto px-5 py-4">
+        {messages.length === 0 ? (
+          <p className="text-sm text-text-muted text-center mt-8">No messages yet.</p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {messages.map((msg) => (
+              <ConversationMessage key={msg.id} message={msg} />
+            ))}
+            <div ref={conversationEndRef} />
+          </div>
         )}
-        {activeTab === 'activity' && (
-          <ActivityTab entries={activeEntries} members={members} />
-        )}
+      </div>
+
+      {/* Input Bar */}
+      <div className="shrink-0 flex items-end gap-2 px-4 py-2 border-t border-border-subtle bg-bg-secondary">
+        <textarea
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              handleSendMessage()
+            }
+          }}
+          placeholder="Send a message..."
+          rows={1}
+          className={cn(
+            'flex-1 resize-none rounded-[20px] border border-border-subtle bg-bg-input',
+            'px-3.5 py-2 text-[13px] text-text-primary placeholder:text-text-muted',
+            'focus:outline-none focus:border-accent-brand',
+            'min-h-[36px] max-h-[100px]',
+          )}
+        />
+        <button
+          type="button"
+          onClick={handleSendMessage}
+          disabled={!inputText.trim()}
+          className={cn(
+            'shrink-0 w-[36px] h-[36px] rounded-full flex items-center justify-center transition-all',
+            inputText.trim()
+              ? 'bg-accent-brand text-bg-primary active:scale-[0.92]'
+              : 'bg-bg-hover text-text-muted',
+          )}
+        >
+          <Send size={16} />
+        </button>
       </div>
     </div>
   )
 }
 
-const TabButton = ({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={cn(
-      'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
-      active
-        ? 'bg-accent-brand/10 text-accent-brand'
-        : 'text-text-muted hover:text-text-secondary hover:bg-bg-hover',
-    )}
-  >
-    {children}
-  </button>
-)
-
-const MessagesTab = ({ messages, members, messagesEndRef }: { messages: Message[]; members: ChatMember[]; messagesEndRef: React.RefObject<HTMLDivElement | null> }) => {
-  if (messages.length === 0) {
-    return <p className="text-sm text-text-muted">No messages yet. Waiting for agent activity...</p>
-  }
-
-  const agentNameMap = new Map(members.map((m) => [m.agentId, m.agentId]))
-
-  return (
-    <div className="flex flex-col gap-2.5">
-      {messages.map((msg) => (
-        <MessageBubble key={msg.id} message={msg} agentName={agentNameMap.get(msg.agentId ?? '') ?? msg.agentId} />
-      ))}
-      <div ref={messagesEndRef} />
-    </div>
-  )
+const formatRelativeTime = (ts: number): string => {
+  const diff = Math.floor((Date.now() - ts) / 1000)
+  if (diff < 60) return `${diff}s ago`
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return new Date(ts).toLocaleDateString()
 }
 
-const MessageBubble = ({ message, agentName }: { message: Message; agentName?: string }) => {
+const ConversationMessage = ({ message }: { message: Message }) => {
   const isUser = message.role === 'user'
+  const name = isUser ? 'You' : (message.agentId ?? 'Agent')
+  const color = isUser ? 'rgb(198,162,118)' : getAgentColor(message.agentId ?? '')
+  const initial = isUser ? 'U' : getInitial(message.agentId ?? 'A')
+
   return (
-    <div className={cn('flex flex-col max-w-[85%]', isUser ? 'self-end items-end' : 'self-start items-start')}>
-      {!isUser && agentName && (
-        <span className="text-[10px] text-text-muted mb-0.5 px-1">{agentName}</span>
-      )}
-      <div className={cn(
-        'rounded-xl px-3 py-2 text-[13px] leading-relaxed whitespace-pre-wrap break-words',
-        isUser
-          ? 'bg-accent-brand text-white rounded-br-sm'
-          : 'bg-bg-secondary border border-border-subtle text-text-primary rounded-bl-sm',
-      )}>
-        {message.content}
+    <div className="flex gap-2.5">
+      <div
+        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0 mt-0.5"
+        style={{ background: `${color}22`, color }}
+      >
+        {initial}
       </div>
-      <span className="text-[9px] text-text-muted mt-0.5 px-1">
-        {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-      </span>
-    </div>
-  )
-}
-
-const ActivityTab = ({ entries, members }: { entries: WhiteboardEntry[]; members: ChatMember[] }) => (
-  <>
-    {members.length > 0 && (
-      <div className="mb-4">
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-2">
-          Agents
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {members.map((m) => (
-            <AgentChip key={m.agentId} member={m} />
-          ))}
-        </div>
-      </div>
-    )}
-
-    {entries.length > 0 ? (
-      <div>
-        <div className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-2">
-          Activity
-        </div>
-        <div className="flex flex-col gap-2">
-          {entries.map((entry) => (
-            <EntryRow key={entry.id} entry={entry} />
-          ))}
-        </div>
-      </div>
-    ) : (
-      <p className="text-sm text-text-muted">No activity yet.</p>
-    )}
-  </>
-)
-
-const AgentChip = ({ member }: { member: ChatMember }) => (
-  <div className="flex items-center gap-1.5 rounded-full border border-border-subtle bg-bg-secondary px-2.5 py-1">
-    <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', memberStatusDot(member.status))} />
-    <span className="text-[11px] text-text-primary truncate max-w-[100px]">{member.agentId}</span>
-  </div>
-)
-
-const EntryRow = ({ entry }: { entry: WhiteboardEntry }) => {
-  const Icon = ENTRY_ICONS[entry.type] ?? Activity
-  return (
-    <div className="flex gap-2.5 rounded-lg border border-border-subtle bg-bg-secondary px-3 py-2.5">
-      <Icon size={14} className="text-text-muted mt-0.5 shrink-0" />
       <div className="flex-1 min-w-0">
-        <div className="text-[12px] text-text-primary leading-relaxed">{entry.summary}</div>
-        <div className="text-[10px] text-text-muted mt-1">
-          {entry.by}
-          {entry.type !== 'progress' && <span className="ml-1.5 opacity-60">{entry.type}</span>}
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <span className="text-xs font-semibold text-text-primary">{name}</span>
+          <span className="text-[10px] text-text-muted">{formatRelativeTime(message.timestamp)}</span>
         </div>
+        {isUser ? (
+          <div className="text-[13px] leading-relaxed whitespace-pre-wrap break-words bg-bg-secondary border border-border-subtle rounded-[10px] px-3.5 py-2.5 text-text-primary">
+            {message.content}
+          </div>
+        ) : (
+          <div className="text-[13px] leading-relaxed break-words text-text-secondary mobile-md">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                code: ({ children, className }) => {
+                  const isBlock = className?.includes('language-')
+                  if (isBlock) {
+                    return (
+                      <pre className="my-2 rounded-md bg-bg-input border border-border-subtle p-3 overflow-x-auto text-xs">
+                        <code className="text-accent-purple font-mono">{children}</code>
+                      </pre>
+                    )
+                  }
+                  return (
+                    <code className="bg-[rgba(99,102,241,0.1)] px-1 py-px rounded text-xs font-mono text-accent-purple">
+                      {children}
+                    </code>
+                  )
+                },
+                pre: ({ children }) => <>{children}</>,
+                ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
+                li: ({ children }) => <li className="text-text-secondary">{children}</li>,
+                h1: ({ children }) => <h1 className="text-sm font-bold text-text-primary mb-1.5 mt-2">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-sm font-semibold text-text-primary mb-1 mt-2">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-[13px] font-semibold text-text-primary mb-1 mt-1.5">{children}</h3>,
+                strong: ({ children }) => <strong className="font-semibold text-text-primary">{children}</strong>,
+                a: ({ href, children }) => (
+                  <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent-brand underline">{children}</a>
+                ),
+                blockquote: ({ children }) => (
+                  <blockquote className="border-l-2 border-accent-brand/40 pl-3 my-2 text-text-muted italic">{children}</blockquote>
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
+        )}
       </div>
     </div>
   )

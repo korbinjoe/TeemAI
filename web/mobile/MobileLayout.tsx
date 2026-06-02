@@ -1,10 +1,16 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { useMobileAuth } from './hooks/useMobileAuth'
 import ConnectionStatus from './components/ConnectionStatus'
 import BottomNav from './components/BottomNav'
 
+const TITLES: Record<string, string> = {
+  '/mobile': 'Missions',
+  '/mobile/dispatch': 'New Mission',
+}
+
 const MobileLayout = () => {
   const { isAuthenticated } = useMobileAuth()
+  const location = useLocation()
 
   if (!isAuthenticated) {
     return (
@@ -17,13 +23,22 @@ const MobileLayout = () => {
     )
   }
 
+  const isDetail = location.pathname.startsWith('/mobile/mission/')
+  const title = TITLES[location.pathname]
+
   return (
     <div className="flex h-dvh flex-col bg-bg-primary">
-      <ConnectionStatus />
-      <div className="flex-1 overflow-y-auto">
+      {!isDetail && title && (
+        <div className="flex items-center justify-between px-5 pt-2 pb-1 shrink-0">
+          <span className="text-[28px] font-bold tracking-tight">{title}</span>
+          <ConnectionStatus />
+        </div>
+      )}
+      {isDetail && <ConnectionStatus inline={false} />}
+      <div className="flex-1 min-h-0 flex flex-col">
         <Outlet />
       </div>
-      <BottomNav />
+      {!isDetail && <BottomNav />}
     </div>
   )
 }

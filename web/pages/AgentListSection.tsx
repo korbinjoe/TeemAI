@@ -9,6 +9,7 @@ import AgentAvatar from '@/components/ui/agent-avatar'
 import type { Agent } from '../types/agentConfig'
 import { useAvatarStyle } from '@/contexts/AvatarStyleContext'
 import { AVATAR_STYLES } from '@/config/avatarAssets'
+import useTeamStats from '@/hooks/useTeamStats'
 
 type TeamFilter = 'all' | 'builtin' | 'user' | 'claude' | 'codex'
 
@@ -30,6 +31,7 @@ export const TeamTab = ({ members, onFire, onEdit, onGoMarket, onClickAgent }: {
   const { t } = useTranslation(['agents', 'common'])
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<TeamFilter>('all')
+  const teamStats = useTeamStats()
 
   const filtered = useMemo(() => {
     let list = members
@@ -112,6 +114,7 @@ export const TeamTab = ({ members, onFire, onEdit, onGoMarket, onClickAgent }: {
             <TeamMemberCard
               key={agent.id}
               agent={agent}
+              stats={teamStats[agent.id]}
               onClick={() => onClickAgent(agent)}
               onFire={() => onFire(agent)}
               onEdit={() => onEdit(agent)}
@@ -217,8 +220,8 @@ const ProviderBadge = ({ provider }: { provider?: string }) => {
   )
 }
 
-const TeamMemberCard = ({ agent, onFire, onEdit, onClick }: {
-  agent: Agent; onFire: () => void; onEdit: () => void; onClick: () => void
+const TeamMemberCard = ({ agent, stats, onFire, onEdit, onClick }: {
+  agent: Agent; stats?: { totalTasks: number; successRate: number }; onFire: () => void; onEdit: () => void; onClick: () => void
 }) => {
   const { t } = useTranslation(['agents', 'common'])
   const isCustom = agent.source === 'user'
@@ -235,6 +238,13 @@ const TeamMemberCard = ({ agent, onFire, onEdit, onClick }: {
             <ProviderBadge provider={agent.provider} />
           </div>
           <div className="text-xs text-text-secondary mt-1.5 leading-[1.5] line-clamp-2">{agent.description}</div>
+          {stats && stats.totalTasks > 0 && (
+            <div className="flex items-center gap-2 mt-1.5 text-[10px] text-text-muted">
+              <span>{stats.totalTasks} missions</span>
+              <span className="w-px h-2.5 bg-border-subtle" />
+              <span>{Math.round(stats.successRate * 100)}% success</span>
+            </div>
+          )}
           {agent.tags && agent.tags.length > 0 && (
             <div className="flex gap-1 mt-1.5 flex-wrap">
               {agent.tags.slice(0, 4).map((tag) => (

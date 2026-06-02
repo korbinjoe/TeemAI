@@ -69,6 +69,29 @@ export const createAgentRoutes = (deps: AgentRouteDeps): Router => {
     res.json(agentStore.list())
   })
 
+  router.get('/api/agents/team-stats', async (_req, res) => {
+    const agents = agentStore.list()
+    const dnaDir = resolve(process.cwd(), 'ai-assets/evolution/dna')
+    const stats: Record<string, { totalTasks: number; successRate: number }> = {}
+
+    await Promise.all(agents.map(async (agent) => {
+      const dnaPath = resolve(dnaDir, `${agent.name}.json`)
+      try {
+        const raw = await readFile(dnaPath, 'utf-8')
+        const data = JSON.parse(raw)
+        const metrics = data.metrics || {}
+        if (metrics.totalTasks > 0) {
+          stats[agent.id] = {
+            totalTasks: metrics.totalTasks || 0,
+            successRate: metrics.successRate || 0,
+          }
+        }
+      } catch { /* no DNA file — skip */ }
+    }))
+
+    res.json(stats)
+  })
+
   router.get('/api/agents/:id', (req, res) => {
     const agent = agentStore.get(req.params.id)
     if (agent) return res.json(agent)

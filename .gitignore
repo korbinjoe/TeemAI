@@ -59,3 +59,5 @@ npm-debug.log*
 research/
 .understand-anything/
 .design/
+
+.r2c/

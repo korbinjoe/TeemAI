@@ -6,6 +6,7 @@ import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { useDialog } from '../../contexts/DialogContext'
 import { useWorkspaceChats } from '../../hooks/useWorkspaceChats'
 import { useAgents } from '../../hooks/useAgents'
+import useTeamStats from '../../hooks/useTeamStats'
 import AgentAvatar from '../ui/agent-avatar'
 import type { Chat } from './types'
 
@@ -41,6 +42,7 @@ const WorkspaceHome = () => {
   const { openNewMission } = useDialog()
   const { running, awaitingReview, done } = useWorkspaceChats(workspaceId)
   const { hiredAgents, resolveAgentName } = useAgents()
+  const teamStats = useTeamStats()
   const navigate = useNavigate()
 
   const failedChats = done.filter((c) => (c as Chat & { missionStatus?: string }).missionStatus === 'error')
@@ -58,11 +60,11 @@ const WorkspaceHome = () => {
         <div className="mb-14">
           <div className="text-[15px] font-medium text-text-muted mb-1.5">{getGreeting()}</div>
           <h1 className="text-[32px] font-extrabold text-text-emphasis tracking-[-0.5px] leading-[1.15] mb-2.5">
-            What should your team<br />work on?
+            Your team is ready
           </h1>
           <p className="text-[14px] text-text-muted leading-relaxed max-w-[440px] mb-8">
-            Describe a task, assign agents, walk away.
-            They'll ship code, open PRs, and ping you when it's done.
+            They remember your stack, know your standards, and grow with every mission.
+            Assign a task — they'll ship it while you're away.
           </p>
           <div className="flex items-center gap-4">
             <button
@@ -76,9 +78,13 @@ const WorkspaceHome = () => {
           </div>
         </div>
 
-        {/* Activity feed */}
+        {/* Activity feed — Mission Control */}
         {hasActivity && (
           <div className="mb-9">
+            <div className="text-[10px] font-bold text-text-muted uppercase tracking-[0.6px] mb-4 flex items-center gap-2">
+              Mission Control
+              <span className="flex-1 h-px bg-border-subtle/40" />
+            </div>
             {awaitingReview.length > 0 && (
               <FeedSection label="Needs your review" count={awaitingReview.length}>
                 {awaitingReview.slice(0, FEED_PREVIEW_COUNT).map((chat) => (
@@ -144,16 +150,24 @@ const WorkspaceHome = () => {
               </span>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {hiredAgents.map((agent) => (
-                <div
-                  key={agent.id}
-                  className="flex items-center gap-[7px] pl-2 pr-3 py-1.5 bg-bg-secondary border border-border-subtle rounded-full text-[11px] font-semibold text-text-secondary hover:border-border hover:bg-bg-hover transition-colors"
-                >
-                  <AgentAvatar name={agent.name} agentId={agent.id} size="sm" />
-                  <span>{agent.name.split(' ')[0]}</span>
-                  <span className="w-[5px] h-[5px] rounded-full bg-accent-green opacity-80" />
-                </div>
-              ))}
+              {hiredAgents.map((agent) => {
+                const agentStat = teamStats[agent.id]
+                return (
+                  <div
+                    key={agent.id}
+                    className="flex items-center gap-[7px] pl-2 pr-3 py-1.5 bg-bg-secondary border border-border-subtle rounded-full text-[11px] font-semibold text-text-secondary hover:border-border hover:bg-bg-hover transition-colors"
+                  >
+                    <AgentAvatar name={agent.name} agentId={agent.id} size="sm" />
+                    <span>{agent.name.split(' ')[0]}</span>
+                    {agentStat && agentStat.totalTasks > 0 && (
+                      <span className="text-[9px] font-medium text-text-muted">
+                        {agentStat.totalTasks} missions
+                      </span>
+                    )}
+                    <span className="w-[5px] h-[5px] rounded-full bg-accent-green opacity-80" />
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -161,6 +175,9 @@ const WorkspaceHome = () => {
         {/* Templates — only for empty state */}
         {!hasActivity && (
           <div className="mb-9">
+            <p className="text-[12px] text-text-muted mb-4">
+              Your team is standing by. Start your first mission — they'll remember everything for next time.
+            </p>
             <div className="text-[10px] font-bold text-text-muted uppercase tracking-[0.6px] mb-2.5">
               Start with a template
             </div>

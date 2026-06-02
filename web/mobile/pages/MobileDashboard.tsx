@@ -1,87 +1,224 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { chatStatusDot } from '@/components/workspace/MissionSessionRows'
+import { memberStatusDot } from '@/components/workspace/MissionSessionRows'
 import { useMobileMissions } from '../hooks/useMobileMissions'
-import type { Chat } from '@/components/workspace/types'
+import type { Chat, ChatMember } from '@/components/workspace/types'
 
-const statusLabel = (chat: Chat): string => {
-  const members = chat.members ?? []
-  if (members.some((m) => m.status === 'waiting' || m.status === 'waiting_input')) return 'Needs attention'
-  if (members.some((m) => m.status === 'error')) return 'Error'
-  if (chat.status === 'running') return 'Running'
-  if (chat.status === 'stopped') return 'Done'
-  return 'Idle'
+const AGENT_COLORS: Record<string, string> = {
+  lead: '#6B8DB5',
+  'fullstack-engineer': '#C87941',
+  'code-reviewer': '#5BA0A8',
+  'ui-designer': '#C76B8A',
+  'devops-engineer': '#7BA056',
+  architect: '#5878B0',
+  sensei: '#9B6BC0',
+  'image-creator': '#D4A03C',
 }
 
-const MobileDashboard = () => {
-  const { missions, loading, refresh } = useMobileMissions()
-  const navigate = useNavigate()
+const FALLBACK_COLORS = ['#8B6BAE', '#5C9E72', '#B87850', '#6898B8', '#C0728A', '#8FA84E']
 
-  const active = missions.filter((m) => m.status === 'running' || m.status === 'idle')
-  const recent = missions.filter((m) => m.status === 'stopped').slice(0, 10)
+const getAgentColor = (agentId: string): string => {
+  if (AGENT_COLORS[agentId]) return AGENT_COLORS[agentId]
+  let h = 0
+  for (let i = 0; i < agentId.length; i++) h = ((h << 5) - h + agentId.charCodeAt(i)) | 0
+  return FALLBACK_COLORS[Math.abs(h) % FALLBACK_COLORS.length]
+}
+
+const phaseLabel = (status: ChatMember['status']): string => {
+  switch (status) {
+    case 'running': return 'running'
+    case 'waiting': return 'waiting'
+    case 'waiting_input': return 'waiting'
+    case 'error': return 'error'
+    case 'done': return 'done'
+    default: return 'idle'
+  }
+}
+
+const phaseColor = (status: ChatMember['status']): string => {
+  switch (status) {
+    case 'running': return 'text-accent-running'
+    case 'waiting':
+    case 'waiting_input': return 'text-accent-yellow'
+    case 'error': return 'text-accent-red'
+    case 'done': return 'text-text-muted'
+    default: return 'text-text-muted'
+  }
+}
+
+type DashTab = 'all' | 'running' | 'done'
+
+const hasPermissionWaiting = (chat: Chat): boolean =>
+  (chat.members ?? []).some((m) => m.status === 'waiting')
+
+const MobileDashboard = () => {
+  const { missions, loading, workspaceNames } = useMobileMissions()
+  const navigate = useNavigate()
+  const [tab, setTab] = useState<DashTab>('all')
+
+  const running = missions.filter((m) => m.status === 'running' || m.status === 'idle')
+  const done = missions.filter((m) => m.status === 'stopped')
+
+  const showRunning = tab === 'all' || tab === 'running'
+  const showDone = tab === 'all' || tab === 'done'
 
   return (
-    <div className="px-4 pt-4 pb-4">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold text-text-primary">Missions</h1>
-        <button
-          type="button"
-          onClick={() => void refresh()}
-          className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-hover transition-colors"
-          aria-label="Refresh"
-        >
-          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-        </button>
+    <div className="flex flex-col h-full">
+      {/* Tabs */}
+      <div className="flex gap-0 px-5 shrink-0 bg-bg-primary">
+        {(['all', 'running', 'done'] as const).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={cn(
+              'py-1.5 mr-5 text-[13px] border-b-2 transition-colors capitalize',
+              tab === t
+                ? 'text-accent-brand-light border-accent-brand'
+                : 'text-text-muted border-transparent',
+            )}
+          >
+            {t === 'all' ? 'All' : t === 'running' ? 'Running' : 'Done'}
+          </button>
+        ))}
       </div>
 
-      {loading && missions.length === 0 && (
-        <p className="text-sm text-text-secondary">Loading missions...</p>
-      )}
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto px-5 pb-4">
+        {loading && missions.length === 0 && (
+          <p className="text-sm text-text-secondary mt-6">Loading missions...</p>
+        )}
 
-      {!loading && missions.length === 0 && (
-        <p className="text-sm text-text-secondary">No missions yet. Create one from your desktop.</p>
-      )}
+        {!loading && missions.length === 0 && (
+          <p className="text-sm text-text-secondary mt-6">No missions yet.</p>
+        )}
 
-      {active.length > 0 && (
-        <div className="mb-5">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-2">Active</div>
-          <div className="flex flex-col gap-1.5">
-            {active.map((m) => (
-              <MissionCard key={m.id} chat={m} onClick={() => navigate(`/mobile/mission/${m.id}`)} />
+        {showRunning && running.length > 0 && (
+          <div>
+            <GroupLabel label="Running" count={running.length} />
+            {running.map((m) => (
+              <MissionCard
+                key={m.id}
+                chat={m}
+                workspaceName={workspaceNames[m.workspaceId]}
+                onClick={() => navigate(`/mobile/mission/${m.id}`)}
+              />
             ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {recent.length > 0 && (
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-2">Recent</div>
-          <div className="flex flex-col gap-1.5">
-            {recent.map((m) => (
-              <MissionCard key={m.id} chat={m} onClick={() => navigate(`/mobile/mission/${m.id}`)} />
+        {showDone && done.length > 0 && (
+          <div>
+            <GroupLabel label="Done" count={done.length} />
+            {done.map((m) => (
+              <MissionCard
+                key={m.id}
+                chat={m}
+                workspaceName={workspaceNames[m.workspaceId]}
+                isDone
+                onClick={() => navigate(`/mobile/mission/${m.id}`)}
+              />
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
 
-const MissionCard = ({ chat, onClick }: { chat: Chat; onClick: () => void }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="flex items-center gap-3 rounded-lg border border-border-subtle bg-bg-secondary px-3 py-3 text-left transition-colors hover:bg-bg-hover active:bg-bg-hover w-full"
-  >
-    <span className={cn('w-2 h-2 rounded-full flex-shrink-0', chatStatusDot(chat))} />
-    <div className="flex-1 min-w-0">
-      <div className="text-[13px] font-medium text-text-primary truncate">{chat.title || 'Untitled Mission'}</div>
-      <div className="text-[11px] text-text-muted truncate mt-0.5">
-        {chat.waitingReason || statusLabel(chat)}
-      </div>
-    </div>
-  </button>
+const GroupLabel = ({ label, count }: { label: string; count: number }) => (
+  <div className="flex items-center gap-1.5 pt-4 pb-2">
+    <span className="text-[11px] uppercase tracking-[1.2px] text-text-muted font-medium">{label}</span>
+    <span className="text-[10px] text-text-secondary bg-bg-hover px-1.5 py-px rounded-lg">{count}</span>
+  </div>
 )
+
+const MissionCard = ({ chat, workspaceName, isDone, onClick }: {
+  chat: Chat
+  workspaceName?: string
+  isDone?: boolean
+  onClick: () => void
+}) => {
+  const members = chat.members ?? []
+  const needsApproval = hasPermissionWaiting(chat)
+  const progressPct = isDone ? 100 : Math.min(90, Math.max(10, (chat.totalToolCalls ?? 0) * 5 + 10))
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'relative w-full text-left rounded-[10px] border bg-bg-secondary px-3.5 py-2.5 mb-2 transition-all active:scale-[0.98] active:bg-bg-tertiary',
+        needsApproval
+          ? 'border-accent-yellow shadow-[0_0_0_1px_rgba(251,191,36,0.15)]'
+          : 'border-border-subtle',
+        isDone && 'opacity-75',
+      )}
+    >
+      {needsApproval && (
+        <div className="absolute -top-px right-3 bg-accent-yellow text-bg-primary text-[9px] font-bold uppercase tracking-[0.5px] px-2 py-0.5 rounded-b">
+          Needs Approval
+        </div>
+      )}
+
+      {/* Title + Workspace */}
+      <div className="flex items-center justify-between mb-1.5">
+        <span className={cn('text-[13px] truncate flex-1 mr-2', isDone ? 'font-medium' : 'font-semibold')}>
+          {chat.title || 'Untitled Mission'}
+        </span>
+        {workspaceName && (
+          <span className="text-[10px] text-text-muted bg-bg-hover px-1.5 py-0.5 rounded shrink-0">
+            {workspaceName}
+          </span>
+        )}
+      </div>
+
+      {/* Agents — single row */}
+      {members.length > 0 && (
+        <div className="flex items-center gap-2.5 mb-1.5">
+          {members.map((m) => (
+            <AgentBadge key={m.agentId} member={m} />
+          ))}
+        </div>
+      )}
+
+      {/* Progress + Cost */}
+      <div className="flex items-center">
+        <div className="flex-1 h-[2px] bg-bg-hover rounded-sm mr-3 overflow-hidden">
+          <div
+            className={cn('h-full rounded-sm transition-[width] duration-500', isDone ? 'bg-accent-green/50' : 'bg-accent-running')}
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+        {chat.totalCost != null && (
+          <span className="text-[11px] text-text-muted font-mono shrink-0">
+            ${chat.totalCost.toFixed(2)}
+          </span>
+        )}
+      </div>
+    </button>
+  )
+}
+
+const AgentBadge = ({ member }: { member: ChatMember }) => {
+  const color = getAgentColor(member.agentId)
+  const initial = (member.agentId.charAt(0) || '?').toUpperCase()
+  const label = phaseLabel(member.status)
+
+  return (
+    <div className="flex items-center gap-1 text-text-secondary">
+      <div
+        className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-medium shrink-0"
+        style={{ background: `${color}26`, color }}
+      >
+        {initial}
+      </div>
+      <span className="text-[11px]">{member.agentId}</span>
+      <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', memberStatusDot(member.status))} />
+      <span className={cn('text-[11px]', phaseColor(member.status))}>{label}</span>
+    </div>
+  )
+}
 
 export default MobileDashboard

@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../../contexts/ThemeContext'
+import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { History, Handshake, Zap, Repeat, FolderGit, Moon, Sun, Bell, Settings } from './icons'
 import { API_BASE, authFetch } from '@/config/api'
+import { useAgents } from '../../hooks/useAgents'
+import { useWorkspaceChats } from '../../hooks/useWorkspaceChats'
+import AgentAvatar from '../ui/agent-avatar'
 
 const useResourceCounts = () => {
   const [counts, setCounts] = useState({ agents: 0, skills: 0, cronJobs: 0, workspaces: 0 })
@@ -37,9 +41,44 @@ const useResourceCounts = () => {
 export const ResourcesSection = () => {
   const navigate = useNavigate()
   const counts = useResourceCounts()
+  const { hiredAgents } = useAgents()
+  const { workspaceId } = useWorkspace()
+  const { running } = useWorkspaceChats(workspaceId)
+  const runningCount = running.length
+
+  const previewAgents = useMemo(() => hiredAgents.slice(0, 3), [hiredAgents])
+
   return (
     <div className="px-1.5 py-1.5 border-t border-border-subtle">
-      <ResourceItem icon={<Handshake size={14} />} label="Team"       count={counts.agents}     onClick={() => navigate('/agents')} />
+      <button
+        onClick={() => navigate('/agents')}
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-bg-hover transition-colors group"
+      >
+        <span className="text-text-muted group-hover:text-text-secondary transition-colors"><Handshake size={14} /></span>
+        <span className="text-[12px] text-text-primary flex-1 text-left">Team</span>
+        {previewAgents.length > 0 && (
+          <span className="flex items-center -space-x-1 mr-0.5">
+            {previewAgents.map((agent) => (
+              <AgentAvatar
+                key={agent.id}
+                name={agent.name}
+                agentId={agent.id}
+                size="xs"
+                className="ring-[1.5px] ring-bg-secondary"
+              />
+            ))}
+          </span>
+        )}
+        {runningCount > 0 && (
+          <span className="flex items-center gap-1 mr-0.5">
+            <span className="w-[5px] h-[5px] rounded-full bg-accent-running animate-pulse" />
+            <span className="text-[10px] font-medium text-accent-running tabular-nums">{runningCount}</span>
+          </span>
+        )}
+        {counts.agents > 0 && (
+          <span className="text-[11px] text-text-muted tabular-nums">{counts.agents}</span>
+        )}
+      </button>
       <ResourceItem icon={<Zap size={14} />}       label="Skills"     count={counts.skills}     onClick={() => navigate('/skills')} />
       <ResourceItem icon={<Repeat size={14} />}    label="Schedules"  count={counts.cronJobs}   onClick={() => navigate('/cron-jobs')} />
       <ResourceItem icon={<FolderGit size={14} />} label="Workspaces" count={counts.workspaces} onClick={() => navigate('/workspaces')} />

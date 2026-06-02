@@ -16,7 +16,7 @@ const openFileInIde = (filePath: string, line?: number) => {
   window.dispatchEvent(new CustomEvent('ide:open-file', { detail: { filePath, line } }))
 }
 
-const FILE_PATH_IN_TEXT_RE = /((?:\/|\.\.?\/|[\w@-]+\/)(?:[\w@./-])*\.(?:tsx?|jsx?|css|scss|less|json|md|mdx|yml|yaml|toml|py|rs|go|java|rb|php|sh|sql|html|vue|svelte|c|cpp|h|hpp|swift|kt)(?::\d+(?:-\d+)?)?)/g
+const FILE_PATH_IN_TEXT_RE = /((?:~\/|\/|\.\.?\/|[\w@-]+\/)(?:[\w@./-])*\.(?:tsx?|jsx?|css|scss|less|json|md|mdx|yml|yaml|toml|py|rs|go|java|rb|php|sh|sql|html|vue|svelte|c|cpp|h|hpp|swift|kt)(?::\d+(?:-\d+)?)?)/g
 
 const processTextChildren = (children: React.ReactNode): React.ReactNode => {
   if (typeof children === 'string') {

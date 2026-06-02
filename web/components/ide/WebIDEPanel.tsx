@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { Files, GitBranch, Terminal, ChevronDown, ClipboardList, Globe, Maximize2, Minimize2 } from 'lucide-react'
 import FileTree from './FileTree'
 import { isMacElectron } from '@/utils/env'
+import { authFetch } from '@/config/api'
 import { useWebIDEState } from '@/hooks/useWebIDEState'
 import { getWebSocketClient } from '@/services/WebSocketClient'
 import type { GitStatusData } from '@/hooks/useGitStatus'
@@ -90,6 +91,14 @@ const WebIDEPanel = ({ chatId, roots, gitStatus, multiGitStatus, onMultiOptimist
 
   const { tabs, activeTabPath, setActiveTabPath, openFile, closeTab, updateContent, saveFile, pendingLine, pendingKeyword, clearPendingLine, pruneDeletedTabs, refreshOpenTabs, refreshTab } = useWebIDEState(worktreePath)
 
+  const homeDirRef = useRef('')
+  useEffect(() => {
+    authFetch('/api/home-dir')
+      .then(r => r.json())
+      .then(d => { homeDirRef.current = d.home || '' })
+      .catch(() => {})
+  }, [])
+
   const wsClient = getWebSocketClient()
 
   useEffect(() => {
@@ -150,7 +159,11 @@ const WebIDEPanel = ({ chatId, roots, gitStatus, multiGitStatus, onMultiOptimist
     const handleOpenFile = (e: Event) => {
       const { filePath, line } = (e as CustomEvent).detail as { filePath: string; line?: number }
       if (!filePath) return
-      const resolved = filePath.startsWith('/') ? filePath : primaryRoot ? `${primaryRoot}/${filePath}` : filePath
+      let expanded = filePath
+      if (expanded.startsWith('~/') && homeDirRef.current) {
+        expanded = homeDirRef.current + expanded.slice(1)
+      }
+      const resolved = expanded.startsWith('/') ? expanded : primaryRoot ? `${primaryRoot}/${expanded}` : expanded
       openFile(resolved, line)
       setViewTab('files')
       setRevealPath(resolved)

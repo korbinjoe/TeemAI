@@ -175,11 +175,23 @@ export class WorkflowScheduler {
 
     engine.recordTaskResult(taskId, result)
 
+    // L1: Clear queue if workflow just completed
+    if (engine.status === 'completed' || engine.status === 'stopped') {
+      this.clearQueueForChat(engine.chatId)
+    }
+
     const resolvedStatus = taskCompleted ? 'completed' : 'failed'
     this.deps.broadcastToChat(engine.chatId, {
       type: 'workflow:task-updated',
       payload: { chatId: engine.chatId, workflowId: engine.workflowId, taskId, status: resolvedStatus, agentId },
     })
+
+    // L3: If task has autoAdvance and completed successfully, advance immediately
+    const taskDef = engine.getTask(taskId)
+    if (taskCompleted && taskDef?.autoAdvance) {
+      log.info('autoAdvance: immediately advancing downstream tasks', { workflowId: engine.workflowId, taskId })
+      this.advanceEngine(engine)
+    }
 
     this.collectEnrichedContext(engine.chatId, result).then(enriched => {
       const readyTasks = engine.getReadyTasks()
@@ -260,7 +272,9 @@ export class WorkflowScheduler {
         })
         return
       }
-      log.info('Lead agent is busy, queuing will happen on next idle', { chatId, workflowId, phase })
+      // L1: Queue the notification instead of dropping it
+      this.enqueueNotification(chatId, prompt)
+      log.info('Lead agent is busy, notification queued', { chatId, workflowId, phase, queueSize: this.pendingNotifications.get(chatId)?.length })
       return
     }
 
@@ -397,6 +411,81 @@ Judgment guidance:
     if (!chat?.workspaceId) return undefined
     const workspace = this.deps.workspaceStore.get(chat.workspaceId)
     return workspace?.repositories[0]?.path
+  }
+
+  // ── L1: Notification Queue ──
+
+  private enqueueNotification(chatId: string, prompt: string): void {
+    const queue = this.pendingNotifications.get(chatId) ?? []
+    if (queue.length >= MAX_QUEUE_PER_CHAT) {
+      log.warn('Notification queue full, dropping oldest', { chatId, queueSize: queue.length })
+      queue.shift()
+    }
+    queue.push(prompt)
+    this.pendingNotifications.set(chatId, queue)
+  }
+
+  private drainPendingNotifications(chatId: string): void {
+    const queue = this.pendingNotifications.get(chatId)
+    if (!queue || queue.length === 0) return
+
+    const leadSession = this.deps.sessionRegistry.findByChat(chatId, LEAD_AGENT_ID)
+    if (!leadSession || !leadSession.acpClient?.isAlive()) return
+
+    const phase = leadSession.activitySnapshot?.phase
+    if (phase !== 'waiting_input' && phase !== 'waiting_confirmation') return
+
+    log.info('Draining pending notifications for chat', { chatId, count: queue.length })
+    const prompts = [...queue]
+    this.pendingNotifications.delete(chatId)
+
+    for (const prompt of prompts) {
+      leadSession.acpClient.prompt(leadSession.sessionId, prompt).catch(err => {
+        log.error('Failed to deliver queued notification', { chatId, error: err instanceof Error ? err.message : String(err) })
+      })
+    }
+  }
+
+  clearQueueForChat(chatId: string): void {
+    this.pendingNotifications.delete(chatId)
+  }
+
+  // ── L2: Watchdog Timer ──
+
+  private startWatchdog(): void {
+    const intervalMs = this.deps.watchdogIntervalMs ?? DEFAULT_WATCHDOG_INTERVAL_MS
+    this.watchdogTimer = setInterval(() => this.watchdogScan(), intervalMs)
+  }
+
+  private watchdogScan(): void {
+    const workflows = this.deps.workflowRegistry.list('running')
+    const now = Date.now()
+
+    for (const { workflowId, chatId } of workflows) {
+      const engine = this.deps.workflowRegistry.get(workflowId)
+      if (!engine) continue
+
+      const state = engine.getState()
+      const lastUpdate = new Date(state.updatedAt).getTime()
+      const staleDuration = now - lastUpdate
+
+      if (staleDuration < WATCHDOG_STALE_THRESHOLD_MS) continue
+
+      const hasRunning = Object.values(state.tasks).some(t => t.status === 'running')
+      if (hasRunning) continue
+
+      const readyTasks = engine.getReadyTasks()
+      if (readyTasks.length === 0) continue
+
+      log.warn('Watchdog: recovering stuck workflow', {
+        workflowId,
+        chatId,
+        staleDurationMs: staleDuration,
+        readyTaskCount: readyTasks.length,
+      })
+
+      this.advanceEngine(engine)
+    }
   }
 
   private async startTask(engine: WorkflowEngine, taskId: string, agentId: string, description: string): Promise<void> {

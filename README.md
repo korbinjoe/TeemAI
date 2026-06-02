@@ -17,6 +17,8 @@ You:    "Build the auth module, add tests, and update the docs."
 
 [![Watch the demo](https://github.com/user-attachments/assets/5f7b0993-b334-4e62-8114-3a24c6bd7a2c)](https://www.youtube.com/watch?v=NdwieO0M27E)
 
+📦 [Releases](https://github.com/korbinjoe/openteam/releases)
+
 ---
 
 ## Why OpenTeam?

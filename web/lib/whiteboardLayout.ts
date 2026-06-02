@@ -366,11 +366,13 @@ export const layoutWhiteboardDag = (
       const curr = list[i]
       if (goal && curr.id === goal.id) continue
       if (childToParents.get(curr.id)?.includes(prev.id)) continue
+      const fromHandoff = prev.type === 'handoff'
+      if (fromHandoff) addLayoutEdge(prev.id, curr.id)
       edgeList.push({
-        id: `temporal-${prev.id}-${curr.id}`,
+        id: `${fromHandoff ? 'causal' : 'temporal'}-${prev.id}-${curr.id}`,
         source: prev.id,
         target: curr.id,
-        type: 'temporal',
+        type: fromHandoff ? 'causal' : 'temporal',
         isCritical: false,
       })
     }

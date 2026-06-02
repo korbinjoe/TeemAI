@@ -65,6 +65,8 @@ const SpanNodeInner = ({ data }: NodeProps) => {
 
   const accentColor = TYPE_ACCENT[node.type] ?? 'rgb(var(--border))'
   const isHandoff = node.type === 'handoff'
+  const isGoal = node.type === 'goal'
+  const isArtifact = node.type === 'artifact'
   const originAgent = normalizeAgent(node.by)
   const originName = agentNames[originAgent] ?? originAgent
 
@@ -88,10 +90,12 @@ const SpanNodeInner = ({ data }: NodeProps) => {
       onClick={() => onClick(node)}
       onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onClick(node) } }}
       className={cn(
-        'group relative cursor-pointer',
-        'rounded-lg bg-bg-elevated border border-border-subtle',
+        'group relative cursor-pointer rounded-lg',
         'transition-all duration-150 ease-out',
-        'hover:shadow-md hover:border-border hover:-translate-y-px',
+        'hover:shadow-md hover:-translate-y-px',
+        isGoal && 'overflow-hidden border-2 border-[rgb(var(--accent-brand))] bg-bg-elevated',
+        isArtifact && 'border border-dashed border-violet-400/40 bg-violet-500/[0.04]',
+        !isGoal && !isArtifact && 'bg-bg-elevated border border-border-subtle hover:border-border',
         isSelected && 'ring-1.5 ring-[rgb(var(--accent-brand))] border-[rgb(var(--accent-brand))] shadow-md',
         isHighlighted && !isSelected && 'border-border shadow-sm',
         isDimmed && 'opacity-20 hover:opacity-40',
@@ -102,42 +106,66 @@ const SpanNodeInner = ({ data }: NodeProps) => {
       <Handle type="target" position={Position.Left}  id="left-in"  style={{ ...HANDLE_STYLE, left: 0 }} />
       <Handle type="source" position={Position.Right} id="right-out" style={{ ...HANDLE_STYLE, right: 0 }} />
 
-      <div
-        className="absolute left-0 top-2 bottom-2 w-[2.5px] rounded-full"
-        style={{ background: accentColor }}
-      />
-
-      <div className="pl-3.5 pr-2.5 py-2 flex flex-col gap-1.5">
-        <div className="flex items-center gap-1.5">
-          <span
-            className="inline-flex items-center gap-1 px-1.5 py-px rounded text-[10px] font-semibold tracking-wide"
-            style={{
-              color: accentColor,
-              background: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
-            }}
-          >
-            {isHandoff ? (
-              <>→ {displayName}</>
-            ) : (
-              <>
-                <Icon size={11} strokeWidth={2.5} aria-hidden="true" />
-                {t(visual.labelKey)}
-              </>
-            )}
+      {isGoal && (
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[rgb(var(--accent-brand))]">
+          <Icon size={12} strokeWidth={2.5} className="text-white" aria-hidden="true" />
+          <span className="text-[10px] font-semibold tracking-wide text-white uppercase">
+            {t(visual.labelKey)}
           </span>
-          <span className="ml-auto text-[10px] text-text-muted font-mono shrink-0">
+          <span className="ml-auto text-[10px] text-white/70 font-mono shrink-0">
             {relTime}
           </span>
           {node.isLive && (
             <span className="relative flex h-2 w-2 shrink-0">
-              <span className="absolute inset-0 rounded-full bg-[rgb(var(--accent-running))] motion-safe:animate-ping opacity-60" />
-              <span className="relative rounded-full h-2 w-2 bg-[rgb(var(--accent-running))]" />
+              <span className="absolute inset-0 rounded-full bg-white/60 motion-safe:animate-ping opacity-60" />
+              <span className="relative rounded-full h-2 w-2 bg-white" />
             </span>
           )}
         </div>
+      )}
 
-        {/* Summary */}
-        <div className="text-[11.5px] text-text-primary leading-snug line-clamp-2 break-words">
+      {!isGoal && (
+        <div
+          className={cn('absolute left-0 top-2 bottom-2 rounded-full', isArtifact ? 'w-[3.5px]' : 'w-[2.5px]')}
+          style={{ background: accentColor }}
+        />
+      )}
+
+      <div className={cn('flex flex-col gap-1.5', isGoal ? 'px-3 py-2' : 'pl-3.5 pr-2.5 py-2')}>
+        {!isGoal && (
+          <div className="flex items-center gap-1.5">
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-px rounded text-[10px] font-semibold tracking-wide"
+              style={{
+                color: accentColor,
+                background: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
+              }}
+            >
+              {isHandoff ? (
+                <>→ {displayName}</>
+              ) : (
+                <>
+                  <Icon size={11} strokeWidth={2.5} aria-hidden="true" />
+                  {t(visual.labelKey)}
+                </>
+              )}
+            </span>
+            <span className="ml-auto text-[10px] text-text-muted font-mono shrink-0">
+              {relTime}
+            </span>
+            {node.isLive && (
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="absolute inset-0 rounded-full bg-[rgb(var(--accent-running))] motion-safe:animate-ping opacity-60" />
+                <span className="relative rounded-full h-2 w-2 bg-[rgb(var(--accent-running))]" />
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className={cn(
+          'text-text-primary leading-snug line-clamp-2 break-words',
+          isGoal ? 'text-xs font-medium' : 'text-[11.5px]',
+        )}>
           {isHandoff ? stripHandoffPrefix(node.entry.summary) : node.entry.summary}
         </div>
 

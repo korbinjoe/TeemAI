@@ -1,4 +1,5 @@
 import { useWorkspace } from '../../contexts/WorkspaceContext'
+import { useDialog } from '../../contexts/DialogContext'
 import AgentSessionItem from './AgentSessionItem'
 import { Plus } from './icons'
 import { cn } from '../../lib/utils'
@@ -44,7 +45,8 @@ const missionStatusColor = (agents: MissionAgent[]): string => {
 }
 
 const MissionGroupItem = ({ mission, isSelected }: MissionGroupItemProps) => {
-  const { expandedMissions, toggleMission, openMissionOverview, openAddAgent } = useWorkspace()
+  const { expandedMissions, toggleMission, openMissionOverview } = useWorkspace()
+  const { openAddAgent } = useDialog()
   const expanded = expandedMissions[mission.id] !== false
 
   const hasRunning = mission.agents.some((a) => a.status === 'running')

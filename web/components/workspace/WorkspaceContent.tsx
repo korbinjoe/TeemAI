@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useWorkspace, IDE_WIDTH_DEFAULT } from '../../contexts/WorkspaceContext'
+import { useDialog } from '../../contexts/DialogContext'
 import { useWorkspaceChats } from '../../hooks/useWorkspaceChats'
 import ChatPane from './ChatPane'
 import IDEPanel from './IDEPanel'
@@ -185,7 +186,8 @@ const IdeRegion = ({ mode, collapsed }: { mode: 'single' | 'split' | 'quad'; col
  *  HiddenChatPortalSource feeds the IDE portal (MiniAgentPanes don't mount ChatInstance). */
 const QuadFrame = ({ ideCollapsed }: { ideCollapsed: boolean }) => {
   const QUAD_SIZE = 4
-  const { workspaceId, activeChatId, openAddAgent } = useWorkspace()
+  const { workspaceId, activeChatId } = useWorkspace()
+  const { openAddAgent } = useDialog()
   const { chats } = useWorkspaceChats(workspaceId)
   const chat = activeChatId ? chats.find((c) => c.id === activeChatId) : undefined
   const members = chat?.members ?? []

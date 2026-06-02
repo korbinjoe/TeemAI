@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
+import { useDialog } from '../../contexts/DialogContext'
 import { useWorkspaceChats } from '../../hooks/useWorkspaceChats'
 import { useAgents } from '../../hooks/useAgents'
 import { Search } from './icons'
@@ -56,10 +57,10 @@ const memberStatusToString = (s: ChatMember['status']): string => {
 const CommandPalette = () => {
   const {
     workspaceId,
-    commandPaletteOpen, closeCommandPalette,
-    openNewMission, togglePanel, toggleTerminal, cycleLayoutMode, toggleIde,
+    togglePanel, toggleTerminal, cycleLayoutMode, toggleIde,
     ideCollapsed,
   } = useWorkspace()
+  const { commandPaletteOpen, closeCommandPalette, openNewMission } = useDialog()
   const { chats } = useWorkspaceChats(workspaceId)
   const { agentNames } = useAgents()
   const navigate = useNavigate()

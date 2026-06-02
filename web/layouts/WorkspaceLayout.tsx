@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { WorkspaceProvider, useWorkspace } from '../contexts/WorkspaceContext'
+import { DialogProvider, useDialog } from '../contexts/DialogContext'
 import { buildMissionUrl } from '../components/workspace/urls'
 import { useChatTabs } from '../contexts/ChatTabContext'
 import { useWorkspaceChats } from '../hooks/useWorkspaceChats'
@@ -20,6 +21,12 @@ const WorkspaceLayoutInner = () => {
     activeChatId,
     panelCollapsed,
     ideCollapsed,
+    cycleLayoutMode,
+    togglePanel,
+    toggleTerminal,
+    toggleIde,
+  } = useWorkspace()
+  const {
     commandPaletteOpen,
     addAgentOpen,
     newMissionOpen,
@@ -29,11 +36,7 @@ const WorkspaceLayoutInner = () => {
     closeAddAgent,
     openNewMission,
     closeNewMission,
-    cycleLayoutMode,
-    togglePanel,
-    toggleTerminal,
-    toggleIde,
-  } = useWorkspace()
+  } = useDialog()
   const { openTab } = useChatTabs()
   const navigate = useNavigate()
   const { chats, running, awaitingReview } = useWorkspaceChats(workspaceId)
@@ -180,7 +183,9 @@ const WorkspaceLayout = () => {
       activeChatId={missionId ?? null}
       selectedAgentId={agentId}
     >
-      <WorkspaceLayoutInner />
+      <DialogProvider>
+        <WorkspaceLayoutInner />
+      </DialogProvider>
     </WorkspaceProvider>
   )
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWorkspace, SIDEBAR_WIDTH_DEFAULT } from '../../contexts/WorkspaceContext'
+import { useDialog } from '../../contexts/DialogContext'
 import { isElectron, isMacElectron } from '../../utils/env'
 import { API_BASE, authFetch } from '@/config/api'
 import MissionSessionList from './MissionSessionList'
@@ -14,7 +15,8 @@ interface MissionSidebarProps {
 }
 
 const MissionSidebar = ({ collapsed }: MissionSidebarProps) => {
-  const { togglePanel, sidebarWidth, setSidebarWidth, openNewMission, workspaceId } = useWorkspace()
+  const { togglePanel, sidebarWidth, setSidebarWidth, workspaceId } = useWorkspace()
+  const { openNewMission } = useDialog()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)

@@ -1,4 +1,5 @@
 import { useWorkspace } from '../../contexts/WorkspaceContext'
+import { useDialog } from '../../contexts/DialogContext'
 import { useMission } from '../../hooks/useMission'
 import { useAgents } from '../../hooks/useAgents'
 import { useWhiteboard } from '../../hooks/useWhiteboard'
@@ -8,7 +9,8 @@ import { cn } from '../../lib/utils'
 import { memberStatusDot } from './MissionSessionRows'
 
 const MissionInfoSidebar = () => {
-  const { workspaceId, activeChatId, selectAgent, openAddAgent } = useWorkspace()
+  const { workspaceId, activeChatId, selectAgent } = useWorkspace()
+  const { openAddAgent } = useDialog()
   const { chat, members } = useMission(activeChatId)
   const { agentNames } = useAgents()
   const { meta } = useWorkspaceMeta(workspaceId)

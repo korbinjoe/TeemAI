@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Zap, Wrench, Eye, LayoutGrid, ClipboardCheck, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
+import { useDialog } from '../../contexts/DialogContext'
 import { useWorkspaceChats } from '../../hooks/useWorkspaceChats'
 import { useAgents } from '../../hooks/useAgents'
 import AgentAvatar from '../ui/agent-avatar'
@@ -36,7 +37,8 @@ const getGreeting = (): string => {
 }
 
 const WorkspaceHome = () => {
-  const { workspaceId, openNewMission } = useWorkspace()
+  const { workspaceId } = useWorkspace()
+  const { openNewMission } = useDialog()
   const { running, awaitingReview, done } = useWorkspaceChats(workspaceId)
   const { hiredAgents, resolveAgentName } = useAgents()
   const navigate = useNavigate()

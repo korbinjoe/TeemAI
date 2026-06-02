@@ -8,6 +8,7 @@ const INITIAL_VISIBLE = 10
 const PAGE_STEP = 10
 import { API_BASE, authFetch } from '@/config/api'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
+import { useDialog } from '../../contexts/DialogContext'
 import { useAllChats } from '../../hooks/useAllChats'
 import { useAgents } from '../../hooks/useAgents'
 import { useMissionPinArchive } from '../../hooks/useMissionPinArchive'
@@ -26,7 +27,8 @@ interface MissionSessionListProps {
 }
 
 const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
-  const { workspaceId, activeChatId, selectedAgentId, openAddAgent, openNewMission } = useWorkspace()
+  const { workspaceId, activeChatId, selectedAgentId } = useWorkspace()
+  const { openAddAgent, openNewMission } = useDialog()
   const { chats, workspaces, loading } = useAllChats()
   const { unmatchedDirs } = useExternalCwds()
   const { agentNames } = useAgents()

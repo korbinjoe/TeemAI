@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
+import { useDialog } from '../../contexts/DialogContext'
 import { useAgents } from '../../hooks/useAgents'
 import { API_BASE, authFetch } from '@/config/api'
 import { toast } from 'sonner'
@@ -9,7 +10,8 @@ import { buildMissionUrl } from './urls'
 import { nextInstanceId } from '../../../shared/utils'
 
 const AddAgentPicker = () => {
-  const { workspaceId, addAgentOpen, addAgentTaskId, closeAddAgent } = useWorkspace()
+  const { workspaceId } = useWorkspace()
+  const { addAgentOpen, addAgentTaskId, closeAddAgent } = useDialog()
   const { hiredAgents } = useAgents()
   const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)

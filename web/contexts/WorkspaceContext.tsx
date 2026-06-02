@@ -35,11 +35,6 @@ interface WorkspaceState {
   terminalOpen: boolean
   activeIdeTab: IdeTab
   expandedMissions: Record<string, boolean>
-  commandPaletteOpen: boolean
-  newMissionOpen: boolean
-  newMissionWorkspaceId: string | null
-  addAgentOpen: boolean
-  addAgentTaskId: string | null
   ideCollapsed: boolean
   sidebarWidth: number
   idePanelWidth: number
@@ -77,12 +72,6 @@ interface WorkspaceContextValue extends WorkspaceState {
   toggleTerminal: () => void
   setIdeTab: (tab: IdeTab) => void
   toggleMission: (missionId: string) => void
-  openCommandPalette: () => void
-  closeCommandPalette: () => void
-  openNewMission: (workspaceId?: string) => void
-  closeNewMission: () => void
-  openAddAgent: (missionId: string) => void
-  closeAddAgent: () => void
   toggleIde: () => void
   setSidebarWidth: (w: number) => void
   setIdePanelWidth: (w: number) => void
@@ -105,12 +94,6 @@ type Action =
   | { type: 'TOGGLE_TERMINAL' }
   | { type: 'SET_IDE_TAB'; tab: IdeTab }
   | { type: 'TOGGLE_MISSION'; missionId: string }
-  | { type: 'OPEN_COMMAND_PALETTE' }
-  | { type: 'CLOSE_COMMAND_PALETTE' }
-  | { type: 'OPEN_NEW_MISSION'; workspaceId?: string | null }
-  | { type: 'CLOSE_NEW_MISSION' }
-  | { type: 'OPEN_ADD_AGENT'; missionId: string }
-  | { type: 'CLOSE_ADD_AGENT' }
   | { type: 'TOGGLE_IDE' }
   | { type: 'SET_SIDEBAR_WIDTH'; width: number }
   | { type: 'SET_IDE_PANEL_WIDTH'; width: number }
@@ -145,29 +128,6 @@ const reducer = (state: WorkspaceState, action: Action): WorkspaceState => {
 
     case 'TOGGLE_MISSION':
       return { ...state, expandedMissions: { ...state.expandedMissions, [action.missionId]: !state.expandedMissions[action.missionId] } }
-
-    case 'OPEN_COMMAND_PALETTE':
-      return { ...state, commandPaletteOpen: true }
-
-    case 'CLOSE_COMMAND_PALETTE':
-      return { ...state, commandPaletteOpen: false }
-
-    case 'OPEN_NEW_MISSION':
-      return {
-        ...state,
-        newMissionOpen: true,
-        newMissionWorkspaceId: action.workspaceId ?? null,
-        commandPaletteOpen: false,
-      }
-
-    case 'CLOSE_NEW_MISSION':
-      return { ...state, newMissionOpen: false, newMissionWorkspaceId: null }
-
-    case 'OPEN_ADD_AGENT':
-      return { ...state, addAgentOpen: true, addAgentTaskId: action.missionId }
-
-    case 'CLOSE_ADD_AGENT':
-      return { ...state, addAgentOpen: false, addAgentTaskId: null }
 
     case 'TOGGLE_IDE':
       return { ...state, ideCollapsed: !state.ideCollapsed }
@@ -208,11 +168,6 @@ const defaultState: WorkspaceState = {
   terminalOpen: true,
   activeIdeTab: 'IDE',
   expandedMissions: {},
-  commandPaletteOpen: false,
-  newMissionOpen: false,
-  newMissionWorkspaceId: null,
-  addAgentOpen: false,
-  addAgentTaskId: null,
   ideCollapsed: false,
   sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
   idePanelWidth: IDE_WIDTH_DEFAULT,
@@ -317,12 +272,6 @@ export const WorkspaceProvider = ({
   }, [])
   const setIdeTab = useCallback((tab: IdeTab) => dispatch({ type: 'SET_IDE_TAB', tab }), [])
   const toggleMission = useCallback((missionId: string) => dispatch({ type: 'TOGGLE_MISSION', missionId }), [])
-  const openCommandPalette = useCallback(() => dispatch({ type: 'OPEN_COMMAND_PALETTE' }), [])
-  const closeCommandPalette = useCallback(() => dispatch({ type: 'CLOSE_COMMAND_PALETTE' }), [])
-  const openNewMission = useCallback((wsId?: string) => dispatch({ type: 'OPEN_NEW_MISSION', workspaceId: wsId ?? null }), [])
-  const closeNewMission = useCallback(() => dispatch({ type: 'CLOSE_NEW_MISSION' }), [])
-  const openAddAgent = useCallback((missionId: string) => dispatch({ type: 'OPEN_ADD_AGENT', missionId }), [])
-  const closeAddAgent = useCallback(() => dispatch({ type: 'CLOSE_ADD_AGENT' }), [])
   const toggleIde = useCallback(() => dispatch({ type: 'TOGGLE_IDE' }), [])
   const setSidebarWidth = useCallback((width: number) => dispatch({ type: 'SET_SIDEBAR_WIDTH', width }), [])
   const setIdePanelWidth = useCallback((width: number) => dispatch({ type: 'SET_IDE_PANEL_WIDTH', width }), [])
@@ -353,12 +302,6 @@ export const WorkspaceProvider = ({
     toggleTerminal,
     setIdeTab,
     toggleMission,
-    openCommandPalette,
-    closeCommandPalette,
-    openNewMission,
-    closeNewMission,
-    openAddAgent,
-    closeAddAgent,
     toggleIde,
     setSidebarWidth,
     setIdePanelWidth,
@@ -369,9 +312,7 @@ export const WorkspaceProvider = ({
     ideMountNode,
     selectAgent, openMissionOverview,
     setLayoutMode, cycleLayoutMode, togglePanel, collapsePanel, expandPanel,
-    toggleTerminal, setIdeTab, toggleMission,
-    openCommandPalette, closeCommandPalette, openNewMission, closeNewMission,
-    openAddAgent, closeAddAgent, toggleIde,
+    toggleTerminal, setIdeTab, toggleMission, toggleIde,
     setSidebarWidth, setIdePanelWidth, setChatSplitWidth,
   ])
 

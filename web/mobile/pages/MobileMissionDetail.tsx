@@ -43,6 +43,7 @@ const MobileMissionDetail = () => {
   const navigate = useNavigate()
   const [chat, setChat] = useState<Chat | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
+  const [agentNames, setAgentNames] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [permRequest, setPermRequest] = useState<ExpertPermissionRequestPayload | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -52,8 +53,17 @@ const MobileMissionDetail = () => {
   const fetchData = useCallback(async () => {
     if (!missionId) return
     try {
-      const res = await authFetch(`${API_BASE}/api/chats/${missionId}`)
-      if (res.ok) setChat(await res.json())
+      const [chatRes, agentsRes] = await Promise.all([
+        authFetch(`${API_BASE}/api/chats/${missionId}`),
+        authFetch(`${API_BASE}/api/agents`),
+      ])
+      if (chatRes.ok) setChat(await chatRes.json())
+      if (agentsRes.ok) {
+        const agents: { id: string; name: string }[] = await agentsRes.json()
+        const map: Record<string, string> = {}
+        for (const a of agents) map[a.id] = a.name
+        setAgentNames(map)
+      }
     } finally {
       setLoading(false)
     }
@@ -63,19 +73,49 @@ const MobileMissionDetail = () => {
 
   useEffect(() => {
     if (!missionId) return
+    let streamSeq = 0
 
     const ws = getWebSocketClient()
     ws.connect().catch(() => {})
 
+    const handlePartialText = (payload: { agentId: string; chatId: string; text: string }) => {
+      if (payload.chatId !== missionId) return
+      setMessages((prev) => {
+        const last = prev[prev.length - 1]
+        if (last?.role === 'agent' && last.agentId === payload.agentId && last.streaming) {
+          const next = [...prev]
+          next[next.length - 1] = { ...last, content: last.content + payload.text }
+          return next
+        }
+        return [
+          ...prev,
+          {
+            id: `stream-${payload.agentId}-${++streamSeq}`,
+            role: 'agent' as const,
+            agentId: payload.agentId,
+            content: payload.text,
+            timestamp: Date.now(),
+            type: 'text',
+            streaming: true,
+          },
+        ]
+      })
+    }
+
     const handleStructuredMessage = (payload: { agentId: string; chatId: string; messages: Message[] }) => {
       if (payload.chatId !== missionId) return
-      const incoming = payload.messages.filter(isVisibleMessage)
-      if (incoming.length === 0) return
+      const tagged = payload.messages.map((m) => ({ ...m, agentId: m.agentId || payload.agentId }))
+      const incoming = tagged.filter(isVisibleMessage)
+      if (incoming.length === 0) {
+        setMessages((prev) => prev.filter((m) => !(m.streaming && m.agentId === payload.agentId)))
+        return
+      }
       setMessages((prev) => {
-        const existing = new Set(prev.map((m) => m.id))
+        const withoutStreaming = prev.filter((m) => !(m.streaming && m.agentId === payload.agentId))
+        const existing = new Set(withoutStreaming.map((m) => m.id))
         const newMsgs = incoming.filter((m) => !existing.has(m.id))
-        if (newMsgs.length === 0) return prev
-        return [...prev, ...newMsgs].sort((a, b) => a.timestamp - b.timestamp)
+        if (newMsgs.length === 0) return withoutStreaming
+        return [...withoutStreaming, ...newMsgs].sort((a, b) => a.timestamp - b.timestamp)
       })
     }
 
@@ -95,6 +135,7 @@ const MobileMissionDetail = () => {
       }
     }
 
+    ws.on('expert:partial-text', handlePartialText)
     ws.on('expert:structured-message', handleStructuredMessage)
     ws.on('expert:permission-request', handlePermission)
     ws.on('chat:permission-resolved', handlePermResolved)
@@ -104,6 +145,7 @@ const MobileMissionDetail = () => {
     ws.send('chat:resume-experts', { chatId: missionId })
 
     return () => {
+      ws.off('expert:partial-text', handlePartialText)
       ws.off('expert:structured-message', handleStructuredMessage)
       ws.off('expert:permission-request', handlePermission)
       ws.off('chat:permission-resolved', handlePermResolved)
@@ -188,7 +230,7 @@ const MobileMissionDetail = () => {
         <div className="shrink-0 bg-accent-yellow/[0.08] border-b border-accent-yellow/20 px-5 py-3">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-accent-yellow mb-1">
             <AlertTriangle size={14} />
-            Permission Request — {permRequest.agentId}
+            Permission Request — {agentNames[permRequest.agentId] || permRequest.agentId}
           </div>
           <div className="text-xs text-text-secondary font-mono bg-bg-input border border-border-subtle rounded-md px-2.5 py-1.5 mb-2.5">
             {permRequest.toolCall.title}
@@ -221,10 +263,14 @@ const MobileMissionDetail = () => {
         {messages.length === 0 ? (
           <p className="text-sm text-text-muted text-center mt-8">No messages yet.</p>
         ) : (
-          <div className="flex flex-col gap-4">
-            {messages.map((msg) => (
-              <ConversationMessage key={msg.id} message={msg} />
-            ))}
+          <div className="flex flex-col">
+            {messages.map((msg, i) => {
+              const prev = messages[i - 1]
+              const sameAgent = prev && prev.role === msg.role && prev.agentId === msg.agentId && !prev.streaming
+              return (
+                <ConversationMessage key={msg.id} message={msg} agentNames={agentNames} continuation={!!sameAgent} />
+              )
+            })}
             <div ref={conversationEndRef} />
           </div>
         )}
@@ -276,14 +322,29 @@ const formatRelativeTime = (ts: number): string => {
   return new Date(ts).toLocaleDateString()
 }
 
-const ConversationMessage = ({ message }: { message: Message }) => {
+const ConversationMessage = ({ message, agentNames, continuation }: { message: Message; agentNames: Record<string, string>; continuation?: boolean }) => {
   const isUser = message.role === 'user'
-  const name = isUser ? 'You' : (message.agentId ?? 'Agent')
-  const color = isUser ? 'rgb(198,162,118)' : getAgentColor(message.agentId ?? '')
-  const initial = isUser ? 'U' : getInitial(message.agentId ?? 'A')
+  const agentId = message.agentId ?? ''
+  const name = isUser ? 'You' : (agentNames[agentId] || agentId || 'Agent')
+  const color = isUser ? 'rgb(198,162,118)' : getAgentColor(agentId)
+  const initial = isUser ? 'U' : getInitial(name)
+
+  if (continuation) {
+    return (
+      <div className="pl-[38px] mt-1">
+        {isUser ? (
+          <div className="text-[13px] leading-relaxed whitespace-pre-wrap break-words bg-bg-secondary border border-border-subtle rounded-[10px] px-3.5 py-2.5 text-text-primary">
+            {message.content}
+          </div>
+        ) : (
+          <AgentMarkdown content={message.content} />
+        )}
+      </div>
+    )
+  }
 
   return (
-    <div className="flex gap-2.5">
+    <div className="flex gap-2.5 mt-4 first:mt-0">
       <div
         className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0 mt-0.5"
         style={{ background: `${color}22`, color }}
@@ -300,49 +361,53 @@ const ConversationMessage = ({ message }: { message: Message }) => {
             {message.content}
           </div>
         ) : (
-          <div className="text-[13px] leading-relaxed break-words text-text-secondary mobile-md">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                code: ({ children, className }) => {
-                  const isBlock = className?.includes('language-')
-                  if (isBlock) {
-                    return (
-                      <pre className="my-2 rounded-md bg-bg-input border border-border-subtle p-3 overflow-x-auto text-xs">
-                        <code className="text-accent-purple font-mono">{children}</code>
-                      </pre>
-                    )
-                  }
-                  return (
-                    <code className="bg-[rgba(99,102,241,0.1)] px-1 py-px rounded text-xs font-mono text-accent-purple">
-                      {children}
-                    </code>
-                  )
-                },
-                pre: ({ children }) => <>{children}</>,
-                ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
-                li: ({ children }) => <li className="text-text-secondary">{children}</li>,
-                h1: ({ children }) => <h1 className="text-sm font-bold text-text-primary mb-1.5 mt-2">{children}</h1>,
-                h2: ({ children }) => <h2 className="text-sm font-semibold text-text-primary mb-1 mt-2">{children}</h2>,
-                h3: ({ children }) => <h3 className="text-[13px] font-semibold text-text-primary mb-1 mt-1.5">{children}</h3>,
-                strong: ({ children }) => <strong className="font-semibold text-text-primary">{children}</strong>,
-                a: ({ href, children }) => (
-                  <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent-brand underline">{children}</a>
-                ),
-                blockquote: ({ children }) => (
-                  <blockquote className="border-l-2 border-accent-brand/40 pl-3 my-2 text-text-muted italic">{children}</blockquote>
-                ),
-              }}
-            >
-              {message.content}
-            </ReactMarkdown>
-          </div>
+          <AgentMarkdown content={message.content} />
         )}
       </div>
     </div>
   )
 }
+
+const AgentMarkdown = ({ content }: { content: string }) => (
+  <div className="text-[13px] leading-relaxed break-words text-text-secondary mobile-md">
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+        code: ({ children, className }) => {
+          const isBlock = className?.includes('language-')
+          if (isBlock) {
+            return (
+              <pre className="my-2 rounded-md bg-bg-input border border-border-subtle p-3 overflow-x-auto text-xs">
+                <code className="text-accent-purple font-mono">{children}</code>
+              </pre>
+            )
+          }
+          return (
+            <code className="bg-[rgba(99,102,241,0.1)] px-1 py-px rounded text-xs font-mono text-accent-purple">
+              {children}
+            </code>
+          )
+        },
+        pre: ({ children }) => <>{children}</>,
+        ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
+        ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
+        li: ({ children }) => <li className="text-text-secondary">{children}</li>,
+        h1: ({ children }) => <h1 className="text-sm font-bold text-text-primary mb-1.5 mt-2">{children}</h1>,
+        h2: ({ children }) => <h2 className="text-sm font-semibold text-text-primary mb-1 mt-2">{children}</h2>,
+        h3: ({ children }) => <h3 className="text-[13px] font-semibold text-text-primary mb-1 mt-1.5">{children}</h3>,
+        strong: ({ children }) => <strong className="font-semibold text-text-primary">{children}</strong>,
+        a: ({ href, children }) => (
+          <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent-brand underline">{children}</a>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote className="border-l-2 border-accent-brand/40 pl-3 my-2 text-text-muted italic">{children}</blockquote>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  </div>
+)
 
 export default MobileMissionDetail

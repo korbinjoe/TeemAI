@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TeamMates Presence — Sidebar Visual Mockup</title>
+<style>
+  /* ── Reset ─────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── Design Tokens (from index.css dark theme, brand=jiqing) ── */
+  :root {
+    --bg-primary:       rgb(10, 10, 16);
+    --bg-secondary:     rgb(16, 16, 24);
+    --bg-tertiary:      rgb(22, 22, 32);
+    --bg-hover:         rgb(30, 30, 42);
+    --bg-elevated:      rgb(24, 24, 36);
+    --bg-input:         rgb(18, 18, 28);
+
+    --text-primary:     rgb(226, 228, 240);
+    --text-secondary:   rgb(148, 156, 172);
+    --text-muted:       rgb(90, 100, 120);
+    --text-emphasis:    rgb(248, 250, 252);
+
+    --accent-brand:     rgb(90, 143, 202);
+    --accent-brand-light: rgb(130, 176, 222);
+    --accent-brand-deep: rgb(62, 114, 172);
+    --accent-green:     rgb(52, 211, 153);
+    --accent-yellow:    rgb(251, 191, 36);
+    --accent-red:       rgb(239, 68, 68);
+    --accent-running:   rgb(96, 165, 250);
+
+    --border-color:     rgb(38, 38, 54);
+    --border-subtle:    rgb(28, 28, 42);
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+
+    /* Agent signature colors */
+    --agent-lead:       #6B8DB5;
+    --agent-fullstack:  #C87941;
+    --agent-reviewer:   #5BA0A8;
+    --agent-designer:   #C76B8A;
+    --agent-devops:     #7BA056;
+    --agent-architect:  #5878B0;
+    --agent-sensei:     #9B6BC0;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Layout: Sidebar + Main ──────────────────────── */
+  .app-layout {
+    display: flex;
+    height: 100vh;
+  }
+
+  /* ── Sidebar ──────────────────────────────────────── */
+  .sidebar {
+    width: 280px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar Header ───────────────────────────────── */
+  .sidebar-header {
+    padding: 10px 10px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .sidebar-header-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px 8px;
+  }
+
+  .logo-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: var(--radius-sm);
+    margin-left: -4px;
+    transition: background 0.15s;
+  }
+  .logo-btn:hover { background: var(--bg-hover); }
+  .logo-text {
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+
+  .header-icon-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .header-icon-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+  }
+
+  .new-mission-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .new-mission-btn:hover {
+    background: var(--bg-hover);
+    border-color: rgba(90, 143, 202, 0.4);
+  }
+  .new-mission-btn .shortcut {
+    margin-left: auto;
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* ── Mission List (scrollable) ────────────────────── */
+  .mission-list {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 4px 6px;
+  }
+  .mission-list::-webkit-scrollbar { width: 4px; }
+  .mission-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 2px; }
+  .mission-list::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.12); }
+
+  /* Workspace group */
+  .ws-group { margin-bottom: 2px; }
+  .ws-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .ws-header:hover { background: rgba(255,255,255,0.025); }
+  .ws-header .name {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ws-header .count {
+    font-family: monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+  .ws-header .chevron {
+    color: var(--text-muted);
+    font-size: 8px;
+    width: 12px;
+    flex-shrink: 0;
+  }
+
+  /* Mission row */
+  .mission-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 6px 6px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.1s;
+    position: relative;
+    margin-left: 8px;
+  }
+  .mission-row:hover { background: var(--bg-hover); }
+  .mission-row.selected {
+    background: rgba(90, 143, 202, 0.14);
+  }
+  .mission-row.selected::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    border-radius: 0 2px 2px 0;
+    background: var(--accent-brand);
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot.running {
+    background: var(--accent-running);
+    box-shadow: 0 0 6px rgba(96, 165, 250, 0.4);
+    animation: pulse-ring 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  .status-dot.done      { background: rgba(52, 211, 153, 0.4); }
+  .status-dot.waiting    { background: var(--accent-yellow); }
+  .status-dot.error      { background: var(--accent-red); }
+  .status-dot.idle       { background: var(--text-muted); }
+
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.4); }
+    70%  { box-shadow: 0 0 0 5px rgba(96, 165, 250, 0); }
+    100% { box-shadow: 0 0 0 5px rgba(96, 165, 250, 0); }
+  }
+
+  .mission-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-primary);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mission-row .agent-count {
+    font-family: monospace;
+    font-size: 10px;
+    padding: 0 6px;
+    border-radius: 3px;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .mission-row .age {
+    font-family: monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .chevron-btn {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    margin-right: -2px;
+    font-size: 8px;
+  }
+
+  /* Agent sub-row */
+  .agent-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px 5px 36px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.1s;
+    margin-left: 8px;
+  }
+  .agent-row:hover { background: var(--bg-hover); }
+  .agent-row .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .agent-row .name {
+    font-size: 11px;
+    color: var(--text-secondary);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .agent-row .age {
+    font-family: monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  /* Waiting reason on mission row */
+  .waiting-reason {
+    font-size: 10px;
+    color: var(--accent-yellow);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+  }
+
+  /* ──────────────────────────────────────────────────── */
+  /* ★ NEW: Team Activity Strip                          */
+  /* ──────────────────────────────────────────────────── */
+  .team-activity {
+    padding: 8px 10px 6px;
+    border-top: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+    overflow: visible;
+    position: relative;
+    z-index: 10;
+  }
+
+  .team-activity-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding: 0 2px;
+  }
+  .team-activity-header .label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .team-activity-header .status-summary {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .team-activity-header .status-chip {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-family: monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+  .team-activity-header .status-chip .mini-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+  }
+
+  /* Avatar row — horizontal scroll, no wrap */
+  .team-avatars {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-bottom: 2px;
+    position: relative;
+  }
+  .team-avatars::-webkit-scrollbar { height: 0; }
+
+  .team-avatar-item {
+    position: relative;
+    flex-shrink: 0;
+    cursor: pointer;
+    padding: 3px;
+    border-radius: var(--radius-sm);
+    transition: background 0.12s;
+  }
+  .team-avatar-item:hover {
+    background: var(--bg-hover);
+  }
+
+  .team-avatar-circle {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+    position: relative;
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .team-avatar-item:hover .team-avatar-circle {
+    transform: scale(1.08);
+  }
+
+  /* Running agent gets a subtle glow */
+  .team-avatar-item.is-running .team-avatar-circle {
+    box-shadow: 0 0 0 2px var(--bg-secondary), 0 0 8px rgba(96, 165, 250, 0.3);
+  }
+
+  /* Status indicator on avatar */
+  .team-avatar-status {
+    position: absolute;
+    bottom: 1px;
+    right: 1px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid var(--bg-secondary);
+  }
+  .team-avatar-status.running {
+    background: var(--accent-running);
+    animation: status-pulse 1.6s ease-in-out infinite;
+  }
+  .team-avatar-status.done    { background: rgba(52, 211, 153, 0.6); }
+  .team-avatar-status.waiting  { background: var(--accent-yellow); }
+  .team-avatar-status.error    { background: var(--accent-red); }
+  .team-avatar-status.idle     { background: var(--text-muted); }
+
+  @keyframes status-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.5; }
+  }
+
+  /* Agent name label on hover — positioned below the avatar row
+     to avoid overflow clipping issues in the sidebar flex layout.
+     In production, use the existing <Tooltip> portal component. */
+  .team-avatar-item .tooltip {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    font-size: 9px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s;
+    z-index: 20;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .team-avatar-item .tooltip .tooltip-role {
+    color: var(--text-muted);
+    margin-left: 3px;
+    font-size: 8px;
+  }
+  .team-avatar-item:hover .tooltip {
+    opacity: 1;
+  }
+
+  /* ──────────────────────────────────────────────────── */
+  /* Existing: Resources Section                         */
+  /* ──────────────────────────────────────────────────── */
+  .resources-section {
+    padding: 6px 6px;
+    border-top: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+
+  .resource-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.12s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+  .resource-item:hover { background: var(--bg-hover); }
+  .resource-item .icon {
+    color: var(--text-muted);
+    font-size: 14px;
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+  }
+  .resource-item .label {
+    font-size: 12px;
+    color: var(--text-primary);
+    flex: 1;
+  }
+  .resource-item .rcount {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Footer ───────────────────────────────────────── */
+  .sidebar-footer {
+    padding: 6px 8px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .footer-icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .footer-icon-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+  }
+
+  /* ── Main Content (placeholder) ───────────────────── */
+  .main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--bg-primary);
+    overflow: hidden;
+  }
+  .main-toolbar {
+    height: 40px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .main-toolbar .tab {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all 0.12s;
+  }
+  .main-toolbar .tab:hover { color: var(--text-secondary); background: var(--bg-hover); }
+  .main-toolbar .tab.active {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+  }
+  .main-body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* ── Annotation markers ───────────────────────────── */
+  .new-feature-marker {
+    position: relative;
+  }
+  .new-feature-marker::after {
+    content: 'NEW';
+    position: absolute;
+    top: -2px;
+    right: -6px;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--accent-brand-light);
+    background: rgba(90, 143, 202, 0.15);
+    padding: 1px 4px;
+    border-radius: 3px;
+    border: 1px dashed rgba(90, 143, 202, 0.35);
+  }
+
+  /* Design annotation callout */
+  .annotation {
+    position: fixed;
+    background: rgba(90, 143, 202, 0.08);
+    border: 1px dashed rgba(90, 143, 202, 0.3);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    max-width: 320px;
+    z-index: 100;
+  }
+  .annotation .annotation-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent-brand-light);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .annotation .annotation-title::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-brand);
+    flex-shrink: 0;
+  }
+  .annotation ul {
+    margin: 4px 0 0 16px;
+    padding: 0;
+  }
+  .annotation li { margin-bottom: 3px; }
+
+  /* Connector line from annotation to feature */
+  .connector {
+    position: fixed;
+    z-index: 99;
+  }
+
+  /* ── Alternative: B variant (inline in resources) ── */
+  .variant-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-brand);
+    padding: 16px 0 6px 8px;
+  }
+  .variant-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border-subtle);
+    margin: 24px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-layout">
+  <!-- ════════════════════════════════════════════════ -->
+  <!-- SIDEBAR (exact replica of current MissionSidebar) -->
+  <!-- ════════════════════════════════════════════════ -->
+  <div class="sidebar">
+
+    <!-- Header -->
+    <div class="sidebar-header">
+      <div class="sidebar-header-row">
+        <button class="logo-btn">
+          <svg width="20" height="20" viewBox="0 0 352 352" fill="none">
+            <rect width="352" height="352" rx="56" fill="rgb(90,143,202)" />
+            <rect x="75" y="92" width="202" height="48" rx="24" fill="white" />
+            <rect x="150" y="92" width="52" height="192" rx="26" fill="white" />
+          </svg>
+          <span class="logo-text">OpenTeam</span>
+        </button>
+        <span style="flex:1"></span>
+        <!-- Refresh -->
+        <button class="header-icon-btn" title="Refresh external sessions">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+        </button>
+        <!-- Search -->
+        <button class="header-icon-btn" title="Search missions (/)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </button>
+        <!-- Collapse -->
+        <button class="header-icon-btn" title="Collapse sidebar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="m14 9-3 3 3 3"/></svg>
+        </button>
+      </div>
+      <button class="new-mission-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14m-7-7h14"/></svg>
+        <span>New Mission</span>
+        <span class="shortcut">&#8984;N</span>
+      </button>
+    </div>
+
+    <!-- Scrollable Mission List -->
+    <div class="mission-list">
+
+      <!-- Workspace: openteam (expanded, current) -->
+      <div class="ws-group">
+        <div class="ws-header" style="background: rgba(255,255,255,0.015);">
+          <span class="chevron">&#9662;</span>
+          <span class="name">openteam</span>
+          <!-- Running indicator on workspace header -->
+          <span class="status-dot running" style="width:6px; height:6px;"></span>
+          <span class="count">5</span>
+        </div>
+
+        <!-- Mission 1: selected, running, expanded -->
+        <div class="mission-row selected">
+          <span class="chevron-btn">&#9662;</span>
+          <span class="status-dot running"></span>
+          <span style="flex:1; min-width:0;">
+            <span class="mission-title">Redesign teammates sidebar presence</span>
+          </span>
+          <span class="agent-count">3</span>
+          <span class="age">2m</span>
+        </div>
+        <!-- Agent sub-rows (expanded) -->
+        <div class="agent-row">
+          <span class="dot" style="background: var(--agent-lead);"></span>
+          <span class="name">Lead</span>
+          <span class="age">2m</span>
+        </div>
+        <div class="agent-row">
+          <span class="dot running" style="background: var(--accent-running);"></span>
+          <span class="name">UI Designer</span>
+          <span class="age">1m</span>
+        </div>
+        <div class="agent-row">
+          <span class="dot" style="background: rgba(52,211,153,0.4);"></span>
+          <span class="name">Architect</span>
+          <span class="age">8m</span>
+        </div>
+
+        <!-- Mission 2: running -->
+        <div class="mission-row">
+          <span class="chevron-btn">&#9656;</span>
+          <span class="status-dot running"></span>
+          <span style="flex:1; min-width:0;">
+            <span class="mission-title">Fix mobile remote control auth flow</span>
+          </span>
+          <span class="agent-count">2</span>
+          <span class="age">5m</span>
+        </div>
+
+        <!-- Mission 3: waiting -->
+        <div class="mission-row">
+          <span class="chevron-btn">&#9656;</span>
+          <span class="status-dot waiting"></span>
+          <span style="flex:1; min-width:0;">
+            <span class="mission-title">Add LAN discovery service</span>
+            <span class="waiting-reason">Waiting for confirmation: API schema</span>
+          </span>
+          <span class="age">15m</span>
+        </div>
+
+        <!-- Mission 4: done -->
+        <div class="mission-row" style="opacity: 0.6;">
+          <span class="chevron-btn">&#9656;</span>
+          <span class="status-dot done"></span>
+          <span style="flex:1; min-width:0;">
+            <span class="mission-title">War room timeline card styling</span>
+          </span>
+          <span class="age">1h</span>
+        </div>
+
+        <!-- Mission 5: done -->
+        <div class="mission-row" style="opacity: 0.6;">
+          <span class="chevron-btn">&#9656;</span>
+          <span class="status-dot done"></span>
+          <span style="flex:1; min-width:0;">
+            <span class="mission-title">Fix empty state logo theme awareness</span>
+          </span>
+          <span class="age">3h</span>
+        </div>
+      </div>
+
+      <!-- Workspace: my-blog (collapsed) -->
+      <div class="ws-group">
+        <div class="ws-header">
+          <span class="chevron">&#9656;</span>
+          <span class="name">my-blog</span>
+          <span class="count">2</span>
+        </div>
+      </div>
+
+      <!-- Workspace: data-pipeline (collapsed) -->
+      <div class="ws-group">
+        <div class="ws-header">
+          <span class="chevron">&#9656;</span>
+          <span class="name">data-pipeline</span>
+          <span class="count">1</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- ★ NEW: Team Activity Strip                      -->
+    <!-- This section is the proposed enhancement.       -->
+    <!-- Position: between mission list and resources.   -->
+    <!-- ════════════════════════════════════════════════ -->
+    <div class="team-activity new-feature-marker" id="team-strip">
+
+      <!-- Section header with aggregate status -->
+      <div class="team-activity-header">
+        <!-- Icon: Users group -->
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted);">
+          <circle cx="12" cy="8" r="3" />
+          <path d="M7 20a5 5 0 0 1 10 0" />
+          <circle cx="5" cy="10" r="2" />
+          <path d="M1 20c0-2.2 1.5-3.5 3.5-3.5" />
+          <circle cx="19" cy="10" r="2" />
+          <path d="M23 20c0-2.2-1.5-3.5-3.5-3.5" />
+        </svg>
+        <span class="label">Team</span>
+        <span class="status-summary">
+          <span class="status-chip">
+            <span class="mini-dot" style="background: var(--accent-running);"></span>
+            3
+          </span>
+          <span class="status-chip">
+            <span class="mini-dot" style="background: var(--accent-yellow);"></span>
+            1
+          </span>
+          <span class="status-chip">
+            <span class="mini-dot" style="background: var(--text-muted);"></span>
+            3
+          </span>
+        </span>
+      </div>
+
+      <!-- Agent avatars with status -->
+      <div class="team-avatars">
+
+        <!-- Lead — running -->
+        <div class="team-avatar-item is-running">
+          <div class="team-avatar-circle" style="background: var(--agent-lead);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l2 2"/></svg>
+          </div>
+          <span class="team-avatar-status running"></span>
+          <span class="tooltip">Lead <span class="tooltip-role">running</span></span>
+        </div>
+
+        <!-- Fullstack — running -->
+        <div class="team-avatar-item is-running">
+          <div class="team-avatar-circle" style="background: var(--agent-fullstack);">F</div>
+          <span class="team-avatar-status running"></span>
+          <span class="tooltip">Fullstack <span class="tooltip-role">running</span></span>
+        </div>
+
+        <!-- UI Designer — running -->
+        <div class="team-avatar-item is-running">
+          <div class="team-avatar-circle" style="background: var(--agent-designer);">D</div>
+          <span class="team-avatar-status running"></span>
+          <span class="tooltip">Designer <span class="tooltip-role">running</span></span>
+        </div>
+
+        <!-- Architect — waiting -->
+        <div class="team-avatar-item">
+          <div class="team-avatar-circle" style="background: var(--agent-architect);">A</div>
+          <span class="team-avatar-status waiting"></span>
+          <span class="tooltip">Architect <span class="tooltip-role">waiting</span></span>
+        </div>
+
+        <!-- Code Reviewer — idle -->
+        <div class="team-avatar-item">
+          <div class="team-avatar-circle" style="background: var(--agent-reviewer); opacity: 0.5;">R</div>
+          <span class="team-avatar-status idle"></span>
+          <span class="tooltip">Reviewer <span class="tooltip-role">idle</span></span>
+        </div>
+
+        <!-- DevOps — idle -->
+        <div class="team-avatar-item">
+          <div class="team-avatar-circle" style="background: var(--agent-devops); opacity: 0.5;">O</div>
+          <span class="team-avatar-status idle"></span>
+          <span class="tooltip">DevOps <span class="tooltip-role">idle</span></span>
+        </div>
+
+        <!-- Sensei — idle -->
+        <div class="team-avatar-item">
+          <div class="team-avatar-circle" style="background: var(--agent-sensei); opacity: 0.5;">S</div>
+          <span class="team-avatar-status idle"></span>
+          <span class="tooltip">Sensei <span class="tooltip-role">idle</span></span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Resources (existing, unchanged) -->
+    <div class="resources-section">
+      <button class="resource-item">
+        <span class="icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-3-3.87"/><path d="M4 21v-2a4 4 0 0 1 3-3.87"/><path d="m13.2 2.3.7.7a2.7 2.7 0 0 1 0 3.8l-.7.7a1.7 1.7 0 0 0 0 2.4l.1.1"/><circle cx="12" cy="8" r="3"/></svg>
+        </span>
+        <span class="label">Team</span>
+        <span class="rcount">7</span>
+      </button>
+      <button class="resource-item">
+        <span class="icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </span>
+        <span class="label">Skills</span>
+        <span class="rcount">12</span>
+      </button>
+      <button class="resource-item">
+        <span class="icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+        </span>
+        <span class="label">Schedules</span>
+        <span class="rcount">3</span>
+      </button>
+      <button class="resource-item">
+        <span class="icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z"/></svg>
+        </span>
+        <span class="label">Workspaces</span>
+        <span class="rcount">3</span>
+      </button>
+    </div>
+
+    <!-- Footer (existing, unchanged) -->
+    <div class="sidebar-footer">
+      <button class="footer-icon-btn" title="Mission History">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      </button>
+      <span style="flex:1"></span>
+      <button class="footer-icon-btn" title="Switch to light theme">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+      <button class="footer-icon-btn" title="Notifications">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+      <button class="footer-icon-btn" title="Settings">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════ -->
+  <!-- MAIN CONTENT (context placeholder)              -->
+  <!-- ════════════════════════════════════════════════ -->
+  <div class="main-content">
+    <div class="main-toolbar">
+      <span class="tab active">Chat</span>
+      <span class="tab">Terminal</span>
+      <span class="tab">War Room</span>
+      <span style="flex:1"></span>
+      <span style="font-size:11px; color:var(--text-muted);">Redesign teammates sidebar presence</span>
+    </div>
+    <div class="main-body">
+      <div style="text-align:center; max-width: 400px; line-height: 1.8;">
+        <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 8px;">Main content area</div>
+        <div style="font-size: 11px; color: var(--text-muted);">
+          This mockup focuses on the sidebar.<br/>
+          The Team Activity strip (marked NEW) sits between<br/>
+          the mission list and the Resources section.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- Design Annotations (overlay)                        -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="annotation" style="right: 32px; top: 24px; max-width: 360px;">
+  <div class="annotation-title">Team Activity Strip — Design Rationale</div>
+  <p style="margin-bottom: 8px;">
+    A compact, always-visible team roster that surfaces <strong>who is doing what</strong>
+    at a glance, without requiring any expansion or navigation.
+  </p>
+  <ul>
+    <li><strong>Position:</strong> Between mission list and Resources — natural "team awareness" zone. Doesn't push any existing content, uses fixed height (~52px).</li>
+    <li><strong>Avatar circles:</strong> Use each agent's signature color from <code>AGENT_COLOR_MAP</code>, matching the existing design system.</li>
+    <li><strong>Status dots:</strong> Reuse the project's status color vocabulary (blue=running, yellow=waiting, green=done, gray=idle).</li>
+    <li><strong>Running glow:</strong> Active agents get a subtle blue shadow ring, idle agents dim to 50% opacity — visual weight proportional to activity.</li>
+    <li><strong>Header counts:</strong> <span style="display:inline-flex;align-items:center;gap:2px;"><span style="width:5px;height:5px;border-radius:50%;background:var(--accent-running);display:inline-block;"></span>3</span> running, <span style="display:inline-flex;align-items:center;gap:2px;"><span style="width:5px;height:5px;border-radius:50%;background:var(--accent-yellow);display:inline-block;"></span>1</span> waiting, <span style="display:inline-flex;align-items:center;gap:2px;"><span style="width:5px;height:5px;border-radius:50%;background:var(--text-muted);display:inline-block;"></span>3</span> idle — cross-workspace aggregate.</li>
+    <li><strong>Hover tooltip:</strong> Shows agent name + current status.</li>
+    <li><strong>Click action:</strong> Navigate to <code>/agents</code> page (same as existing Team link).</li>
+    <li><strong>No disruption:</strong> Resources and Footer sections are 100% unchanged. Mission list scroll area is unaffected.</li>
+    <li><strong>Cross-workspace:</strong> Shows ALL team members across all workspaces, consistent with the sidebar's "immersive overview" positioning.</li>
+  </ul>
+</div>
+
+<div class="annotation" style="right: 32px; bottom: 24px; max-width: 340px;">
+  <div class="annotation-title">Integration Impact</div>
+  <ul>
+    <li><strong>New component:</strong> <code>TeamActivityStrip.tsx</code> (~80 lines)</li>
+    <li><strong>Data source:</strong> Aggregate agent status from existing <code>useAllChats</code> + <code>useAgents</code> hooks — no new API needed.</li>
+    <li><strong>Insertion point:</strong> <code>MissionSidebar.tsx</code>, between <code>&lt;MissionSessionList/&gt;</code> and <code>&lt;ResourcesSection/&gt;</code>.</li>
+    <li><strong>Height budget:</strong> ~52px fixed — does not affect mission list scroll.</li>
+    <li><strong>Existing features:</strong> Zero changes to Resources, Footer, or mission list.</li>
+  </ul>
+</div>
+
+</body>
+</html>

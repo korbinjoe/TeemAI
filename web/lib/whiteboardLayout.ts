@@ -242,39 +242,68 @@ export const layoutWhiteboardDag = (
   }
 
   if (goal) {
-    for (const [agent, list] of byAgent) {
-      if (agent === normalizeAgent(goal.by) && list[0]?.id === goal.id) {
-        if (list.length > 1) {
-          const first = list[1]
-          if (!childToParents.get(first.id)?.includes(goal.id) && first.type !== 'handoff') {
-            addLayoutEdge(goal.id, first.id)
-            edgeList.push({
-              id: `goal-fanout-${goal.id}-${first.id}`,
-              source: goal.id,
-              target: first.id,
-              type: 'ref',
-              isCritical: false,
-            })
-          }
-        }
-      } else {
-        const first = list[0]
-        if (
-          first &&
-          first.id !== goal.id &&
-          first.type !== 'handoff' &&
-          !childToParents.get(first.id)?.includes(goal.id)
-        ) {
-          addLayoutEdge(goal.id, first.id)
+    for (const e of allEntries) {
+      if (e.id === goal.id) continue
+      if (e.type === 'handoff') {
+        if (!childToParents.get(e.id)?.includes(goal.id)) {
+          addLayoutEdge(goal.id, e.id)
           edgeList.push({
-            id: `goal-fanout-${goal.id}-${first.id}`,
+            id: `goal-fanout-${goal.id}-${e.id}`,
             source: goal.id,
-            target: first.id,
-            type: 'ref',
+            target: e.id,
+            type: 'causal',
             isCritical: false,
           })
         }
       }
+    }
+
+    for (const [agent, list] of byAgent) {
+      const first = agent === normalizeAgent(goal.by) && list[0]?.id === goal.id
+        ? list[1]
+        : list[0]
+      if (
+        first &&
+        first.id !== goal.id &&
+        first.type !== 'handoff' &&
+        !(childToParents.get(first.id)?.length)
+      ) {
+        addLayoutEdge(goal.id, first.id)
+        edgeList.push({
+          id: `goal-fanout-${goal.id}-${first.id}`,
+          source: goal.id,
+          target: first.id,
+          type: 'causal',
+          isCritical: false,
+        })
+      }
+    }
+  }
+
+  for (const e of allEntries) {
+    if (e.type !== 'artifact') continue
+    if (childToParents.get(e.id)?.length) continue
+    const artAgent = agentOf(e)
+    const artTs = Date.parse(e.timestamp)
+
+    let bestHandoff: WhiteboardEntry | undefined
+    for (const h of allEntries) {
+      if (h.type !== 'handoff') continue
+      const hTarget = handoffTargetAgent.get(h.id)
+      if (hTarget !== artAgent) continue
+      const hTs = Date.parse(h.timestamp)
+      if (hTs > artTs) continue
+      if (!bestHandoff || hTs > Date.parse(bestHandoff.timestamp)) bestHandoff = h
+    }
+    if (bestHandoff) {
+      addLayoutEdge(bestHandoff.id, e.id)
+      edgeList.push({
+        id: `handoff-artifact-${bestHandoff.id}-${e.id}`,
+        source: bestHandoff.id,
+        target: e.id,
+        type: 'causal',
+        isCritical: false,
+      })
     }
   }
 

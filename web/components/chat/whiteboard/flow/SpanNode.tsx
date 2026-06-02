@@ -93,9 +93,10 @@ const SpanNodeInner = ({ data }: NodeProps) => {
         'group relative cursor-pointer rounded-lg',
         'transition-all duration-150 ease-out',
         'hover:shadow-md hover:-translate-y-px',
-        isGoal && 'overflow-hidden border-2 border-[rgb(var(--accent-brand))] bg-bg-elevated',
-        isArtifact && 'border border-dashed border-violet-400/40 bg-violet-500/[0.04]',
-        !isGoal && !isArtifact && 'bg-bg-elevated border border-border-subtle hover:border-border',
+        isGoal && 'overflow-hidden border-2 border-[rgb(var(--accent-brand))] bg-bg-elevated shadow-sm',
+        isHandoff && 'border border-sky-400/50 bg-sky-500/[0.06]',
+        isArtifact && 'border border-violet-400/50 bg-violet-500/[0.06]',
+        !isGoal && !isHandoff && !isArtifact && 'bg-bg-elevated border border-border-subtle hover:border-border',
         isSelected && 'ring-1.5 ring-[rgb(var(--accent-brand))] border-[rgb(var(--accent-brand))] shadow-md',
         isHighlighted && !isSelected && 'border-border shadow-sm',
         isDimmed && 'opacity-20 hover:opacity-40',
@@ -126,7 +127,10 @@ const SpanNodeInner = ({ data }: NodeProps) => {
 
       {!isGoal && (
         <div
-          className={cn('absolute left-0 top-2 bottom-2 rounded-full', isArtifact ? 'w-[3.5px]' : 'w-[2.5px]')}
+          className={cn(
+            'absolute left-0 top-2 bottom-2 rounded-full',
+            (isHandoff || isArtifact) ? 'w-[3.5px]' : 'w-[2.5px]',
+          )}
           style={{ background: accentColor }}
         />
       )}
@@ -135,19 +139,20 @@ const SpanNodeInner = ({ data }: NodeProps) => {
         {!isGoal && (
           <div className="flex items-center gap-1.5">
             <span
-              className="inline-flex items-center gap-1 px-1.5 py-px rounded text-[10px] font-semibold tracking-wide"
+              className={cn(
+                'inline-flex items-center gap-1 rounded text-[10px] font-semibold tracking-wide',
+                (isHandoff || isArtifact) ? 'px-2 py-0.5' : 'px-1.5 py-px',
+              )}
               style={{
                 color: accentColor,
-                background: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
+                background: `color-mix(in srgb, ${accentColor} ${isHandoff || isArtifact ? '14' : '10'}%, transparent)`,
               }}
             >
+              <Icon size={11} strokeWidth={2.5} aria-hidden="true" />
               {isHandoff ? (
                 <>→ {displayName}</>
               ) : (
-                <>
-                  <Icon size={11} strokeWidth={2.5} aria-hidden="true" />
-                  {t(visual.labelKey)}
-                </>
+                t(visual.labelKey)
               )}
             </span>
             <span className="ml-auto text-[10px] text-text-muted font-mono shrink-0">

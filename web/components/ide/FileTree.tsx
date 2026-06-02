@@ -853,6 +853,17 @@ const FileTree = ({ roots, onFileSelect, selectedFile, changeMap, dirAggregate, 
     expandSequentially()
   }, [revealPath, revealTrigger])
 
+  const prevSelectedFileRef = useRef(selectedFile)
+  useEffect(() => {
+    if (prevSelectedFileRef.current === selectedFile) return
+    prevSelectedFileRef.current = selectedFile
+    if (!selectedFile) return
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-filepath="${CSS.escape(selectedFile)}"]`)
+      if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    })
+  }, [selectedFile])
+
   const headerLabel = showRootHeaders
     ? t('fileTree.dirCount', { count: roots.length })
     : (roots[0]?.name || roots[0]?.path.split('/').pop() || '')

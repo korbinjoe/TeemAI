@@ -21,7 +21,7 @@ You:    "Build the auth module, add tests, and update the docs."
 
 ---
 
-## Why OpenTeam?
+## Why Cogents?
 
 ### Your agents start from zero every time
 

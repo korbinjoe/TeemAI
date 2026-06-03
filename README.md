@@ -1,4 +1,4 @@
-# OpenTeam
+# Cogents
 
 **Your AI teammates — with names, memory, and growing expertise.**
 

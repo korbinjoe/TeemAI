@@ -199,4 +199,42 @@ describe('expandSlashCommand', () => {
     expect(out).toContain('Project body here.')
     setProjectRoot('')
   })
+
+  it('expands user skill with colon sub-command (/skill:subcommand)', async () => {
+    await writeFileAt(
+      join(FAKE_HOME, '.claude/skills/pagex/SKILL.md'),
+      '---\nname: pagex\n---\nPagex skill body.\n$ARGUMENTS',
+    )
+    const out = await expandSlashCommand('/pagex:init', PROJECT_CWD)
+    expect(out).toContain('Pagex skill body.')
+    expect(out).toContain('init')
+    const marker = decodeMarker(out)
+    expect(marker?.cmd).toBe('/pagex:init')
+    expect(marker?.args).toBe('init')
+  })
+
+  it('expands user skill with colon sub-command and extra args', async () => {
+    const out = await expandSlashCommand('/pagex:init my-project --template=react', PROJECT_CWD)
+    expect(out).toContain('Pagex skill body.')
+    expect(out).toContain('init my-project --template=react')
+    const marker = decodeMarker(out)
+    expect(marker?.cmd).toBe('/pagex:init')
+    expect(marker?.args).toBe('init my-project --template=react')
+  })
+
+  it('expands user skill from .codex/skills/ with colon sub-command', async () => {
+    await writeFileAt(
+      join(FAKE_HOME, '.codex/skills/codex-skill/SKILL.md'),
+      'Codex skill body.',
+    )
+    const out = await expandSlashCommand('/codex-skill:run', PROJECT_CWD)
+    expect(out).toContain('Codex skill body.')
+    const marker = decodeMarker(out)
+    expect(marker?.cmd).toBe('/codex-skill:run')
+  })
+
+  it('project/user command takes priority over user skill fallback', async () => {
+    const out = await expandSlashCommand('/plug-c:do-thing', PROJECT_CWD)
+    expect(out).toContain('Skill C body.')
+  })
 })

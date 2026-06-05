@@ -156,7 +156,9 @@ const matchesCommand = (cmdName: string, query: string): boolean => {
   if (query.includes(':')) {
     const [qGroup, qSub] = query.split(':', 2)
     const [cGroup, cSub] = name.split(':', 2)
-    if (!cSub) return false
+    if (!cSub) {
+      return name === qGroup
+    }
     return cGroup.startsWith(qGroup) && cSub.includes(qSub)
   }
   return false

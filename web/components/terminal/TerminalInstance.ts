@@ -193,9 +193,11 @@ export class TerminalInstance {
       }
 
       this.suppressResize = false
-      if (terminal.cols !== (initCols ?? 80) || terminal.rows !== (initRows ?? 24)) {
-        this.resizeCallbacks.forEach(cb => cb({ cols: terminal.cols, rows: terminal.rows }))
-      }
+      // Always fire — the server PTY may have been spawned at a different
+      // size (e.g. estimateSize vs FitAddon actual). The onResize callback
+      // in useTerminalInstances deduplicates identical sizes via
+      // lastSentCols/lastSentRows, so this is safe even if sizes match.
+      this.resizeCallbacks.forEach(cb => cb({ cols: terminal.cols, rows: terminal.rows }))
 
       if (this.container && this.currentState() !== 'disposed') {
         this.resizeObserver = new ResizeObserver(() => {
@@ -259,8 +261,10 @@ export class TerminalInstance {
   resetAndWriteSnapshot(data: string): void {
     if (this._state === 'disposed') return
     if (this._state === 'opened' && this.terminal) {
-      this.terminal.clear()
-      this.terminal.write(data)
+      // Full viewport + scrollback clear then home cursor.
+      // terminal.clear() preserves the cursor-line content which leaves
+      // ghost characters (e.g. em-dash fragments) from the previous render.
+      this.terminal.write('\x1b[2J\x1b[3J\x1b[H' + data)
     } else {
       this.pendingData = [data]
       this.pendingChars = data.length

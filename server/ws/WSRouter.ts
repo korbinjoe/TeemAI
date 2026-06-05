@@ -11,6 +11,7 @@ import type { WorkspaceStore } from '../stores/WorkspaceStore'
 import type { DevInspector } from '../dev/DevInspector'
 import type { GitWatchManager } from '../git/GitWatchManager'
 import type { ExecutionModeRouter } from '../orchestration/ExecutionModeRouter'
+import { scanPluginSlashCommands, scanProjectSlashCommands, scanUserSkills } from '../runtime/PluginCommandsScanner'
 import { createLogger } from '../lib/logger'
 import { trackEvent } from '../lib/eventTracker'
 
@@ -159,7 +160,10 @@ export class WSRouter {
     }
 
     if (type === 'chat:set-context') {
-      if (payload.chatId) this.expertHandler.setChatId(connectionId, payload.chatId)
+      if (payload.chatId) {
+        this.expertHandler.setChatId(connectionId, payload.chatId)
+        this.pushAvailableCommands(ws, payload.chatId)
+      }
       return
     }
     if (type === 'chat:resume-experts') {
@@ -235,6 +239,35 @@ export class WSRouter {
       this.terminalViewManager?.handleDisconnect(connectionId)
       this.senseiUpgradeService?.cancel(connectionId)
     }
+  }
+
+  private pushAvailableCommands(ws: WebSocket, chatId: string): void {
+    const cwd = this.resolveCwd(chatId)
+    Promise.all([
+      scanPluginSlashCommands(),
+      cwd ? scanProjectSlashCommands(cwd) : Promise.resolve([]),
+      scanUserSkills(),
+    ])
+      .then(([pluginCmds, projectCmds, userSkills]) => {
+        const commands = Array.from(new Set([...pluginCmds, ...projectCmds, ...userSkills])).sort()
+        if (commands.length === 0) return
+        if (ws.readyState !== ws.OPEN) return
+        ws.send(JSON.stringify({
+          type: 'chat:available-commands',
+          payload: { chatId, commands },
+        }))
+      })
+      .catch((err) => {
+        log.warn('Pre-scan slash commands failed', { chatId, error: err instanceof Error ? err.message : String(err) })
+      })
+  }
+
+  private resolveCwd(chatId: string): string | null {
+    if (!this.chatStore || !this.workspaceStore) return null
+    const chat = this.chatStore.get(chatId)
+    if (!chat?.workspaceId) return null
+    const ws = this.workspaceStore.get(chat.workspaceId)
+    return ws?.repositories?.[0]?.path ?? null
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

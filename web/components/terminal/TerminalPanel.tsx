@@ -324,7 +324,8 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
       if (wsClient.isConnected()) {
         for (const agentId of desired) {
           if (!attachedRef.current.has(agentId)) {
-            wsClient.send('expert:cli-attach', { chatId, agentId, cols: 80, rows: 24 })
+            const est = estimateSize(terminalAreaRef.current)
+            wsClient.send('expert:cli-attach', { chatId, agentId, cols: est.cols, rows: est.rows })
             attachedRef.current.add(agentId)
           }
         }

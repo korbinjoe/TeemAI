@@ -6,7 +6,7 @@
  * surface them. Naming follows Claude Code convention: `<plugin>:<skill-or-command>`.
  */
 
-import { readdir, readFile } from 'fs/promises'
+import { readdir, readFile, stat } from 'fs/promises'
 import { existsSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
@@ -44,10 +44,26 @@ const readJsonSafe = async <T>(path: string): Promise<T | null> => {
   }
 }
 
+/**
+ * List subdirectories, following symlinks. `readdir({ withFileTypes })` does
+ * not follow symlinks for `isDirectory()`, so we fall back to `stat()` for
+ * entries that report as symbolic links.
+ */
 const listSubdirs = async (dir: string): Promise<string[]> => {
   try {
     const entries = await readdir(dir, { withFileTypes: true })
-    return entries.filter((e) => e.isDirectory()).map((e) => e.name)
+    const dirs: string[] = []
+    for (const e of entries) {
+      if (e.isDirectory()) {
+        dirs.push(e.name)
+      } else if (e.isSymbolicLink()) {
+        try {
+          const s = await stat(join(dir, e.name)) // stat follows symlinks
+          if (s.isDirectory()) dirs.push(e.name)
+        } catch { /* broken symlink — skip */ }
+      }
+    }
+    return dirs
   } catch {
     return []
   }
@@ -94,11 +110,20 @@ export const scanPluginSlashCommands = async (): Promise<string[]> => {
     if (!installPath || !existsSync(installPath)) continue
 
     // Skills live under <installPath>/skills/<name>/SKILL.md
+    // Sub-skills live under <installPath>/skills/<name>/skills/<sub>/SKILL.md
     const skillsDir = join(installPath, 'skills')
     const skillNames = await listSubdirs(skillsDir)
     for (const name of skillNames) {
       if (existsSync(join(skillsDir, name, 'SKILL.md'))) {
         results.add(`${pluginName}:${name}`)
+      }
+      // Scan nested sub-skills
+      const subSkillsDir = join(skillsDir, name, 'skills')
+      const subNames = await listSubdirs(subSkillsDir)
+      for (const sub of subNames) {
+        if (existsSync(join(subSkillsDir, sub, 'SKILL.md'))) {
+          results.add(`${pluginName}:${name}:${sub}`)
+        }
       }
     }
 
@@ -136,7 +161,12 @@ export const scanProjectSlashCommands = async (cwd: string): Promise<string[]> =
     for (const entry of entries) {
       if (entry.isFile() && entry.name.endsWith('.md')) {
         results.add(entry.name.replace(/\.md$/, ''))
-      } else if (entry.isDirectory()) {
+      } else if (entry.isDirectory() || entry.isSymbolicLink()) {
+        // Follow symlinks — stat() resolves them
+        try {
+          const s = await stat(join(commandsDir, entry.name))
+          if (!s.isDirectory()) continue
+        } catch { continue }
         const subFiles = await listFilesWithExt(join(commandsDir, entry.name), '.md')
         for (const file of subFiles) {
           results.add(`${entry.name}:${file.replace(/\.md$/, '')}`)
@@ -156,9 +186,13 @@ export const scanProjectSlashCommands = async (cwd: string): Promise<string[]> =
 /**
  * Scan user-level skills from `~/.claude/skills/` and `~/.codex/skills/`.
  *
- * Each subdirectory containing a `SKILL.md` is treated as a skill whose
- * slash-command name equals the directory name. This mirrors what Claude Code
- * does natively in terminal mode.
+ * Each subdirectory containing a `SKILL.md` is treated as a top-level skill
+ * whose slash-command name equals the directory name (e.g. `pagex`).
+ *
+ * If a skill also has a `skills/` sub-directory, each child that contains
+ * its own `SKILL.md` is registered as a hierarchical command using the
+ * `<parent>:<child>` convention (e.g. `pagex:init`). This mirrors what
+ * Claude Code does natively in terminal mode.
  */
 export const scanUserSkills = async (): Promise<string[]> => {
   const results = new Set<string>()
@@ -170,11 +204,20 @@ export const scanUserSkills = async (): Promise<string[]> => {
 
   for (const dir of dirs) {
     if (!existsSync(dir)) continue
-    const entries = await readdir(dir, { withFileTypes: true }).catch(() => [])
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue
-      if (existsSync(join(dir, entry.name, 'SKILL.md'))) {
-        results.add(entry.name)
+    const skillNames = await listSubdirs(dir)
+    for (const name of skillNames) {
+      const skillDir = join(dir, name)
+      if (existsSync(join(skillDir, 'SKILL.md'))) {
+        results.add(name)
+      }
+
+      // Scan nested sub-skills: <skill>/skills/<sub>/SKILL.md → "<skill>:<sub>"
+      const subSkillsDir = join(skillDir, 'skills')
+      const subEntries = await listSubdirs(subSkillsDir)
+      for (const sub of subEntries) {
+        if (existsSync(join(subSkillsDir, sub, 'SKILL.md'))) {
+          results.add(`${name}:${sub}`)
+        }
       }
     }
   }

@@ -113,6 +113,21 @@ const pluginCandidates = async (segments: string[]): Promise<string[]> => {
   return candidates
 }
 
+/**
+ * Candidates for user-level skills with sub-skills.
+ * `/pagex:init` → segments ['pagex','init'] → ~/.claude/skills/pagex/skills/init/SKILL.md
+ */
+const userSkillCandidates = (segments: string[]): string[] => {
+  if (segments.length < 2) return []
+  const [parent, ...rest] = segments
+  const sub = rest[rest.length - 1]
+  const home = homedir()
+  return [
+    join(home, '.claude', 'skills', parent, 'skills', sub, 'SKILL.md'),
+    join(home, '.codex', 'skills', parent, 'skills', sub, 'SKILL.md'),
+  ]
+}
+
 const resolveCommandFile = async (cwd: string, segments: string[]): Promise<string | null> => {
   const projectHit = firstExisting(projectCandidates(cwd, segments))
   if (projectHit) return projectHit
@@ -122,6 +137,9 @@ const resolveCommandFile = async (cwd: string, segments: string[]): Promise<stri
   }
   const userHit = firstExisting(userCandidates(segments))
   if (userHit) return userHit
+  // Check user skill sub-skills (e.g. ~/.claude/skills/pagex/skills/init/SKILL.md)
+  const userSkillHit = firstExisting(userSkillCandidates(segments))
+  if (userSkillHit) return userSkillHit
   const pluginHit = firstExisting(await pluginCandidates(segments))
   return pluginHit
 }
@@ -198,6 +216,29 @@ export const expandSlashCommand = async (text: string, cwd: string): Promise<str
   try {
     const file = await resolveCommandFile(cwd, segments)
     if (!file) {
+      // Fallback: check if the first segment is a user-level skill.
+      // Supports /skill:subcommand syntax (e.g., /pagex:init → ~/.claude/skills/pagex/SKILL.md with args "init").
+      const skillFallbackPaths = [
+        join(CLAUDE_HOME, 'skills', segments[0], 'SKILL.md'),
+        join(homedir(), '.codex', 'skills', segments[0], 'SKILL.md'),
+      ]
+      const skillFallback = firstExisting(skillFallbackPaths)
+      if (skillFallback) {
+        const skillRaw = await readFile(skillFallback, 'utf-8')
+        const skillBody = stripFrontmatter(skillRaw).trim()
+        if (skillBody) {
+          const subCommand = segments.slice(1).join(':')
+          const effectiveArgs = [subCommand, rawArgs].filter(Boolean).join(' ')
+          const expanded = applyArguments(skillBody, effectiveArgs)
+          log.info('Expanded user skill with sub-command', { name: rawName, file: skillFallback, subCommand, argsLen: effectiveArgs.length })
+          const marker = encodeSlashMarker({
+            cmd: `/${rawName}`,
+            args: effectiveArgs.trim(),
+            original: text.trim(),
+          })
+          return `${marker}${expanded}`
+        }
+      }
       log.warn('No command file found for custom slash command — stripping prefix for natural language fallback', { name: rawName, cwd, projectRoot: _projectRoot, segments })
       return text.replace(/^\//, '')
     }

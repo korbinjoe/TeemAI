@@ -172,6 +172,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     setLoading, thinking,
     allWorktreeSessions, wsRepositories,
     agentSlashCommands,
+    chatAvailableCommands,
     chatModel, setChatModel,
     agentPlans, agentModes, agentAvailableCommands, agentSessionInfo,
     permissionRequests, dismissPermissionRequest,
@@ -199,13 +200,18 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   const dirPickerHistory = useMemo(() => currentWorkingDirectory ? [currentWorkingDirectory] : [], [currentWorkingDirectory])
   const dirPicker = useDirPicker(dirPickerHistory)
 
+  const chatLevelFallback = useMemo(() => {
+    if (chatAvailableCommands.length === 0) return DEFAULT_SLASH_COMMANDS
+    return Array.from(new Set([...DEFAULT_SLASH_COMMANDS, ...chatAvailableCommands])).sort()
+  }, [chatAvailableCommands])
+
   const currentSlashCommands = useMemo(() => {
-    if (!targetAgentId) return DEFAULT_SLASH_COMMANDS
+    if (!targetAgentId) return chatLevelFallback
     const available = agentAvailableCommands[targetAgentId]
     const slash = agentSlashCommands[targetAgentId]
-    if (!available?.length && !slash?.length) return DEFAULT_SLASH_COMMANDS
-    return Array.from(new Set([...(available ?? []), ...(slash ?? [])])).sort()
-  }, [targetAgentId, agentSlashCommands, agentAvailableCommands])
+    if (!available?.length && !slash?.length) return chatLevelFallback
+    return Array.from(new Set([...(available ?? []), ...(slash ?? []), ...chatAvailableCommands])).sort()
+  }, [targetAgentId, agentSlashCommands, agentAvailableCommands, chatAvailableCommands, chatLevelFallback])
 
   const currentMode = targetAgentId ? agentModes[targetAgentId] : undefined
   const currentPlan = targetAgentId ? agentPlans[targetAgentId] : undefined

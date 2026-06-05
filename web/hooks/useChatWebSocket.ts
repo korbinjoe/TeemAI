@@ -68,6 +68,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
   const [wsRepositories, setWsRepositories] = useState<Array<{ id: string; path: string; name: string }>>([])
   const [chatTokenSnapshot, setChatTokenSnapshot] = useState<{ totalCost?: number; totalTokens?: { input: number; output: number; cacheRead?: number; cacheCreation?: number } } | null>(null)
   const [agentSlashCommands, setAgentSlashCommands] = useState<Record<string, string[]>>({})
+  const [chatAvailableCommands, setChatAvailableCommands] = useState<string[]>([])
   const [chatModel, setChatModel] = useState<string | null>(null)
 
   const [agentPlans, setAgentPlans] = useState<Record<string, { entries: Array<{ content: string; status: 'pending' | 'in_progress' | 'completed'; priority?: 'low' | 'medium' | 'high' }> }>>({})
@@ -270,6 +271,11 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       if (!isCurrentChatEvent(payload)) return
       if (payload.title) setChatTitle(payload.title)
     }
+    const onChatAvailableCommands = (p: unknown) => {
+      const payload = p as { chatId: string; commands: string[] }
+      if (!isCurrentChatEvent(payload)) return
+      if (Array.isArray(payload.commands)) setChatAvailableCommands(payload.commands)
+    }
 
     wsClient.on('expert:structured-message', onStructuredMessage)
     wsClient.on('error', onError)
@@ -289,6 +295,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     wsClient.on('expert:permission-request', onExpertPermissionRequest)
     wsClient.on('chat:permission-resolved', onChatPermissionResolved)
     wsClient.on('chat:title-updated', onChatTitleUpdated)
+    wsClient.on('chat:available-commands', onChatAvailableCommands)
 
     const handleReconnected = () => {
       setConnected(true)
@@ -350,6 +357,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       wsClient.off('expert:permission-request', onExpertPermissionRequest)
       wsClient.off('chat:permission-resolved', onChatPermissionResolved)
       wsClient.off('chat:title-updated', onChatTitleUpdated)
+      wsClient.off('chat:available-commands', onChatAvailableCommands)
       wsClient.off('reconnected', handleReconnected)
       wsClient.off('disconnected', handleDisconnected)
       wsClient.off('reconnect_failed', handleReconnectFailed)
@@ -418,6 +426,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     wsRepositories,
     chatTokenSnapshot,
     agentSlashCommands,
+    chatAvailableCommands,
     chatModel, setChatModel,
     agentPlans,
     agentModes,

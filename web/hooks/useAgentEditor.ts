@@ -214,7 +214,7 @@ export function parseIdentityContent(content: string): ParsedIdentity {
     const colonIdx = line.indexOf(':')
     if (colonIdx < 0) continue
     const key = line.slice(0, colonIdx).trim()
-    const val = line.slice(colonIdx + 1).trim()
+    const val = line.slice(colonIdx + 1).trimStart()
 
     const keyNorm = key.toLowerCase()
     if (keyNorm === 'name') result.name = val

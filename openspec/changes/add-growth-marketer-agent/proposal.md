@@ -21,7 +21,7 @@ This contradicts the pulse-mode thesis — dispatch the marketer alongside an en
 1. **One new built-in agent** `growth-marketer` registered in `openteam.json`, discoverable as a sub-agent of `lead`.
 2. **Self-contained workspace** at `ai-assets/agents/growth-marketer/` with `IDENTITY.md`, `SOUL.md`, and (optionally) `TOOLS.md` matching existing conventions.
 3. **Single end-to-end skill** that runs: GitHub repo → summary → tweet draft → (approval) → posted on X. Implemented as a new skill `ai-assets/skills/x-promoter/` so the capability is reusable by other agents.
-4. **Persistent X login state** — the agent uses a dedicated Playwright user-data dir (`~/.openteam/browser-profiles/x/`) so the user logs into X once and the agent reuses the session across runs.
+4. **Persistent X login state** — the agent uses a dedicated Playwright user-data dir (`~/.teemai/browser-profiles/x/`) so the user logs into X once and the agent reuses the session across runs.
 5. **Default draft-then-approve gate** — the agent stops at "tweet drafted, open this URL or call `--confirm` to post". Auto-post is opt-in via an explicit `autoPost=true` parameter.
 6. **War-room aware** — writes `decision` (angle/positioning choice), `artifact` (the posted tweet URL + draft path), `open_question` (when angle is unclear), and `constraint` (e.g. X login expired) per the existing whiteboard protocol.
 7. **No engineering / product scope creep** — the marketer does not edit product code, does not write PRDs, does not run analytics; it strictly owns the "turn this repo into a posted tweet" loop.
@@ -98,13 +98,13 @@ input: { repoUrl, lang?="en", style?="hook", thread?=false, autoPost?=false }
 2. Draft tweet
    - Run repo-summary → tweet-draft prompt chain
    - Constraints: ≤ 280 chars per tweet, hook-first, 1–2 hashtags max, link last
-   - Output to `~/.openteam/agents/growth-marketer/drafts/<repo>-<timestamp>.md`
+   - Output to `~/.teemai/agents/growth-marketer/drafts/<repo>-<timestamp>.md`
    - Optionally generate 2–3 variants and write a `decision` entry naming the picked one
 
 3. Post (gated)
    - If autoPost=false (default): print the draft + the file path, write a `progress` entry "draft ready, awaiting approval", stop
    - If autoPost=true OR user calls the skill with --confirm <draft-path>:
-     - Launch Playwright with persistent context at `~/.openteam/browser-profiles/x/`
+     - Launch Playwright with persistent context at `~/.teemai/browser-profiles/x/`
      - If not logged in (detected via redirect to /login): write a `constraint` entry "X login expired", print instructions for the user to log in once, stop
      - Open https://x.com/home, click Post, paste each tweet (thread: paste + click "Add" between tweets), click Post
      - Capture the posted tweet URL from the toast / navigation
@@ -129,7 +129,7 @@ input: { repoUrl, lang?="en", style?="hook", thread?=false, autoPost?=false }
 | Output shape | Single tweet, optional 2–5 tweet thread | Covers the common case without thread-chaining complexity in v1 |
 | Images | Text only | Smallest scope; image attachments are a clean follow-up |
 | Language | English default, `lang=zh` for Chinese | X main audience is English; explicit override available |
-| Login flow | Persistent profile under `~/.openteam/browser-profiles/x/` | User logs in once interactively; agent reuses cookies; never asks for or stores password |
+| Login flow | Persistent profile under `~/.teemai/browser-profiles/x/` | User logs in once interactively; agent reuses cookies; never asks for or stores password |
 
 If any of these defaults disagree with the user's intent, they can be flipped by editing `proposal.md` and `tasks.md` before implementation starts.
 

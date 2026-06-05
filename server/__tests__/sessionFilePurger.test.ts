@@ -3,7 +3,7 @@ import { promises as fs, writeFileSync, symlinkSync, existsSync, mkdirSync } fro
 import { join } from 'path'
 import { tmpdir } from 'os'
 
-const TMP_HOME = join(tmpdir(), `openteam-purger-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+const TMP_HOME = join(tmpdir(), `teemai-purger-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
 
 vi.mock('os', async () => {
   const actual = await vi.importActual<typeof import('os')>('os')

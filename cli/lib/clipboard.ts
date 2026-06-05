@@ -8,7 +8,7 @@
 import { execSync, spawnSync } from 'child_process'
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'fs'
 import { join } from 'path'
-import { OPENTEAM_HOME } from '../../shared/openteam-home'
+import { TEEMAI_HOME } from '../../shared/teemai-home'
 
 const platform = process.platform
 
@@ -36,7 +36,7 @@ export const readClipboardText = (): string | null => {
 
 export const saveClipboardImage = (): string | null => {
   try {
-    const dir = join(OPENTEAM_HOME, 'tmp', 'images')
+    const dir = join(TEEMAI_HOME, 'tmp', 'images')
     mkdirSync(dir, { recursive: true })
     const dest = join(dir, `paste_${Date.now()}.png`)
 

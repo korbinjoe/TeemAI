@@ -106,12 +106,12 @@ fi
 WB_WRITE="${SCRIPT_DIR}/../../whiteboard/scripts/wb-write.sh"
 write_wb() {
   local type="$1" summary="$2"
-  if [[ -x "$WB_WRITE" && -n "${OPENTEAM_CHAT_ID:-}" && -n "${EXPERT_API_BASE:-}" && -n "${OPENTEAM_INSTANCE_ID:-}" ]]; then
+  if [[ -x "$WB_WRITE" && -n "${TEEMAI_CHAT_ID:-}" && -n "${EXPERT_API_BASE:-}" && -n "${TEEMAI_INSTANCE_ID:-}" ]]; then
     bash "$WB_WRITE" "$type" "$summary" "x-promoter" >/dev/null 2>&1 || true
   fi
 }
 
-PROFILE_DIR="${HOME}/.openteam/browser-profiles/x"
+PROFILE_DIR="${HOME}/.teemai/browser-profiles/x"
 FAILURE_PNG="${DRAFT%.md}-failure.png"
 
 set +e

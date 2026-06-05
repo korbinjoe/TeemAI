@@ -15,7 +15,7 @@ const log = createFrontendLogger('WebSocket')
 
 const isDebug = (): boolean => {
   if (typeof window === 'undefined') return false
-  return (window as unknown as { __OPENTEAM_WS_DEBUG__?: boolean }).__OPENTEAM_WS_DEBUG__ === true
+  return (window as unknown as { __TEEMAI_WS_DEBUG__?: boolean }).__TEEMAI_WS_DEBUG__ === true
 }
 
 /* ── Handler Type ── */

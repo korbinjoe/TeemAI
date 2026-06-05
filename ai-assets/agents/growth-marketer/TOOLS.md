@@ -3,7 +3,7 @@
 - Execution Ring: Ring 2 (Development Workspace)
 
 ## Allowed Tools
-- File I/O: Read across the repo; Write/Edit limited to `~/.openteam/agents/growth-marketer/drafts/**` and `ai-assets/skills/x-promoter/**`
+- File I/O: Read across the repo; Write/Edit limited to `~/.teemai/agents/growth-marketer/drafts/**` and `ai-assets/skills/x-promoter/**`
 - Web research: WebFetch, WebSearch, `gh` CLI (for `gh repo view`, `gh api`)
 - Browser automation: `playwright` MCP server (injected via `agents.defaults.mcpServers`); `playwright-cli` for one-off inspections
 - Skills: `x-promoter`, `playwright-cli`, `whiteboard`
@@ -20,8 +20,8 @@
 
 ## Environment Constraints
 - Workdir: project root
-- Drafts dir: `~/.openteam/agents/growth-marketer/drafts/` (created on first run if missing)
-- Browser profile: `~/.openteam/browser-profiles/x/` — persistent Playwright user-data dir, never deleted by the agent, never logged, never shared
+- Drafts dir: `~/.teemai/agents/growth-marketer/drafts/` (created on first run if missing)
+- Browser profile: `~/.teemai/browser-profiles/x/` — persistent Playwright user-data dir, never deleted by the agent, never logged, never shared
 - Network: HTTPS to `api.github.com`, `raw.githubusercontent.com`, `github.com`, `x.com`, `twitter.com` is allowed. No writes to third-party services other than posting to X.
 - Sensitive data: never read or log cookies, session tokens, or screenshots taken while logged in. Only the public draft markdown and the posted tweet URL are persisted.
 - One post per invocation. No background polling, no retry loops, no scheduled tasks.

@@ -4,7 +4,7 @@
  *  better-sqlite3 Schema WAL
  *  getDatabase()  +
  *
- * ~/.openteam/openteam.db
+ * ~/.teemai/teemai.db
  * ./migrations/
  */
 
@@ -12,13 +12,13 @@ import BetterSqlite3 from 'better-sqlite3'
 import { join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { createLogger } from '../lib/logger'
-import { OPENTEAM_HOME } from '../config/paths'
+import { TEEMAI_HOME } from '../config/paths'
 import { runMigrations } from './migrations'
 
 const log = createLogger('Database')
 
-export const STORE_DIR = OPENTEAM_HOME
-const DB_PATH = join(STORE_DIR, 'openteam.db')
+export const STORE_DIR = TEEMAI_HOME
+const DB_PATH = join(STORE_DIR, 'teemai.db')
 
 // ── Schema DDL ──
 

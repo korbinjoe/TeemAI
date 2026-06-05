@@ -14,5 +14,5 @@
 - Code changes must state impact scope
 
 ## Current Focus
-- OpenTeam: Operating system for AI super-individuals
+- TeemAI: Operating system for AI super-individuals
 - Core metrics: first-pass rate, task success rate

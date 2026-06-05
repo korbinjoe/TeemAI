@@ -17,7 +17,7 @@ export const getAuthToken = (): string | null => {
     const urlToken = params.get('token')
     if (urlToken) return urlToken
     if (window.location.pathname.startsWith('/mobile')) {
-      return localStorage.getItem('openteam-mobile-token')
+      return localStorage.getItem('teemai-mobile-token')
     }
     return null
   } catch {

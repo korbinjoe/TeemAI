@@ -77,7 +77,7 @@ The system SHALL create `<workspaceDir>/memory/` for every registered agent duri
 
 #### Scenario: Seeding creates memory directory
 
-- **Given** agent `architect` has no `~/.openteam/agents/architect/memory/` directory
+- **Given** agent `architect` has no `~/.teemai/agents/architect/memory/` directory
 - **When** the server completes its workspace seeding pass at boot
-- **Then** the directory `~/.openteam/agents/architect/memory/` exists
+- **Then** the directory `~/.teemai/agents/architect/memory/` exists
 - **And** the directory is empty (no template file is created)

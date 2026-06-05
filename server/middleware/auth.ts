@@ -18,7 +18,7 @@ export const setRuntimeAuthToken = (token: string | null): void => {
 }
 
 export const getAuthToken = (): string | undefined =>
-  runtimeToken ?? process.env.OPENTEAM_AUTH_TOKEN ?? undefined
+  runtimeToken ?? process.env.TEEMAI_AUTH_TOKEN ?? undefined
 
 /**
  * Express localhost  Bearer Token
@@ -35,7 +35,7 @@ export const createAuthMiddleware = () =>
       return
     }
 
-    if (req.path.startsWith('/api/auth/openteam/')) {
+    if (req.path.startsWith('/api/auth/teemai/')) {
       next()
       return
     }
@@ -49,7 +49,7 @@ export const createAuthMiddleware = () =>
     const token = getAuthToken()
     if (!token) {
       res.status(403).json({
-        error: 'Remote access denied. Set OPENTEAM_AUTH_TOKEN environment variable to enable remote access.',
+        error: 'Remote access denied. Set TEEMAI_AUTH_TOKEN environment variable to enable remote access.',
       })
       return
     }

@@ -16,9 +16,9 @@ policies, and completion notification. **Exit immediately after submission.**
 
 | Variable | Description |
 |----------|-------------|
-| `EXPERT_API_BASE` | openteam-server HTTP address |
-| `OPENTEAM_CHAT_ID` | Current chat ID |
-| `OPENTEAM_INSTANCE_ID` | Your instance ID |
+| `EXPERT_API_BASE` | teemai-server HTTP address |
+| `TEEMAI_CHAT_ID` | Current chat ID |
+| `TEEMAI_INSTANCE_ID` | Your instance ID |
 
 ## Create Workflow
 

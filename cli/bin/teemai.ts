@@ -16,8 +16,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const { version } = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf8'))
 
 const program = new Command()
-  .name('openteam')
-  .description('OpenTeam - AI Agent Team Management')
+  .name('teemai')
+  .description('TeemAI - AI Agent Team Management')
   .version(version)
 
 program.addCommand(serveCommand)
@@ -52,7 +52,7 @@ program
     }
 
     const url = `http://localhost:${actualPort}`
-    console.log(chalk.green('\n  OpenTeam is running at:'))
+    console.log(chalk.green('\n  TeemAI is running at:'))
     console.log(chalk.bold(`  → ${url}\n`))
 
     const { default: open } = await import('open')

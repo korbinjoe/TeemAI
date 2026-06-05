@@ -23,8 +23,8 @@ echo "git_local_query_ms_min=$min"
 echo "git_local_query_ms_max=$max"
 
 echo "[perf] ui build output summary"
-npm run -s build:ui >/tmp/openteam-perf-build.log 2>&1 || {
-  cat /tmp/openteam-perf-build.log
+npm run -s build:ui >/tmp/teemai-perf-build.log 2>&1 || {
+  cat /tmp/teemai-perf-build.log
   exit 1
 }
-grep -E "dist/assets/.*\\.js|dist/assets/.*\\.css|gzip size|Some chunks are larger" /tmp/openteam-perf-build.log | head -n 120
+grep -E "dist/assets/.*\\.js|dist/assets/.*\\.css|gzip size|Some chunks are larger" /tmp/teemai-perf-build.log | head -n 120

@@ -391,7 +391,7 @@ This reduces Lead's context window consumption for multi-step tasks significantl
 The `WorkflowEngine` persists DAG state to disk:
 
 ```
-~/.openteam/workflows/<workflow-id>/
+~/.teemai/workflows/<workflow-id>/
   dag.json            — original DAG definition
   state.json          — current execution state (which tasks completed, results)
   tasks/<taskId>/     — individual task plan.md + result.md (existing format)
@@ -452,7 +452,7 @@ interface WorkflowResult {
 }
 ```
 
-The `WorkflowResult` is persisted to `~/.openteam/workflows/<id>/result.json`
+The `WorkflowResult` is persisted to `~/.teemai/workflows/<id>/result.json`
 and written to the Whiteboard as a `progress` entry, so it survives Lead
 process restarts.
 
@@ -547,7 +547,7 @@ This means the server is a **stateful executor** that outlives Lead sessions.
 The key invariant: `state.json` is always up-to-date, even without Lead.
 
 **Server restart**: If the server itself restarts, it scans
-`~/.openteam/workflows/` for `state.json` files with `status: 'running'`.
+`~/.teemai/workflows/` for `state.json` files with `status: 'running'`.
 For each:
 - Tasks marked `running` whose Expert processes no longer exist → mark `failed`
   (the Expert was killed by the server restart)
@@ -704,7 +704,7 @@ alive, so `state.json` accurately reflects which tasks were `running` vs
 **Recovery after graceful shutdown**:
 
 ```
-App restarts → Server scans ~/.openteam/workflows/
+App restarts → Server scans ~/.teemai/workflows/
   → Finds state.json with status = 'suspended'
   → Tasks marked 'suspended' are re-queued as 'pending' (not 'failed')
   → Lead starts → resume-workflow.sh → Engine re-spawns Experts for those tasks
@@ -926,7 +926,7 @@ prompt, providing continuity without requiring the user to repeat themselves.
 
 ### 6.1 Problem Statement
 
-The Mailbox system (`~/.openteam/mailbox/{chatId}/{from}→{to}.jsonl`) was
+The Mailbox system (`~/.teemai/mailbox/{chatId}/{from}→{to}.jsonl`) was
 designed as the inter-agent communication channel. In practice, its only active
 use is:
 
@@ -970,7 +970,7 @@ is documented as "last resort fallback" in the expert-dispatcher SKILL.md.
 
 **Phase 3 — Clean up**:
 - Remove `MailboxManager.ts` and related imports (9 files reference it)
-- Remove `~/.openteam/mailbox/` directory creation
+- Remove `~/.teemai/mailbox/` directory creation
 - Clean up `shared/agent-message-types.ts` (remove unused message types)
 
 ### 6.3 What Replaces Mailbox's Functions

@@ -6,9 +6,9 @@ import { existsSync } from 'fs'
 import { WorkspaceStore } from '../../server/stores/WorkspaceStore.js'
 import { AgentStore } from '../../server/stores/AgentStore.js'
 import { ChatStore } from '../../server/stores/ChatStore.js'
-import { OPENTEAM_HOME } from '../../shared/openteam-home'
+import { TEEMAI_HOME } from '../../shared/teemai-home'
 
-const storeDir = OPENTEAM_HOME
+const storeDir = TEEMAI_HOME
 
 export const configCommand = new Command('config')
   .description('View current configuration info')
@@ -39,7 +39,7 @@ export const configCommand = new Command('config')
       return
     }
 
-    console.log(chalk.bold('\nOpenTeam Configuration:\n'))
+    console.log(chalk.bold('\nTeemAI Configuration:\n'))
     console.log(`  Storage:    ${chalk.cyan(config.storageDir)}`)
     console.log(`  Exists:     ${config.storageExists ? chalk.green('Yes') : chalk.red('No')}`)
     console.log()

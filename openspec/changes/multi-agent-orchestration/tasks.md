@@ -69,7 +69,7 @@ Remove reading infrastructure:
 Remove server infrastructure:
 - [x] Remove `MailboxManager` from server DI — 7 files: `ExpertExitHandler.ts`, `ExpertActivityHandler.ts`, `ExpertEventWiring.ts`, `ExpertLifecycle.ts`, `ExpertHandler.ts`, `server/index.ts`, `expertRoutes.ts`
 - [x] Delete `server/mailbox/MailboxManager.ts`
-- [x] Remove `~/.openteam/mailbox/` directory creation from server startup
+- [x] Remove `~/.teemai/mailbox/` directory creation from server startup
 
 Clean up types:
 - [x] Mark deprecated AgentMessage types with `@deprecated` in `shared/agent-message-types.ts`: task:accepted, task:progress, task:milestone, task:idle, task:rejected, task:delegated, query, response
@@ -97,7 +97,7 @@ Core engine:
 Failure handling and retry:
 - [x] Implement `onFailure` policy: `stop` (halt DAG, skip remaining), `skip` (mark failed, continue non-dependents), `retry` (re-spawn Expert, up to maxRetries)
 - [x] Implement `WorkflowResult` with per-task status (completed/failed/skipped/pending) and aggregate counts
-- [x] Persist `result.json` to `~/.openteam/workflows/<id>/` on DAG completion or stop
+- [x] Persist `result.json` to `~/.teemai/workflows/<id>/` on DAG completion or stop
 
 Per-task timeout:
 - [x] Implement per-task timeout timer (default 30 min, overridable in `WorkflowTask.timeoutMinutes`)
@@ -111,11 +111,11 @@ DAG-internal Handoff awareness:
 - [x] Engine distinguishes handoff-exit (old agent, ignore) from task-completion (current agent, record result)
 
 Checkpoint and recovery:
-- [x] Implement checkpoint persistence (`~/.openteam/workflows/<id>/state.json`) using atomic write-then-rename
+- [x] Implement checkpoint persistence (`~/.teemai/workflows/<id>/state.json`) using atomic write-then-rename
 - [x] Add tmp file fallback: if `state.json` missing but `state.json.tmp` exists, read tmp on recovery
 - [x] Implement workflow state machine: created → running → completed/stopped/suspended
 - [x] Add `suspended` task state — distinct from `failed`, does not consume retry budget
-- [x] Server startup: scan `~/.openteam/workflows/` for `running`/`suspended` workflows, reconcile with live processes
+- [x] Server startup: scan `~/.teemai/workflows/` for `running`/`suspended` workflows, reconcile with live processes
 - [x] For `suspended` tasks: re-queue as `pending` (automatic retry)
 - [x] For `running` tasks with dead processes: mark `failed` (apply onFailure policy)
 

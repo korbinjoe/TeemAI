@@ -6,7 +6,7 @@ import { promises as fs } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 
-const TMP_HOME = join(tmpdir(), `openteam-route-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+const TMP_HOME = join(tmpdir(), `teemai-route-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
 
 vi.mock('os', async () => {
   const actual = await vi.importActual<typeof import('os')>('os')

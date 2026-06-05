@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { OPENTEAM_HOME } from './paths'
+import { TEEMAI_HOME } from './paths'
 
 export interface ModelOption {
   value: string
@@ -23,7 +23,7 @@ const HARDCODED_MODELS: ModelOption[] = [
 
 const HARDCODED_DEFAULT_MODEL = 'claude-opus-4-8'
 
-const CONFIG_PATH = join(OPENTEAM_HOME, 'config.json')
+const CONFIG_PATH = join(TEEMAI_HOME, 'config.json')
 
 interface ConfigFile {
   models?: ModelOption[]

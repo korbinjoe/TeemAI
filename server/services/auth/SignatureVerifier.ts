@@ -9,11 +9,11 @@ import { createHash, generateKeyPairSync, sign, verify } from 'crypto'
 import { join } from 'path'
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { createLogger } from '../../lib/logger'
-import { OPENTEAM_HOME } from '../../config/paths'
+import { TEEMAI_HOME } from '../../config/paths'
 
 const log = createLogger('SignatureVerifier')
 
-const KEYS_DIR = join(OPENTEAM_HOME, 'keys')
+const KEYS_DIR = join(TEEMAI_HOME, 'keys')
 const PRIVATE_KEY_PATH = join(KEYS_DIR, 'update-signing.pem')
 const PUBLIC_KEY_PATH = join(KEYS_DIR, 'update-signing.pub')
 

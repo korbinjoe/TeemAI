@@ -1,7 +1,7 @@
 /**
  * ACP (Agent Client Protocol)  —
  *
- *  JSON-RPC 2.0  OpenTeam  AI Agent
+ *  JSON-RPC 2.0  TeemAI  AI Agent
  * v5:  agentclientprotocol.com  spec2026-04
  *   - P0-1tool_call_update / plan / modeId / AvailableCommand[]
  *   - P0-2agentCapabilities promptCapabilities / mcpCapabilities / sessionCapabilities
@@ -335,7 +335,7 @@ export type ACPSessionUpdateType =
   | { sessionUpdate: 'config_option_update'; configOptions: ACPConfigOption[] }
   | { sessionUpdate: 'session_info_update'; title?: string; updatedAt?: string }
 
-export interface OpenTeamParsedMessage {
+export interface TeemAIParsedMessage {
   id: string
   role: 'user' | 'agent'
   content: string
@@ -353,13 +353,13 @@ export interface OpenTeamParsedMessage {
   isTurnEnd?: boolean
 }
 
-export type OpenTeamSessionUpdateType =
-  | { sessionUpdate: '_openteam/activity'; activity: Record<string, unknown> }
-  | { sessionUpdate: '_openteam/cli_init'; slashCommands: string[]; model?: string }
-  | { sessionUpdate: '_openteam/thinking'; text: string; thinkingSummary?: string }
-  | { sessionUpdate: '_openteam/messages_batch'; messages: OpenTeamParsedMessage[]; replacedStatsId: string | null; batchType?: 'full' | 'delta' }
+export type TeemAISessionUpdateType =
+  | { sessionUpdate: '_teemai/activity'; activity: Record<string, unknown> }
+  | { sessionUpdate: '_teemai/cli_init'; slashCommands: string[]; model?: string }
+  | { sessionUpdate: '_teemai/thinking'; text: string; thinkingSummary?: string }
+  | { sessionUpdate: '_teemai/messages_batch'; messages: TeemAIParsedMessage[]; replacedStatsId: string | null; batchType?: 'full' | 'delta' }
 
-export type SessionUpdateType = ACPSessionUpdateType | OpenTeamSessionUpdateType
+export type SessionUpdateType = ACPSessionUpdateType | TeemAISessionUpdateType
 
 export interface ACPSessionUpdateParams {
   sessionId: string

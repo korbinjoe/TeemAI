@@ -134,7 +134,7 @@ The protocol relies on these data sources (some available now, others pending ca
 | Source | Status | Access |
 |--------|--------|--------|
 | War-room entries | Available | `wb-query.sh` |
-| Agent memory (local) | Available | `~/.openteam/agents/<id>/memory/` |
+| Agent memory (local) | Available | `~/.teemai/agents/<id>/memory/` |
 | MemoryStore (cloud) | Pending | `memory_recall` / `memory_smart_search` via MCP |
 | GrowthStore metrics | Pending | Evolution feed endpoint (`/api/evolution/metrics`) |
 | Task outcome history | Pending | GrowthStore `agent_task_outcomes` table |

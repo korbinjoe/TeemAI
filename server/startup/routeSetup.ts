@@ -98,7 +98,7 @@ export const setupRoutes = (app: Express, d: RouteDeps) => {
   if (authToken) {
     log.info('Token authentication enabled for remote access')
   } else {
-    log.info('No auth token set — remote API access will be denied (enable via LAN or OPENTEAM_AUTH_TOKEN)')
+    log.info('No auth token set — remote API access will be denied (enable via LAN or TEEMAI_AUTH_TOKEN)')
   }
 
   const serverVersion: string = (() => {

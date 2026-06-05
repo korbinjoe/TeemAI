@@ -15,9 +15,9 @@ const MobileLayout = () => {
   if (!isAuthenticated) {
     return (
       <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-bg-primary px-6 text-center">
-        <div className="text-lg font-semibold text-text-primary">OpenTeam Mobile</div>
+        <div className="text-lg font-semibold text-text-primary">TeemAI Mobile</div>
         <p className="text-sm text-text-secondary">
-          Scan the QR code from your desktop OpenTeam settings to connect.
+          Scan the QR code from your desktop TeemAI settings to connect.
         </p>
       </div>
     )

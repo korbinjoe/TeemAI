@@ -6,7 +6,7 @@ import express from 'express'
 import { createServer, type Server } from 'http'
 import { AddressInfo } from 'net'
 
-const TMP_HOME = join(tmpdir(), `openteam-tray-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+const TMP_HOME = join(tmpdir(), `teemai-tray-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
 
 vi.mock('os', async () => {
   const actual = await vi.importActual<typeof import('os')>('os')

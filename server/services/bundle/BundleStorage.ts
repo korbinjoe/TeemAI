@@ -1,7 +1,7 @@
 /**
  * BundleStorage — Bundle
  *
- *  ~/.openteam/bundle-store/  bundle
+ *  ~/.teemai/bundle-store/  bundle
  *  OSS/CDN
  */
 
@@ -12,12 +12,12 @@ import {
 } from 'fs'
 import { createHash } from 'crypto'
 import { createLogger } from '../../lib/logger'
-import { OPENTEAM_HOME } from '../../config/paths'
+import { TEEMAI_HOME } from '../../config/paths'
 import type { ReadStream } from 'fs'
 
 const log = createLogger('BundleStorage')
 
-const BUNDLE_STORE = join(OPENTEAM_HOME, 'bundle-store')
+const BUNDLE_STORE = join(TEEMAI_HOME, 'bundle-store')
 
 export interface StoredBundle {
   version: string

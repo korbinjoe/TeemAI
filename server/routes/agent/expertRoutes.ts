@@ -76,7 +76,7 @@ export const createExpertRoutes = (deps: ExpertRouteDeps): Router => {
     const expandedTask = await expandSlashCommand(taskDescription, cwd)
 
     const resolvedTask = `[Task ID: ${envelope.taskId}]
-[Execution Plan: ~/.openteam/tasks/${envelope.taskId}/plan.md]
+[Execution Plan: ~/.teemai/tasks/${envelope.taskId}/plan.md]
 ${envelope.priority ? `[Priority: ${envelope.priority}]` : ''}
 
 ${expandedTask}`

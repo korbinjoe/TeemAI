@@ -71,5 +71,5 @@ A new module `server/orchestration/WorkflowScheduler.ts` that:
 
 - `server/orchestration/` — new WorkflowScheduler, minor wiring in WorkflowRegistry
 - `ai-assets/agents/lead/SOUL.md` — simplify decision model
-- `~/.openteam/skills/expert-dispatcher/` — remove dead scripts
+- `~/.teemai/skills/expert-dispatcher/` — remove dead scripts
 - No DB schema changes, no new dependencies

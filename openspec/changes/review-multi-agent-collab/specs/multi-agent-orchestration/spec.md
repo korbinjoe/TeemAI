@@ -18,7 +18,7 @@ The system SHALL run a Supervisor topology with exactly one `lead` Agent and zer
 
 #### Scenario: Worker-to-Worker handoff is rejected
 
-- **Given** an Expert `architect` attempts to write to `~/.openteam/mailbox/{chatId}/architect→fullstack-product-engineer.jsonl`
+- **Given** an Expert `architect` attempts to write to `~/.teemai/mailbox/{chatId}/architect→fullstack-product-engineer.jsonl`
 - **When** the message is delivered
 - **Then** the recipient Expert SHALL ignore non-Lead `task:*` messages
 - **And** the contract considers this a violation that the protocol layer logs but does not enforce at the filesystem level (Workers run with mailbox write access; enforcement is by convention + prompt)

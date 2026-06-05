@@ -10,7 +10,7 @@ describe('isAllowedCwd', () => {
 
   it('allows cwd within homedir', () => {
     expect(isAllowedCwd(homedir())).toBe(true)
-    expect(isAllowedCwd(homedir() + '/.openteam')).toBe(true)
+    expect(isAllowedCwd(homedir() + '/.teemai')).toBe(true)
   })
 
   it('rejects cwd outside allowed roots', () => {

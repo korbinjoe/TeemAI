@@ -179,7 +179,7 @@ const NewChatForm = ({ currentWorkspaceId, currentAgentId, onCreated }: NewChatF
       const { workspace, chat } = await res.json()
       // Notify useWorkspaceChats listeners so the sidebar/quad pick up the new
       // chat before WorkspaceLayout's auto-redirect runs against a stale list.
-      window.dispatchEvent(new CustomEvent('openteam:chat-created', {
+      window.dispatchEvent(new CustomEvent('teemai:chat-created', {
         detail: { workspaceId: workspace.id, chatId: chat.id },
       }))
       onCreated?.()
@@ -254,8 +254,8 @@ const NewChatForm = ({ currentWorkspaceId, currentAgentId, onCreated }: NewChatF
   }, [dirPicker, t])
 
   const handleQuickCreateWorkspace = useCallback(async () => {
-    if (isElectron && window.openteamBridge?.pickDirectory) {
-      const path = await window.openteamBridge.pickDirectory()
+    if (isElectron && window.teemaiBridge?.pickDirectory) {
+      const path = await window.teemaiBridge.pickDirectory()
       if (path) await onWsPathSelected(path)
     } else {
       dirPicker.openDirPicker()

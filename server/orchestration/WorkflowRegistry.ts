@@ -9,7 +9,7 @@ import { createLogger } from '../lib/logger'
 
 const log = createLogger('WorkflowRegistry')
 
-const WORKFLOWS_ROOT = join(homedir(), '.openteam', 'workflows')
+const WORKFLOWS_ROOT = join(homedir(), '.teemai', 'workflows')
 
 interface WorkflowRegistryDeps {
   whiteboardManager?: { appendEntry(chatId: string, entry: Record<string, unknown>): void }

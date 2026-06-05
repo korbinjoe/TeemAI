@@ -49,7 +49,7 @@ export class SkillManager {
 
   /**
    *  builtin skills  ~/.claude/skills/
-   *  Claude Code  OpenTeam  Skill
+   *  Claude Code  TeemAI  Skill
    */
   async syncBuiltinToClaudeHome(): Promise<void> {
     const claudeSkillsDir = join(homedir(), '.claude', 'skills')

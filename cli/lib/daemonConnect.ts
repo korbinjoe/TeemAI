@@ -1,7 +1,7 @@
 /**
  * daemonConnect —  daemon
  *
- *  ~/.openteam/daemon.port → GET /api/health1s timeout
+ *  ~/.teemai/daemon.port → GET /api/health1s timeout
  *  { port } null
  */
 
@@ -10,16 +10,16 @@ import { existsSync, mkdirSync, openSync, readFileSync, unlinkSync, writeFileSyn
 import { homedir } from 'os'
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
-import { OPENTEAM_HOME } from '../../shared/openteam-home'
+import { TEEMAI_HOME } from '../../shared/teemai-home'
 
 const HOME = homedir()
-const OPENTEAM_DIR = OPENTEAM_HOME
+const TEEMAI_DIR = TEEMAI_HOME
 
-const IS_DEV = process.env.OPENTEAM_DEV === '1' || fileURLToPath(import.meta.url).endsWith('.ts')
+const IS_DEV = process.env.TEEMAI_DEV === '1' || fileURLToPath(import.meta.url).endsWith('.ts')
 const SUFFIX = IS_DEV ? '.dev' : ''
-const PORT_FILE = join(OPENTEAM_DIR, `daemon${SUFFIX}.port`)
-const PID_FILE = join(OPENTEAM_DIR, `daemon${SUFFIX}.pid`)
-const PLIST_LABEL = 'ai.openteam.daemon'
+const PORT_FILE = join(TEEMAI_DIR, `daemon${SUFFIX}.port`)
+const PID_FILE = join(TEEMAI_DIR, `daemon${SUFFIX}.pid`)
+const PLIST_LABEL = 'ai.teemai.daemon'
 const PLIST_PATH = join(HOME, 'Library', 'LaunchAgents', `${PLIST_LABEL}.plist`)
 
 const CLI_VERSION: string = (() => {
@@ -94,10 +94,10 @@ const removeStaleFiles = () => {
 
 /**
  *  daemon pid
- * Dev  openteam.ts daemon run openteam.js daemon run
+ * Dev  teemai.ts daemon run teemai.js daemon run
  */
 const killStaleDaemons = () => {
-  const pattern = IS_DEV ? 'openteam.ts daemon run' : 'openteam.js daemon run'
+  const pattern = IS_DEV ? 'teemai.ts daemon run' : 'teemai.js daemon run'
   try {
     const output = execSync(`pgrep -f "${pattern}" 2>/dev/null || true`, { encoding: 'utf8' }).trim()
     if (!output) return
@@ -160,7 +160,7 @@ const ensurePlistUpToDate = async (domain: string): Promise<void> => {
     const currentPlist = readFileSync(PLIST_PATH, 'utf8')
     if (expectedPlist === currentPlist) return
 
-    const logsDir = join(OPENTEAM_DIR, 'logs')
+    const logsDir = join(TEEMAI_DIR, 'logs')
     mkdirSync(logsDir, { recursive: true })
     writeFileSync(PLIST_PATH, expectedPlist, { encoding: 'utf8', mode: 0o644 })
 
@@ -180,7 +180,7 @@ export const ensureDaemon = async (): Promise<DaemonConnection> => {
 
   const { waitForHealth } = await import('../commands/daemon.js') as typeof import('../commands/daemon')
 
-  if (process.platform === 'darwin' && existsSync(PLIST_PATH) && !process.env.OPENTEAM_SKIP_LAUNCHD && !IS_DEV) {
+  if (process.platform === 'darwin' && existsSync(PLIST_PATH) && !process.env.TEEMAI_SKIP_LAUNCHD && !IS_DEV) {
     const uid = typeof process.getuid === 'function' ? process.getuid() : 501
     const domain = `gui/${uid}`
 
@@ -210,7 +210,7 @@ export const ensureDaemon = async (): Promise<DaemonConnection> => {
 
   const args = buildProgramArguments()
 
-  const logsDir = join(OPENTEAM_DIR, 'logs')
+  const logsDir = join(TEEMAI_DIR, 'logs')
   mkdirSync(logsDir, { recursive: true })
   const outFd = openSync(join(logsDir, 'daemon.log'), 'a')
   const errFd = openSync(join(logsDir, 'daemon.err'), 'a')
@@ -223,7 +223,7 @@ export const ensureDaemon = async (): Promise<DaemonConnection> => {
 
   const port = await waitForHealth(10000)
   if (port === null) {
-    throw new Error('Daemon failed to start (10s timeout), check logs: ~/.openteam/logs/daemon.err')
+    throw new Error('Daemon failed to start (10s timeout), check logs: ~/.teemai/logs/daemon.err')
   }
 
   const pid = readPid()

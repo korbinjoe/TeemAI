@@ -7,8 +7,8 @@
  *   log.error('spawn failed', { error: err.message })
  *
  *   - Console
- *   - ~/.openteam/logs/server-YYYY-MM-DD.log
- *   - ~/.openteam/logs/error-YYYY-MM-DD.log error
+ *   - ~/.teemai/logs/server-YYYY-MM-DD.log
+ *   - ~/.teemai/logs/error-YYYY-MM-DD.log error
  *
  *   - LOG_LEVEL debug/info/warn/error info
  */
@@ -16,9 +16,9 @@
 import { createLogger as winstonCreateLogger, format, transports, Logger } from 'winston'
 import { join } from 'path'
 import { mkdirSync, readdirSync, statSync, unlinkSync } from 'fs'
-import { OPENTEAM_HOME } from '../config/paths'
+import { TEEMAI_HOME } from '../config/paths'
 
-const LOG_DIR = join(OPENTEAM_HOME, 'logs')
+const LOG_DIR = join(TEEMAI_HOME, 'logs')
 const MAX_AGE_DAYS = 14
 const MAX_FILE_SIZE = 20 * 1024 * 1024 // 20MB
 
@@ -68,7 +68,7 @@ const createFileTransport = (prefix: string, level?: string) =>
     ),
   })
 
-const cliMuteFilter = format((info) => (process.env.OPENTEAM_CLI ? false : info))
+const cliMuteFilter = format((info) => (process.env.TEEMAI_CLI ? false : info))
 
 const consoleTransport = new transports.Console({
   format: format.combine(

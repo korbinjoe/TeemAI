@@ -68,7 +68,7 @@ interface ExpertInfo {
 
 // ================== Constant ==================
 const CHANGES_TAB_KEY = '__changes__'
-const LAYOUT_STORAGE_KEY = 'openteam:terminal-layout'
+const LAYOUT_STORAGE_KEY = 'teemai:terminal-layout'
 
 const hiddenStorageKey = (chatId?: string) => chatId ? `cc:terminal:hidden:${chatId}` : null
 

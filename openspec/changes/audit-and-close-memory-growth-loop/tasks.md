@@ -31,7 +31,7 @@ Sequential unless marked `[parallel]`. Each task closes a slice end-to-end.
 ## 5. Server: workspace dir seeding
 
 - [x] 5.1 In `server/services/WorkspaceSeeder.ts` add `ensureAgentMemoryDirs()` step after seed — creates `memory/` under each agent dir.
-- [ ] 5.2 Smoke test: remove `~/.openteam/agents/architect/memory/` if present, boot the server, assert the directory exists after seeding.
+- [ ] 5.2 Smoke test: remove `~/.teemai/agents/architect/memory/` if present, boot the server, assert the directory exists after seeding.
 
 ## 6. Adjacent bug: Sensei prompt asset
 

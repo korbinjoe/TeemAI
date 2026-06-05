@@ -1,5 +1,5 @@
 
-const SELECTED_AGENT_KEY = 'openteam:selected-agent'
+const SELECTED_AGENT_KEY = 'teemai:selected-agent'
 
 export function getSelectedAgentId(): string | null {
   try {

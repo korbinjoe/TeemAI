@@ -1,5 +1,5 @@
 /**
- * loadServerEnv — apply the top-level `env` block from ~/.openteam/openteam.json
+ * loadServerEnv — apply the top-level `env` block from ~/.teemai/teemai.json
  * to process.env before the rest of the server boots.
  *
  * Shell-exported variables always win: a key already present in process.env is
@@ -9,7 +9,7 @@
  * module reads env. Re-exports applyServerEnv for tests.
  *
  * Schema (subset):
- *   { "env": { "OPENTEAM_LIGHT_MODEL": "claude-opus-4-7", ... } }
+ *   { "env": { "TEEMAI_LIGHT_MODEL": "claude-opus-4-7", ... } }
  *
  * Failure modes (missing file, bad JSON, wrong type) are silent — config-driven
  * env is optional and must not block startup.
@@ -17,9 +17,9 @@
 
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { OPENTEAM_HOME } from './paths'
+import { TEEMAI_HOME } from './paths'
 
-const USER_CONFIG_PATH = join(OPENTEAM_HOME, 'openteam.json')
+const USER_CONFIG_PATH = join(TEEMAI_HOME, 'teemai.json')
 
 export const applyServerEnv = (configPath: string = USER_CONFIG_PATH): string[] => {
   let raw: string

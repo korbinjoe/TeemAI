@@ -4,7 +4,7 @@
  *  chat  entries.jsonl +  snapshot.json
  *  Agent →  appendFileSync + O_APPEND
  *
- *   ~/.openteam/whiteboard/{chatId}/
+ *   ~/.teemai/whiteboard/{chatId}/
  *     ├── entries.jsonl   #  entry
  *     └── snapshot.json   # active debounce
  *

@@ -20,7 +20,7 @@
 │     │                                                        │
 │     ▼                                                        │
 │  Outputs:                                                    │
-│    - Draft  → ~/.openteam/agents/growth-marketer/drafts/     │
+│    - Draft  → ~/.teemai/agents/growth-marketer/drafts/     │
 │    - Posted → war-room artifact entry with tweet URL         │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -51,7 +51,7 @@ The agent is a thin orchestrator. The reusable capability lives in the `x-promot
 ### Runtime data layout
 
 ```
-~/.openteam/
+~/.teemai/
   agents/growth-marketer/
     drafts/
       <owner>-<repo>-<YYYYMMDD-HHMM>.md     # draft + provenance + variants
@@ -129,7 +129,7 @@ Exit codes:
 
 1. **Skill over inline scripts.** A new `x-promoter` skill is created instead of putting bash inline in SOUL.md. This makes the primitives reusable by other agents and keeps the agent file small.
 
-2. **Persistent browser profile per platform.** `~/.openteam/browser-profiles/x/` is dedicated to X. This isolates blast radius (e.g. clearing it only logs out X) and makes future LinkedIn / Mastodon adapters trivially additive.
+2. **Persistent browser profile per platform.** `~/.teemai/browser-profiles/x/` is dedicated to X. This isolates blast radius (e.g. clearing it only logs out X) and makes future LinkedIn / Mastodon adapters trivially additive.
 
 3. **Never store credentials, only cookies.** The agent never asks for username/password and never reads from a password manager. The user logs in interactively into the persistent profile (one-time), and the agent reuses the resulting cookies. This is the only auth path.
 

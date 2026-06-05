@@ -1,7 +1,7 @@
 /**
  * VersionGate —
  *
- *  openteam-server  versionPolicy
+ *  teemai-server  versionPolicy
  *  Expert
  */
 

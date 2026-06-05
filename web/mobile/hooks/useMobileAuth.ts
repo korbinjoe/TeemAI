@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 
-const STORAGE_KEY = 'openteam-mobile-token'
+const STORAGE_KEY = 'teemai-mobile-token'
 
 export const useMobileAuth = () => {
   const [token, setToken] = useState<string | null>(() =>

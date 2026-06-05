@@ -171,6 +171,20 @@
     "wsName": "Name",
     "repoPath": "Project directory"
   },
+  "editDialog": {
+    "title": "Edit Workspace",
+    "nameLabel": "Name",
+    "namePlaceholder": "Workspace name",
+    "reposLabel": "Working Directories",
+    "addRepo": "Add Directory",
+    "changeRepo": "Change directory",
+    "removeRepo": "Remove directory",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Workspace updated",
+    "saveFailed": "Failed to update workspace",
+    "nameRequired": "Name is required"
+  },
   "deleteDialog": {
     "title": "Delete \"{{name}}\"?",
     "desc": "This will delete the workspace and all its chats. This action cannot be undone."

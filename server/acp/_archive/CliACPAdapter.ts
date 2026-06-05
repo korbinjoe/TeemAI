@@ -228,7 +228,7 @@ export class CliACPAdapter extends EventEmitter {
 
     this.streamManager.on('activity', (state: ActivityState) => {
       this.emitSessionUpdate({
-        sessionUpdate: 'openteam:activity',
+        sessionUpdate: 'teemai:activity',
         activity: state as unknown as Record<string, unknown>,
       })
     })
@@ -282,7 +282,7 @@ export class CliACPAdapter extends EventEmitter {
 
       case 'thinking':
         return {
-          sessionUpdate: 'openteam:thinking',
+          sessionUpdate: 'teemai:thinking',
           text: msg.content,
         }
 

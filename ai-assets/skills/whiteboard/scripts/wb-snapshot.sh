@@ -2,7 +2,7 @@
 # wb-snapshot.sh — Read the current chat war-room snapshot (goal + active entries)
 # Usage: bash wb-snapshot.sh
 #
-# When OPENTEAM_INSTANCE_ID is set, the server automatically advances cursor = latestSeq,
+# When TEEMAI_INSTANCE_ID is set, the server automatically advances cursor = latestSeq,
 # so the next PostToolUse hook won't re-push already-read content.
 
 set -euo pipefail
@@ -11,8 +11,8 @@ set -euo pipefail
 source "$(dirname "$0")/_env.sh"
 
 API_BASE="${EXPERT_API_BASE:?Environment variable EXPERT_API_BASE is not set}"
-CHAT_ID="${OPENTEAM_CHAT_ID:?Environment variable OPENTEAM_CHAT_ID is not set}"
-INSTANCE_ID="${OPENTEAM_INSTANCE_ID:-}"
+CHAT_ID="${TEEMAI_CHAT_ID:?Environment variable TEEMAI_CHAT_ID is not set}"
+INSTANCE_ID="${TEEMAI_INSTANCE_ID:-}"
 
 URL="${API_BASE}/api/chats/${CHAT_ID}/whiteboard/snapshot"
 if [ -n "$INSTANCE_ID" ]; then

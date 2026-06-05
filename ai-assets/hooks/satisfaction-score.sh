@@ -7,14 +7,14 @@
 # Extracts user text messages from the JSONL transcript, classifies 7 signal types
 # via regex, computes MSS, and appends a one-line summary to the agent's satisfaction log.
 #
-# Output: ~/.openteam/agents/<agent>/memory/satisfaction.md (append)
+# Output: ~/.teemai/agents/<agent>/memory/satisfaction.md (append)
 #
 # All errors are silent (exit 0), never blocks the Agent main flow
 
 set -uo pipefail
 
-AGENT_ID="${OPENTEAM_INSTANCE_ID:-}"
-CHAT_ID="${OPENTEAM_CHAT_ID:-}"
+AGENT_ID="${TEEMAI_INSTANCE_ID:-}"
+CHAT_ID="${TEEMAI_CHAT_ID:-}"
 
 if [ -z "$AGENT_ID" ] || [ -z "$CHAT_ID" ]; then
   exit 0
@@ -77,7 +77,7 @@ elif awk "BEGIN { exit ($MSS < 0) ? 0 : 1 }" 2>/dev/null; then
 fi
 
 # Append to agent's satisfaction memory
-MEMORY_DIR="${HOME}/.openteam/agents/${AGENT_ID}/memory"
+MEMORY_DIR="${HOME}/.teemai/agents/${AGENT_ID}/memory"
 mkdir -p "$MEMORY_DIR" 2>/dev/null || exit 0
 
 SAT_FILE="${MEMORY_DIR}/satisfaction.md"

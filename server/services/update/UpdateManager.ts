@@ -1,7 +1,7 @@
 /**
  * UpdateManager —
  *
- *  ~/.openteam/versions/ manifest
+ *  ~/.teemai/versions/ manifest
  */
 
 import { join } from 'path'
@@ -11,7 +11,7 @@ import {
 } from 'fs'
 import { createHash } from 'crypto'
 import { createLogger } from '../../lib/logger'
-import { OPENTEAM_HOME } from '../../config/paths'
+import { TEEMAI_HOME } from '../../config/paths'
 
 const log = createLogger('UpdateManager')
 
@@ -71,10 +71,10 @@ export interface UpdateCheckResult {
   message: string
 }
 
-const VERSIONS_DIR = join(OPENTEAM_HOME, 'versions')
-const CURRENT_LINK = join(OPENTEAM_HOME, 'current')
-const DOWNLOADS_DIR = join(OPENTEAM_HOME, 'downloads')
-const UPDATE_STATE_FILE = join(OPENTEAM_HOME, 'update-state.json')
+const VERSIONS_DIR = join(TEEMAI_HOME, 'versions')
+const CURRENT_LINK = join(TEEMAI_HOME, 'current')
+const DOWNLOADS_DIR = join(TEEMAI_HOME, 'downloads')
+const UPDATE_STATE_FILE = join(TEEMAI_HOME, 'update-state.json')
 
 interface ErrorRecord {
   deviceId: string
@@ -99,7 +99,7 @@ export class UpdateManager {
   }
 
   private ensureDirs() {
-    for (const dir of [OPENTEAM_HOME, VERSIONS_DIR, DOWNLOADS_DIR]) {
+    for (const dir of [TEEMAI_HOME, VERSIONS_DIR, DOWNLOADS_DIR]) {
       if (!existsSync(dir)) {
         mkdirSync(dir, { recursive: true })
       }
@@ -392,7 +392,7 @@ export class UpdateManager {
     return hash === expectedHash
   }
 
-  get openteamHome() { return OPENTEAM_HOME }
+  get teemaiHome() { return TEEMAI_HOME }
   get versionsDir() { return VERSIONS_DIR }
   get currentLink() { return CURRENT_LINK }
   get downloadsDir() { return DOWNLOADS_DIR }

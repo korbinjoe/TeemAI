@@ -13,7 +13,7 @@ interface HealerDeps {
   agentRegistry: AgentRegistry
   skillManager: SkillManager
   bundledAssetsDir: string
-  openteamHome: string
+  teemaiHome: string
   isBundled: boolean
   seederFactory: () => WorkspaceSeeder
 }
@@ -32,7 +32,7 @@ export const healStaleChatStatuses = (chatStore: ChatStore) => {
   }
 }
 
-export const watchAiAssetsDev = ({ bundledAssetsDir, openteamHome, agentRegistry, skillManager, seederFactory }: Omit<HealerDeps, 'chatStore' | 'isBundled'>) => {
+export const watchAiAssetsDev = ({ bundledAssetsDir, teemaiHome, agentRegistry, skillManager, seederFactory }: Omit<HealerDeps, 'chatStore' | 'isBundled'>) => {
   const seeder = seederFactory()
   let reseedTimer: ReturnType<typeof setTimeout> | null = null
   chokidar.watch([join(bundledAssetsDir, 'agents'), join(bundledAssetsDir, 'skills'), join(bundledAssetsDir, 'hooks')], {
@@ -42,7 +42,7 @@ export const watchAiAssetsDev = ({ bundledAssetsDir, openteamHome, agentRegistry
   }).on('all', () => {
     if (reseedTimer) clearTimeout(reseedTimer)
     reseedTimer = setTimeout(async () => {
-      log.info('ai-assets changed, re-seeding to ~/.openteam/')
+      log.info('ai-assets changed, re-seeding to ~/.teemai/')
       await seeder.seed()
       await agentRegistry.reload()
       await skillManager.loadBuiltinSkills()

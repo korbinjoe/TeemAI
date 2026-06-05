@@ -17,7 +17,7 @@ import { UpdateBridge } from './modules/UpdateBridge'
 import { PORTS } from '../shared/ports'
 
 import { existsSync, readlinkSync } from 'fs'
-import { OPENTEAM_HOME } from '../shared/openteam-home'
+import { TEEMAI_HOME } from '../shared/teemai-home'
 
 const isDev = !app.isPackaged
 if (isDev) {
@@ -80,10 +80,10 @@ setupNativeModulePaths()
 
 /**
  *  server bundle
- *  ~/.openteam/current/server/  server
+ *  ~/.teemai/current/server/  server
  */
 const resolveServerBundle = (): string => {
-  const currentLink = join(OPENTEAM_HOME, 'current')
+  const currentLink = join(TEEMAI_HOME, 'current')
   if (existsSync(currentLink)) {
     try {
       const target = readlinkSync(currentLink)
@@ -220,7 +220,7 @@ app.whenReady().then(bootstrap).catch((err) => {
   console.error('[Electron] Bootstrap failed:', err)
   sendElectronTelemetry('system', 'electron.bootstrap_failed', { error: err instanceof Error ? err.message : String(err) })
   dialog.showErrorBox(
-    'OpenTeam StartFailed',
+    'TeemAI StartFailed',
     `Server startup error. Check logs and retry.\n\n${err instanceof Error ? err.message : String(err)}`,
   )
   app.quit()

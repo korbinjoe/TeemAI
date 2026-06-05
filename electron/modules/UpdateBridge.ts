@@ -21,7 +21,7 @@ import { createHash } from 'crypto'
 import { pipeline } from 'stream/promises'
 import type { WindowManager } from './WindowManager'
 import { PORTS } from '../../shared/ports'
-import { OPENTEAM_HOME } from '../../shared/openteam-home'
+import { TEEMAI_HOME } from '../../shared/teemai-home'
 
 export const UPDATE_IPC = {
   STATUS: 'update:status',
@@ -58,10 +58,10 @@ interface DeviceConfig {
 
 export type UpdateStatus = 'idle' | 'checking' | 'downloading' | 'ready' | 'applying' | 'error'
 
-const VERSIONS_DIR = join(OPENTEAM_HOME, 'versions')
-const CURRENT_LINK = join(OPENTEAM_HOME, 'current')
-const DOWNLOADS_DIR = join(OPENTEAM_HOME, 'downloads')
-const CONFIG_FILE = join(OPENTEAM_HOME, 'config.json')
+const VERSIONS_DIR = join(TEEMAI_HOME, 'versions')
+const CURRENT_LINK = join(TEEMAI_HOME, 'current')
+const DOWNLOADS_DIR = join(TEEMAI_HOME, 'downloads')
+const CONFIG_FILE = join(TEEMAI_HOME, 'config.json')
 
 const CHECK_INTERVAL = 5 * 60 * 1000
 
@@ -298,7 +298,7 @@ export class UpdateBridge {
       shellVersion: '1.0.0',
     }
 
-    this.ensureDir(OPENTEAM_HOME)
+    this.ensureDir(TEEMAI_HOME)
     writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8')
     return config
   }

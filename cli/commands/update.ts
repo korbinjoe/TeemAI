@@ -1,10 +1,10 @@
 /**
  * update  —
  *
- * openteam update
- * openteam update check
- * openteam update status
- * openteam update rollback
+ * teemai update
+ * teemai update check
+ * teemai update status
+ * teemai update rollback
  */
 
 import { Command } from 'commander'
@@ -20,12 +20,12 @@ import { pipeline } from 'stream/promises'
 import { createGunzip } from 'zlib'
 import { getDeviceConfig, type UpdateCheckResult } from '../lib/bundle-loader.js'
 import { PORTS } from '../../shared/ports'
-import { OPENTEAM_HOME } from '../../shared/openteam-home'
-const VERSIONS_DIR = join(OPENTEAM_HOME, 'versions')
-const CURRENT_LINK = join(OPENTEAM_HOME, 'current')
-const DOWNLOADS_DIR = join(OPENTEAM_HOME, 'downloads')
+import { TEEMAI_HOME } from '../../shared/teemai-home'
+const VERSIONS_DIR = join(TEEMAI_HOME, 'versions')
+const CURRENT_LINK = join(TEEMAI_HOME, 'current')
+const DOWNLOADS_DIR = join(TEEMAI_HOME, 'downloads')
 
-const DEFAULT_UPDATE_SERVER = process.env.OPENTEAM_UPDATE_SERVER ?? `http://localhost:${PORTS.DEV_SERVER}`
+const DEFAULT_UPDATE_SERVER = process.env.TEEMAI_UPDATE_SERVER ?? `http://localhost:${PORTS.DEV_SERVER}`
 
 export const updateCommand = new Command('update')
   .description('Check and install updates')
@@ -70,7 +70,7 @@ updateCommand
       const label = result.action === 'rollback' ? 'Rollback' : 'Update'
       console.log(chalk.yellow(`\n  ${label} available: v${result.target?.version}`))
       console.log(chalk.dim(`  ${result.message}`))
-      console.log(chalk.dim(`  Run ${chalk.bold('openteam update')} install\n`))
+      console.log(chalk.dim(`  Run ${chalk.bold('teemai update')} install\n`))
     }
     printCurrentVersion()
   })

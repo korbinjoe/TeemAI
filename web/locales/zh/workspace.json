@@ -171,6 +171,20 @@
     "wsName": "名称",
     "repoPath": "项目目录"
   },
+  "editDialog": {
+    "title": "编辑工作目录",
+    "nameLabel": "名称",
+    "namePlaceholder": "工作目录名称",
+    "reposLabel": "工作路径",
+    "addRepo": "添加目录",
+    "changeRepo": "更换目录",
+    "removeRepo": "移除目录",
+    "save": "保存",
+    "saving": "保存中...",
+    "saved": "工作目录已更新",
+    "saveFailed": "更新工作目录失败",
+    "nameRequired": "名称不能为空"
+  },
   "deleteDialog": {
     "title": "删除「{{name}}」？",
     "desc": "这将删除该工作目录及其所有对话，此操作不可撤销。"

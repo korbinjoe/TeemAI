@@ -1,5 +1,5 @@
 /**
- * openteam daemon —
+ * teemai daemon —
  *
  *   install     macOS launchd Launch AgentRunAtLoad + KeepAlive
  *   uninstall   Launch Agent
@@ -16,17 +16,17 @@ import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 import { Command } from 'commander'
 import chalk from 'chalk'
-import { OPENTEAM_HOME } from '../../shared/openteam-home'
+import { TEEMAI_HOME } from '../../shared/teemai-home'
 
 const HOME = homedir()
-const OPENTEAM_DIR = OPENTEAM_HOME
-const LOGS_DIR = join(OPENTEAM_DIR, 'logs')
+const TEEMAI_DIR = TEEMAI_HOME
+const LOGS_DIR = join(TEEMAI_DIR, 'logs')
 
 const IS_DEV = fileURLToPath(import.meta.url).endsWith('.ts')
 const SUFFIX = IS_DEV ? '.dev' : ''
-const PORT_FILE = join(OPENTEAM_DIR, `daemon${SUFFIX}.port`)
-const PID_FILE = join(OPENTEAM_DIR, `daemon${SUFFIX}.pid`)
-const PLIST_LABEL = 'ai.openteam.daemon'
+const PORT_FILE = join(TEEMAI_DIR, `daemon${SUFFIX}.port`)
+const PID_FILE = join(TEEMAI_DIR, `daemon${SUFFIX}.pid`)
+const PLIST_LABEL = 'ai.teemai.daemon'
 const PLIST_PATH = join(HOME, 'Library', 'LaunchAgents', `${PLIST_LABEL}.plist`)
 
 const isMacOS = process.platform === 'darwin'
@@ -40,15 +40,15 @@ const getUid = (): number => {
   return 501
 }
 
-export const resolveOpenTeamBin = (): string => {
+export const resolveTeemAIBin = (): string => {
   const argv1 = process.argv[1]
   if (argv1 && existsSync(argv1)) return argv1
   const dir = dirname(fileURLToPath(import.meta.url))
-  const candidates = [join(dir, 'openteam.js'), join(dir, 'openteam.ts')]
+  const candidates = [join(dir, 'teemai.js'), join(dir, 'teemai.ts')]
   for (const c of candidates) {
     if (existsSync(c)) return c
   }
-  return argv1 ?? 'openteam'
+  return argv1 ?? 'teemai'
 }
 
 /**
@@ -72,22 +72,22 @@ export const resolveTsxPaths = (): { preflight: string; loader: string } | null 
 
 /**  ProgramArguments
  *
- * - .ts dev node --require preflight.cjs --import loader.mjs openteam.ts daemon run
- * - .js node openteam.js daemon run
+ * - .ts dev node --require preflight.cjs --import loader.mjs teemai.ts daemon run
+ * - .js node teemai.js daemon run
  */
 export const buildProgramArguments = (): string[] => {
   const nodePath = process.execPath
-  const openteamBin = resolveOpenTeamBin()
+  const teemaiBin = resolveTeemAIBin()
 
-  if (openteamBin.endsWith('.ts')) {
+  if (teemaiBin.endsWith('.ts')) {
     const tsx = resolveTsxPaths()
     if (tsx) {
-      return [nodePath, '--require', tsx.preflight, '--import', `file://${tsx.loader}`, openteamBin, 'daemon', 'run']
+      return [nodePath, '--require', tsx.preflight, '--import', `file://${tsx.loader}`, teemaiBin, 'daemon', 'run']
     }
-    return [nodePath, '--experimental-strip-types', openteamBin, 'daemon', 'run']
+    return [nodePath, '--experimental-strip-types', teemaiBin, 'daemon', 'run']
   }
 
-  return [nodePath, openteamBin, 'daemon', 'run']
+  return [nodePath, teemaiBin, 'daemon', 'run']
 }
 
 export const buildPlist = (): string => {
@@ -158,8 +158,8 @@ const execLaunchctl = (args: string[]): { ok: boolean; output: string } => {
 const cmdInstall = async () => {
   if (!isMacOS) {
     console.log(chalk.yellow('\n  Daemon auto-start is not yet supported on this platform.'))
-    console.log(chalk.dim('  To run OpenTeam as a background service, use:'))
-    console.log(chalk.bold('    nohup openteam daemon run &\n'))
+    console.log(chalk.dim('  To run TeemAI as a background service, use:'))
+    console.log(chalk.bold('    nohup teemai daemon run &\n'))
     return
   }
 
@@ -325,9 +325,9 @@ const cmdStatus = async () => {
 }
 
 const cmdRun = async () => {
-  process.env.OPENTEAM_CLI = '1'
+  process.env.TEEMAI_CLI = '1'
   if (IS_DEV) {
-    process.env.OPENTEAM_DEV = '1'
+    process.env.TEEMAI_DEV = '1'
   }
   const { startServer } = await import('../../server/index.js')
   const envPort = Number(process.env.PORT)
@@ -335,7 +335,7 @@ const cmdRun = async () => {
 }
 
 export const daemonCommand = new Command('daemon')
-  .description('Manage OpenTeam background daemon process')
+  .description('Manage TeemAI background daemon process')
 
 daemonCommand
   .command('install')

@@ -28,7 +28,7 @@ interface AgentJsonConfig {
   mcpServers?: Record<string, McpServerConfig>
 }
 
-interface OpenTeamJson {
+interface TeemAIJson {
   workspace?: string
   agents?: {
     defaults?: { model?: string; provider?: string; mcpServers?: Record<string, McpServerConfig> }
@@ -171,7 +171,7 @@ function parseMdAgent(filename: string, raw: string, agentsDir: string): AgentDe
 
 /**
  * AgentRegistry —
- * 1. agentsDir/  openteam.json PROJECT_ROOT
+ * 1. agentsDir/  teemai.json PROJECT_ROOT
  * 2. agentsDir/  .md  agent
  *
  *  agentsDir  ai-assets/agents/per-agent
@@ -181,19 +181,19 @@ export class AgentRegistry {
   private agents = new Map<string, AgentDefinition>()
   private agentsDir: string
   private sharedDir: string
-  private openteamJsonPath: string
-  /** ~/.openteam/openteam.json */
+  private teemaiJsonPath: string
+  /** ~/.teemai/teemai.json */
   private userOpenteamJsonPath: string
   private watcher: ReturnType<typeof chokidar.watch> | null = null
   private reloadTimer: ReturnType<typeof setTimeout> | null = null
   private onReloadCallbacks: Array<() => void> = []
   private _configVersion = 0
 
-  constructor(agentsDir: string, sharedDir: string, openteamJsonPath?: string, userOpenteamJsonPath?: string) {
+  constructor(agentsDir: string, sharedDir: string, teemaiJsonPath?: string, userOpenteamJsonPath?: string) {
     this.agentsDir = agentsDir
     this.sharedDir = sharedDir
-    this.openteamJsonPath = openteamJsonPath ?? join(agentsDir, '..', '..', 'openteam.json')
-    this.userOpenteamJsonPath = userOpenteamJsonPath ?? join(agentsDir, '..', 'openteam.json')
+    this.teemaiJsonPath = teemaiJsonPath ?? join(agentsDir, '..', '..', 'teemai.json')
+    this.userOpenteamJsonPath = userOpenteamJsonPath ?? join(agentsDir, '..', 'teemai.json')
   }
 
   async load(): Promise<void> {
@@ -214,29 +214,29 @@ export class AgentRegistry {
     log.info('Loaded agents', {
       count: this.agents.size,
       agents: [...this.agents.keys()].join(', '),
-      format: loaded ? 'openteam.json' : 'md-files',
+      format: loaded ? 'teemai.json' : 'md-files',
     })
   }
 
   /**
-   *  openteam.json + per-agent
+   *  teemai.json + per-agent
    * @returns true
    */
   private async loadFromConfigJson(): Promise<boolean> {
-    const raw = await readOptional(this.openteamJsonPath)
+    const raw = await readOptional(this.teemaiJsonPath)
     if (!raw) return false
 
-    let config: OpenTeamJson
+    let config: TeemAIJson
     try {
-      config = JSON.parse(raw) as OpenTeamJson
+      config = JSON.parse(raw) as TeemAIJson
     } catch (err) {
-      log.warn('Failed to parse openteam.json', { error: String(err) })
+      log.warn('Failed to parse teemai.json', { error: String(err) })
       return false
     }
 
     const list = config.agents?.list
     if (!list || list.length === 0) {
-      log.warn('openteam.json has no agents.list')
+      log.warn('teemai.json has no agents.list')
       return false
     }
 
@@ -253,7 +253,7 @@ export class AgentRegistry {
         }
         this.agents.set(def.id, def)
       } catch (err) {
-        log.warn('Failed to load agent from openteam.json', {
+        log.warn('Failed to load agent from teemai.json', {
           agentId: agentConfig.id,
           error: String(err),
         })
@@ -286,7 +286,7 @@ export class AgentRegistry {
   }
 
   /**
-   *  ~/.openteam/openteam.json
+   *  ~/.teemai/teemai.json
    *  id agentmcpServers allowedTools/disallowedTools
    *  id agent
    */
@@ -294,11 +294,11 @@ export class AgentRegistry {
     const raw = await readOptional(this.userOpenteamJsonPath)
     if (!raw) return
 
-    let config: OpenTeamJson
+    let config: TeemAIJson
     try {
-      config = JSON.parse(raw) as OpenTeamJson
+      config = JSON.parse(raw) as TeemAIJson
     } catch (err) {
-      log.warn('Failed to parse user openteam.json', { error: String(err) })
+      log.warn('Failed to parse user teemai.json', { error: String(err) })
       return
     }
 
@@ -334,17 +334,17 @@ export class AgentRegistry {
     }
 
     if (mergedCount > 0 || addedCount > 0) {
-      log.info('Merged user openteam.json', { merged: mergedCount, added: addedCount })
+      log.info('Merged user teemai.json', { merged: mergedCount, added: addedCount })
     }
   }
 
   private async deepMergeAgentConfig(agentId: string, userOverride: AgentJsonConfig): Promise<AgentJsonConfig | null> {
-    const projectRaw = await readOptional(this.openteamJsonPath)
+    const projectRaw = await readOptional(this.teemaiJsonPath)
     if (!projectRaw) return userOverride
 
-    let projectConfig: OpenTeamJson
+    let projectConfig: TeemAIJson
     try {
-      projectConfig = JSON.parse(projectRaw) as OpenTeamJson
+      projectConfig = JSON.parse(projectRaw) as TeemAIJson
     } catch {
       return userOverride
     }
@@ -389,8 +389,8 @@ export class AgentRegistry {
     if (this.watcher) return
 
     const watchPaths = [this.agentsDir, this.sharedDir]
-    if (existsSync(this.openteamJsonPath)) {
-      watchPaths.push(this.openteamJsonPath)
+    if (existsSync(this.teemaiJsonPath)) {
+      watchPaths.push(this.teemaiJsonPath)
     }
     if (existsSync(this.userOpenteamJsonPath)) {
       watchPaths.push(this.userOpenteamJsonPath)
@@ -467,11 +467,11 @@ export class AgentRegistry {
     let base: AgentJsonConfig | null = null
     let userOverride: AgentJsonConfig | null = null
 
-    for (const [path, target] of [[this.openteamJsonPath, 'project'], [this.userOpenteamJsonPath, 'user']] as const) {
+    for (const [path, target] of [[this.teemaiJsonPath, 'project'], [this.userOpenteamJsonPath, 'user']] as const) {
       const raw = await readOptional(path)
       if (!raw) continue
       try {
-        const config = JSON.parse(raw) as OpenTeamJson
+        const config = JSON.parse(raw) as TeemAIJson
         const found = config.agents?.list?.find((a) => a.id === agentId)
         if (found) {
           if (target === 'project') base = found

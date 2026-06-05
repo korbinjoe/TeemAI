@@ -19,13 +19,13 @@ This skill is the end-to-end primitive the `growth-marketer` agent composes. Oth
 | Script | Input | Output |
 |--------|-------|--------|
 | `scripts/summarize-repo.sh <repoUrl>` | A `https://github.com/<owner>/<repo>` URL | Structured JSON on stdout |
-| `scripts/draft-tweet.sh --summary <path> [--lang en\|zh] [--thread] [--style hook\|narrative]` | A summary JSON file | Markdown draft at `~/.openteam/agents/growth-marketer/drafts/<owner>-<repo>-<ts>.md` |
+| `scripts/draft-tweet.sh --summary <path> [--lang en\|zh] [--thread] [--style hook\|narrative]` | A summary JSON file | Markdown draft at `~/.teemai/agents/growth-marketer/drafts/<owner>-<repo>-<ts>.md` |
 | `scripts/post-tweet.sh --draft <path> [--variant A\|B\|C] [--confirm]` | A draft markdown file | Without `--confirm`: prints `would post: <body>` (exit 11). With `--confirm`: posts via Playwright, prints permalink URL on success (exit 0) |
 
 ## Defaults that matter
 
 - **Draft-then-approve.** `post-tweet.sh` is a dry-run unless `--confirm` is passed. There is no global override.
-- **Persistent profile.** The Playwright user-data dir is `~/.openteam/browser-profiles/x/`. Log in once interactively; cookies persist across runs. The dir is created with mode `0700` and walked to restrict every file to owner-only.
+- **Persistent profile.** The Playwright user-data dir is `~/.teemai/browser-profiles/x/`. Log in once interactively; cookies persist across runs. The dir is created with mode `0700` and walked to restrict every file to owner-only.
 - **Headed by default.** `post-tweet.mjs` launches Chromium with `headless: false` because X aggressively challenges headless contexts. Override by exporting `X_HEADLESS=1` only if you have verified your account is not gated.
 - **Locale-aware selectors.** Composer / Add-post / Post / View link locators use ARIA-name regexes that cover English, Chinese (zh-CN), Japanese, and Korean X UIs. If your X interface is in another locale and a selector fails (exit 20), extend the regex bank in `scripts/post-tweet.mjs` rather than switching to CSS selectors.
 - **No credential reads.** The skill never asks for or stores a password, an API token, or a session cookie. Only the browser profile dir holds session state.
@@ -40,10 +40,10 @@ scripts/summarize-repo.sh https://github.com/foo/bar > /tmp/bar.json
 
 # 2. Draft (single tweet, English, hook style)
 scripts/draft-tweet.sh --summary /tmp/bar.json
-# → ~/.openteam/agents/growth-marketer/drafts/foo-bar-20260524-1003.md
+# → ~/.teemai/agents/growth-marketer/drafts/foo-bar-20260524-1003.md
 
 # 3. Dry run (always do this first)
-scripts/post-tweet.sh --draft ~/.openteam/agents/growth-marketer/drafts/foo-bar-20260524-1003.md
+scripts/post-tweet.sh --draft ~/.teemai/agents/growth-marketer/drafts/foo-bar-20260524-1003.md
 # → would post: <body>   (exit 11)
 
 # 4. Real post (user-approved)
@@ -63,7 +63,7 @@ scripts/post-tweet.sh --draft ... --variant A --confirm
 
 ## One-time login
 
-Sessions live in `~/.openteam/browser-profiles/x/`. To set up:
+Sessions live in `~/.teemai/browser-profiles/x/`. To set up:
 
 ```bash
 # Open a real headed Chromium against the persistent profile and log in.
@@ -71,7 +71,7 @@ node -e '
   const { chromium } = require("playwright");
   (async () => {
     const ctx = await chromium.launchPersistentContext(
-      require("os").homedir() + "/.openteam/browser-profiles/x",
+      require("os").homedir() + "/.teemai/browser-profiles/x",
       { headless: false }
     );
     await ctx.newPage().then(p => p.goto("https://x.com/login"));
@@ -83,7 +83,7 @@ node -e '
 To wipe the session (logout + re-auth from scratch):
 
 ```bash
-rm -rf ~/.openteam/browser-profiles/x
+rm -rf ~/.teemai/browser-profiles/x
 ```
 
 ## Boundaries

@@ -124,8 +124,8 @@ const WorkspacesPage = () => {
   }
 
   const handleQuickCreate = async () => {
-    if (isElectron && window.openteamBridge?.pickDirectory) {
-      const path = await window.openteamBridge.pickDirectory()
+    if (isElectron && window.teemaiBridge?.pickDirectory) {
+      const path = await window.teemaiBridge.pickDirectory()
       if (path) await onPathSelected(path)
     } else {
       dirPicker.openDirPicker()

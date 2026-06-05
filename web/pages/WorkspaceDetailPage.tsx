@@ -1,13 +1,18 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
-  ArrowLeft, FolderGit2, MessageSquare, Plus,
+  ArrowLeft, FolderGit2, MessageSquare, Plus, Pencil,
   Trash2, GitBranch, ExternalLink, Copy, Check,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { API_BASE, authFetch } from '@/config/api'
 import WorkspaceIcon from '@/components/icons/WorkspaceIcon'
+import EditWorkspaceDialog from '@/components/workspace/EditWorkspaceDialog'
+import DirPickerDialog from '@/components/home/DirPickerDialog'
+import { loadDirHistory } from '@/components/home/storage'
+import { useDirPicker } from '../hooks/useDirPicker'
 import { isElectron, ELECTRON_TITLEBAR_PADDING } from '../utils/env'
 
 interface Repository {
@@ -30,8 +35,14 @@ interface WorkspaceDetail {
 const WorkspaceDetailPage = () => {
   const { workspaceId } = useParams<{ workspaceId: string }>()
   const navigate = useNavigate()
+  const { t } = useTranslation(['workspace', 'common'])
   const [workspace, setWorkspace] = useState<WorkspaceDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editSaving, setEditSaving] = useState(false)
+  const [dirHistory] = useState<string[]>(() => loadDirHistory())
+  const dirPicker = useDirPicker(dirHistory)
+  const [pendingDirCallback, setPendingDirCallback] = useState<((path: string) => void) | null>(null)
 
   const fetchWorkspace = useCallback(async () => {
     if (!workspaceId) return
@@ -78,6 +89,45 @@ const WorkspaceDetailPage = () => {
       toast.success(`Worktree isolation ${next ? 'enabled' : 'disabled'}`)
     } catch {
       toast.error('Failed to update worktree setting')
+    }
+  }
+
+  const handleEditSave = async (name: string, repos: Repository[]) => {
+    if (!workspaceId) return
+    setEditSaving(true)
+    try {
+      const res = await authFetch(`${API_BASE}/api/workspaces/${workspaceId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, repositories: repos }),
+      })
+      if (!res.ok) throw new Error()
+      toast.success(t('workspace:editDialog.saved'))
+      setEditOpen(false)
+      fetchWorkspace()
+    } catch {
+      toast.error(t('workspace:editDialog.saveFailed'))
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  const handleBrowseDir = (onPick: (path: string) => void) => {
+    if (isElectron && window.teemaiBridge?.pickDirectory) {
+      window.teemaiBridge.pickDirectory().then((path) => {
+        if (path) onPick(path)
+      })
+    } else {
+      setPendingDirCallback(() => onPick)
+      dirPicker.openDirPicker()
+    }
+  }
+
+  const handleDirPicked = (path: string) => {
+    dirPicker.setDirModalOpen(false)
+    if (pendingDirCallback) {
+      pendingDirCallback(path)
+      setPendingDirCallback(null)
     }
   }
 
@@ -165,13 +215,23 @@ const WorkspaceDetailPage = () => {
                   </div>
                 </div>
               </div>
-              <button
-                onClick={handleNewMission}
-                className="-webkit-app-region-no-drag inline-flex items-center gap-1.5 rounded-md bg-accent-brand px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-brand-light transition-colors shadow-sm shadow-accent-brand/20"
-              >
-                <Plus size={14} />
-                New Mission
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setEditOpen(true)}
+                  title="Edit workspace"
+                  className="-webkit-app-region-no-drag inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-[13px] font-medium text-text-primary hover:bg-bg-hover transition-colors"
+                >
+                  <Pencil size={13} />
+                  Edit
+                </button>
+                <button
+                  onClick={handleNewMission}
+                  className="-webkit-app-region-no-drag inline-flex items-center gap-1.5 rounded-md bg-accent-brand px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent-brand-light transition-colors shadow-sm shadow-accent-brand/20"
+                >
+                  <Plus size={14} />
+                  New Mission
+                </button>
+              </div>
             </div>
           </div>
 
@@ -249,6 +309,45 @@ const WorkspaceDetailPage = () => {
           )}
         </div>
       </div>
+
+      {workspace && (
+        <EditWorkspaceDialog
+          open={editOpen}
+          onOpenChange={(open) => {
+            if (!open && dirPicker.dirModalOpen) return
+            setEditOpen(open)
+          }}
+          workspaceId={workspace.id}
+          initialName={workspace.name}
+          initialRepos={workspace.repositories}
+          saving={editSaving}
+          onSave={handleEditSave}
+          onBrowseDir={handleBrowseDir}
+        />
+      )}
+
+      <DirPickerDialog
+        open={dirPicker.dirModalOpen}
+        onOpenChange={dirPicker.setDirModalOpen}
+        browsePath={dirPicker.browsePath}
+        homeDir={dirPicker.homeDir}
+        dirs={dirPicker.dirs}
+        loadingDirs={dirPicker.loadingDirs}
+        dirSearch={dirPicker.dirSearch}
+        onDirSearchChange={dirPicker.setDirSearch}
+        searchResults={dirPicker.searchResults}
+        searchLoading={dirPicker.searchLoading}
+        newFolderMode={dirPicker.newFolderMode}
+        onNewFolderModeChange={dirPicker.setNewFolderMode}
+        newFolderName={dirPicker.newFolderName}
+        onNewFolderNameChange={dirPicker.setNewFolderName}
+        newFolderError={dirPicker.newFolderError}
+        onNewFolderErrorChange={dirPicker.setNewFolderError}
+        pickingForCreateWs={false}
+        onLoadDirs={dirPicker.loadDirs}
+        onPickAndLaunch={handleDirPicked}
+        onCreateFolder={() => dirPicker.handleCreateFolder(handleDirPicked)}
+      />
     </div>
   )
 }

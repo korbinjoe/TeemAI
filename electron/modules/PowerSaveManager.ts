@@ -9,7 +9,7 @@ import { powerSaveBlocker, ipcMain, app } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 
-const PREFS_FILE = 'openteam-prefs.json'
+const PREFS_FILE = 'teemai-prefs.json'
 
 interface Prefs {
   preventSleepEnabled: boolean

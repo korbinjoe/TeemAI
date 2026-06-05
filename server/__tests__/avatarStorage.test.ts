@@ -3,7 +3,7 @@ import { promises as fs } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 
-const TMP_HOME = join(tmpdir(), `openteam-avatar-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+const TMP_HOME = join(tmpdir(), `teemai-avatar-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
 
 vi.mock('os', async () => {
   const actual = await vi.importActual<typeof import('os')>('os')
@@ -23,7 +23,7 @@ afterEach(async () => {
 })
 
 describe('avatarStorage', () => {
-  it('ensureAvatarDir creates ~/.openteam/avatars', async () => {
+  it('ensureAvatarDir creates ~/.teemai/avatars', async () => {
     await avatarStorage.ensureAvatarDir()
     const stat = await fs.stat(avatarStorage.AVATAR_ROOT)
     expect(stat.isDirectory()).toBe(true)

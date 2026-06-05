@@ -163,7 +163,7 @@ File: `ai-assets/hooks/wb-post-tool-write.sh`
 Implementation approach — since PostToolUse hooks are stateless (each invocation is independent), use a temporary accumulator file:
 
 ```bash
-# Per-turn accumulator: ~/.openteam/whiteboard/{chatId}/.artifact-acc-{instanceId}.txt
+# Per-turn accumulator: ~/.teemai/whiteboard/{chatId}/.artifact-acc-{instanceId}.txt
 ACC_FILE="${FP_DIR}/.artifact-acc-${INSTANCE_ID}.txt"
 
 case "$TOOL_NAME" in

@@ -45,7 +45,7 @@ npm-debug.log*
 .claude/
 
 # Runtime data
-.openteam/
+.teemai/
 
 .skill-archive/
 .cursor/

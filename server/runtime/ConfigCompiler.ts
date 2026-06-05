@@ -46,7 +46,7 @@ export interface CompileContext {
   resumeSessionId?: string
   connectionId?: string
   skipPermissions?: boolean
-  /** ~/.openteam/system/ Agent  */
+  /** ~/.teemai/system/ Agent  */
   sharedWorkspaceDir?: string
   chatId?: string
   /**  Agent  ID fullstack-engineer#1 */
@@ -85,7 +85,7 @@ export class ConfigCompiler {
 
   /**
    * @param llmEnv  agent.model
-   *    settings.json  env  openteam UI  model/
+   *    settings.json  env  teemai UI  model/
    *    ~/.claude/settings.jsonCodex provider  settings.json
    */
   async compile(
@@ -130,7 +130,7 @@ export class ConfigCompiler {
       args.push('--include-partial-messages')
       args.push('--replay-user-messages')
 
-      const envSkipPerms = process.env.OPENTEAM_SKIP_PERMISSIONS === 'true'
+      const envSkipPerms = process.env.TEEMAI_SKIP_PERMISSIONS === 'true'
       if (context.skipPermissions === true || envSkipPerms) {
         args.push('--dangerously-skip-permissions')
       }
@@ -145,8 +145,8 @@ export class ConfigCompiler {
       args.push('--settings', resumeSettingsPath)
 
       const resumeEnv: Record<string, string> = {}
-      if (context.chatId) resumeEnv.OPENTEAM_CHAT_ID = context.chatId
-      if (context.instanceId) resumeEnv.OPENTEAM_INSTANCE_ID = context.instanceId
+      if (context.chatId) resumeEnv.TEEMAI_CHAT_ID = context.chatId
+      if (context.instanceId) resumeEnv.TEEMAI_INSTANCE_ID = context.instanceId
       resumeEnv.EXPERT_API_BASE = `http://localhost:${context.serverPort}`
       resumeEnv.EXPERT_CONNECTION_ID = context.connectionId || ''
 
@@ -227,13 +227,13 @@ export class ConfigCompiler {
     const presetSessionId = randomUUID()
 
     if (context.chatId) {
-      env.OPENTEAM_CHAT_ID = context.chatId
+      env.TEEMAI_CHAT_ID = context.chatId
     }
     if (context.instanceId) {
-      env.OPENTEAM_INSTANCE_ID = context.instanceId
+      env.TEEMAI_INSTANCE_ID = context.instanceId
     }
     if (context.dispatchChain?.length) {
-      env.OPENTEAM_DISPATCH_CHAIN = JSON.stringify(context.dispatchChain)
+      env.TEEMAI_DISPATCH_CHAIN = JSON.stringify(context.dispatchChain)
     }
 
     const mcpServers: Record<string, McpServerConfig> = {
@@ -337,13 +337,13 @@ export class ConfigCompiler {
       } catch {
       }
 
-      const OPENTEAM_MARKER = '<!-- OpenTeam Agent Instructions -->'
+      const TEEMAI_MARKER = '<!-- TeemAI Agent Instructions -->'
       const userOriginal = fileContent !== null
-        ? fileContent.split(OPENTEAM_MARKER)[0].trimEnd()
+        ? fileContent.split(TEEMAI_MARKER)[0].trimEnd()
         : null
 
       const newContent = userOriginal
-        ? `${userOriginal}\n\n${OPENTEAM_MARKER}\n${promptContent}`
+        ? `${userOriginal}\n\n${TEEMAI_MARKER}\n${promptContent}`
         : promptContent
 
       await writeFile(overridePath, newContent, 'utf-8')
@@ -405,8 +405,8 @@ export class ConfigCompiler {
 
     const env: Record<string, string> = {}
     env.EXPERT_API_BASE = `http://localhost:${context.serverPort}`
-    if (context.chatId) env.OPENTEAM_CHAT_ID = context.chatId
-    if (context.instanceId) env.OPENTEAM_INSTANCE_ID = context.instanceId
+    if (context.chatId) env.TEEMAI_CHAT_ID = context.chatId
+    if (context.instanceId) env.TEEMAI_INSTANCE_ID = context.instanceId
     if (context.connectionId) env.EXPERT_CONNECTION_ID = context.connectionId
 
     return {
@@ -547,10 +547,10 @@ export class ConfigCompiler {
    */
   private async writeEnvFile(context: CompileContext, env: Record<string, string>): Promise<void> {
     if (!context.chatId || !context.instanceId) return
-    const envDir = join(homedir(), '.openteam', 'tmp', 'env')
+    const envDir = join(homedir(), '.teemai', 'tmp', 'env')
     await mkdir(envDir, { recursive: true })
     const envPath = join(envDir, `${context.chatId}-${context.instanceId}.env`)
-    const keys = ['EXPERT_API_BASE', 'OPENTEAM_CHAT_ID', 'OPENTEAM_INSTANCE_ID', 'EXPERT_CONNECTION_ID']
+    const keys = ['EXPERT_API_BASE', 'TEEMAI_CHAT_ID', 'TEEMAI_INSTANCE_ID', 'EXPERT_CONNECTION_ID']
     const lines = keys
       .filter(k => env[k] !== undefined)
       .map(k => `export ${k}="${env[k]}"`)
@@ -638,7 +638,7 @@ export class ConfigCompiler {
 ## Task Communication Protocol
 
 ### Execution Plan（plan.md）
-After accepting a task, create an execution plan at \`~/.openteam/tasks/{taskId}/plan.md\` ：
+After accepting a task, create an execution plan at \`~/.teemai/tasks/{taskId}/plan.md\` ：
 - After each sub-step, update plan.md to check it off
 - After context compression, re-read plan.md to restore progress
 - When blocked, record the reason in plan.md's 'Blockers' section

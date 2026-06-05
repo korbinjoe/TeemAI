@@ -10,7 +10,7 @@ import { homedir } from 'os'
 import { fileURLToPath } from 'url'
 
 const PROJECTS = {
-  openteam: path.join(homedir(), '.claude/projects', `-Users-${process.env.USER}-work-openteam`),
+  teemai: path.join(homedir(), '.claude/projects', `-Users-${process.env.USER}-work-teemai`),
 }
 
 // Collect all JSONL files (excluding subagent)

@@ -55,7 +55,7 @@ if [[ -z "$OWNER" || -z "$REPO" || "$OWNER" == "null" || "$REPO" == "null" ]]; t
 fi
 
 TS=$(date +%Y%m%d-%H%M)
-DRAFTS_DIR="${HOME}/.openteam/agents/growth-marketer/drafts"
+DRAFTS_DIR="${HOME}/.teemai/agents/growth-marketer/drafts"
 mkdir -p "$DRAFTS_DIR"
 OUTPUT_PATH="${DRAFTS_DIR}/${OWNER}-${REPO}-${TS}.md"
 

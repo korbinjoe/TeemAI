@@ -63,7 +63,7 @@ export const ExternalSessionRow = ({
       }
       const { chatId } = (await res.json()) as { chatId: string }
       onAdopted?.(session.id)
-      window.dispatchEvent(new Event('openteam:chat-created'))
+      window.dispatchEvent(new Event('teemai:chat-created'))
       return chatId
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))

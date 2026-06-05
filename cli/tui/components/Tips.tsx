@@ -6,10 +6,10 @@ const TIPS = [
   'Type {~} at start to switch agent',
   '{Ctrl+C} Quit current agent',
   '{Ctrl+E} Switch model',
-  '{openteam -r} Quickly restore last session',
+  '{teemai -r} Quickly restore last session',
   '{Alt+Enter} Multi-line input',
   'Multi-agent parallel: Lead orchestrates multiple Experts working simultaneously',
-  'Team config managed in {openteam.json}',
+  'Team config managed in {teemai.json}',
 ]
 
 const Tips = () => {

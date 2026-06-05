@@ -29,7 +29,7 @@ const acpUpdateTypeColor = (type: string) => {
   if (type === 'tool_call' || type === 'tool_result') return 'text-cyan-400'
   if (type === 'agent_message_chunk') return 'text-green-400'
   if (type === 'session_info_update') return 'text-yellow-400'
-  if (type.startsWith('_openteam/')) return 'text-purple-400'
+  if (type.startsWith('_teemai/')) return 'text-purple-400'
   if (type === 'initialize') return 'text-blue-300'
   return 'text-zinc-400'
 }
@@ -138,7 +138,7 @@ const MessagesBatchView = ({ data }: { data: unknown }) => {
 export const ACPUpdateRow = ({ update }: { update: { ts: number; type: string; summary: string; dir: 'out' | 'in'; data?: unknown } }) => {
   const [showData, setShowData] = useState(false)
   const hasData = update.data != null
-  const isMessagesBatch = update.type === '_openteam/messages_batch'
+  const isMessagesBatch = update.type === '_teemai/messages_batch'
   const [tab, setTab] = useState<'list' | 'json'>(isMessagesBatch ? 'list' : 'json')
   return (
     <div className="border-b border-zinc-800/30">
@@ -228,7 +228,7 @@ export const ACPUpdateList = ({
 
   const display = expanded
     ? protocolFiltered
-    : protocolFiltered.filter(u => u.type !== '_openteam/activity').slice(0, 20)
+    : protocolFiltered.filter(u => u.type !== '_teemai/activity').slice(0, 20)
 
   const suppressedCount = textFiltered.length - protocolFiltered.length
   const isBufferTruncated = totalUpdateCount > updates.length

@@ -2,7 +2,7 @@
  * WorkspaceSeeder -
  *
  *  app bundle  ai-assets/{agents,skills,workspace}
- *  ~/.openteam/{agents,skills,workspace}
+ *  ~/.teemai/{agents,skills,workspace}
  * agents/skills workspace
  *
  * Node 18  withFileTypes: true  entry.parentPath
@@ -19,7 +19,7 @@ export class WorkspaceSeeder {
   constructor(
     /** extraResources/ai-assets/ asar  */
     private bundledAssetsDir: string,
-    private openteamHome: string,
+    private teemaiHome: string,
   ) {}
 
   async seed(): Promise<void> {
@@ -28,13 +28,13 @@ export class WorkspaceSeeder {
       this.seedDir('skills', true),
       this.seedDir('hooks', true),
       this.seedDir('system', true),
-      this.seedOpenTeamJson(),
+      this.seedTeemAIJson(),
     ])
     await this.ensureAgentMemoryDirs()
   }
 
   private async ensureAgentMemoryDirs(): Promise<void> {
-    const agentsDir = join(this.openteamHome, 'agents')
+    const agentsDir = join(this.teemaiHome, 'agents')
     if (!existsSync(agentsDir)) return
     try {
       const entries = await readdir(agentsDir, { withFileTypes: true })
@@ -50,21 +50,21 @@ export class WorkspaceSeeder {
   }
 
   /**
-   *  bundled openteam.json  ~/.openteam/openteam.json
+   *  bundled teemai.json  ~/.teemai/teemai.json
    * -  bundled  agent  agent
    */
-  private async seedOpenTeamJson(): Promise<void> {
-    const src = join(this.bundledAssetsDir, '..', 'openteam.json')
-    const dst = join(this.openteamHome, 'openteam.json')
+  private async seedTeemAIJson(): Promise<void> {
+    const src = join(this.bundledAssetsDir, '..', 'teemai.json')
+    const dst = join(this.teemaiHome, 'teemai.json')
 
     if (!existsSync(src)) {
-      log.debug('Bundled openteam.json not found, skipping seed')
+      log.debug('Bundled teemai.json not found, skipping seed')
       return
     }
 
     if (!existsSync(dst)) {
       await writeFile(dst, await readFile(src))
-      log.info('Seeded openteam.json to user home')
+      log.info('Seeded teemai.json to user home')
       return
     }
 
@@ -88,18 +88,18 @@ export class WorkspaceSeeder {
       ;(merged as { agents: Record<string, unknown> }).agents = mergedAgentsSection
 
       await writeFile(dst, JSON.stringify(merged, null, 2) + '\n', 'utf-8')
-      log.info('Merged bundled openteam.json into user config', {
+      log.info('Merged bundled teemai.json into user config', {
         builtinUpdated: bundledAgents.list.length,
         userPreserved: userCreatedAgents.length,
       })
     } catch (err) {
-      log.warn('Failed to merge openteam.json, skipping', { error: String(err) })
+      log.warn('Failed to merge teemai.json, skipping', { error: String(err) })
     }
   }
 
   private async seedDir(sub: string, overwrite = false): Promise<void> {
     const src = join(this.bundledAssetsDir, sub)
-    const dst = join(this.openteamHome, sub)
+    const dst = join(this.teemaiHome, sub)
 
     if (!existsSync(src)) {
       log.debug('Seed source not found, skipping', { sub })

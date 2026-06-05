@@ -259,8 +259,8 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
           })
         : undefined
 
-      const parentChain: string[] = process.env.OPENTEAM_DISPATCH_CHAIN
-        ? JSON.parse(process.env.OPENTEAM_DISPATCH_CHAIN)
+      const parentChain: string[] = process.env.TEEMAI_DISPATCH_CHAIN
+        ? JSON.parse(process.env.TEEMAI_DISPATCH_CHAIN)
         : []
       const dispatchChain = [...parentChain, agentId]
 

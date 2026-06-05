@@ -73,7 +73,7 @@ import ptWorkspace from './locales/pt/workspace.json'
 import ptCron from './locales/pt/cron.json'
 import ptNotifications from './locales/pt/notifications.json'
 
-const LANGUAGE_KEY = 'openteam:language'
+const LANGUAGE_KEY = 'teemai:language'
 
 const savedLang = (() => {
   try {

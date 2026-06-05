@@ -7,7 +7,7 @@ const log = createLogger('Migration:V16')
 /**
  * V16 chats
  *
- * - whiteboard_path:  ~/.openteam/whiteboard/{chatId}/entries.jsonl
+ * - whiteboard_path:  ~/.teemai/whiteboard/{chatId}/entries.jsonl
  * - whiteboard_goal:  active goal  summary JSONL
  *
  *  JSONL / SQLite

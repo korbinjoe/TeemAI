@@ -381,7 +381,7 @@ const WorkspaceGroup = ({
       const allSessions = await fetchAllUnadopted()
       const adoptedIds = allSessions.length > 0 ? await adoptAllSessions(allSessions) : []
       if (adoptedIds.length > 0) {
-        window.dispatchEvent(new Event('openteam:chat-created'))
+        window.dispatchEvent(new Event('teemai:chat-created'))
       }
       onArchiveAll([...nativeIds, ...adoptedIds])
     } finally {

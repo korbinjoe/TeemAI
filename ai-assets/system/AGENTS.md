@@ -1,6 +1,6 @@
 # OpenSpec Workflow Protocol
 
-All agents in OpenTeam follow the OpenSpec change workflow for non-trivial work.
+All agents in TeemAI follow the OpenSpec change workflow for non-trivial work.
 
 ## When to Use OpenSpec
 

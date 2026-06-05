@@ -72,7 +72,7 @@ export class TrayManager {
     try {
       const icon = createTrayIcon()
       this.tray = new Tray(icon)
-      this.tray.setToolTip('OpenTeam')
+      this.tray.setToolTip('TeemAI')
 
       this.tray.on('click', () => {
         this.showMissionsMenu()
@@ -87,7 +87,7 @@ export class TrayManager {
   updateStatus(status: TrayStatus): void {
     if (this.status === status) return
     this.status = status
-    this.tray?.setToolTip(`OpenTeam — ${STATUS_LABELS[status]}`)
+    this.tray?.setToolTip(`TeemAI — ${STATUS_LABELS[status]}`)
     this.onStatusChangeCallback?.(status)
   }
 
@@ -147,7 +147,7 @@ export class TrayManager {
       },
     })
     template.push({
-      label: 'Open OpenTeam',
+      label: 'Open TeemAI',
       click: () => this.windowManager.focusMain(),
     })
     template.push({ type: 'separator' })

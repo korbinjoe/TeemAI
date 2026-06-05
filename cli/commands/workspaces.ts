@@ -5,9 +5,9 @@ import { join, resolve } from 'path'
 import { existsSync } from 'fs'
 import { WorkspaceStore } from '../../server/stores/WorkspaceStore.js'
 import { detectGitRepo } from '../../server/git/WorktreeManager.js'
-import { OPENTEAM_HOME } from '../../shared/openteam-home'
+import { TEEMAI_HOME } from '../../shared/teemai-home'
 
-const storeDir = OPENTEAM_HOME
+const storeDir = TEEMAI_HOME
 
 const getStore = () => {
   const store = new WorkspaceStore(join(storeDir, 'workspaces.json'))

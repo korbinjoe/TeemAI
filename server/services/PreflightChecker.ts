@@ -10,7 +10,7 @@
 import { execFile } from 'child_process'
 import { existsSync, statfsSync } from 'fs'
 import { homedir } from 'os'
-import { OPENTEAM_HOME } from '../config/paths'
+import { TEEMAI_HOME } from '../config/paths'
 import { resolveCliCommandAsync } from '../lib/resolveCliCommand'
 import { createLogger } from '../lib/logger'
 import type { CliInstallFailure } from './CliAutoInstaller'
@@ -156,7 +156,7 @@ export class PreflightChecker {
 
   private checkDiskSpace(): CheckItem {
     try {
-      const checkPath = existsSync(OPENTEAM_HOME) ? OPENTEAM_HOME : homedir()
+      const checkPath = existsSync(TEEMAI_HOME) ? TEEMAI_HOME : homedir()
       const stats = statfsSync(checkPath)
       const availableGB = (stats.bavail * stats.bsize) / (1024 ** 3)
       const status: CheckStatus = availableGB < 1 ? 'fail' : availableGB < 5 ? 'warn' : 'pass'

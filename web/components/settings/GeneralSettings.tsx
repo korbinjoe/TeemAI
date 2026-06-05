@@ -82,12 +82,12 @@ const GeneralSettings = () => {
 
   useEffect(() => {
     if (!isElectron) return
-    window.openteamBridge?.getPreventSleep().then(setPreventSleep).catch(() => {})
+    window.teemaiBridge?.getPreventSleep().then(setPreventSleep).catch(() => {})
   }, [])
 
   const handlePreventSleepChange = (checked: boolean) => {
     setPreventSleep(checked)
-    window.openteamBridge?.setPreventSleep(checked).catch(() => {})
+    window.teemaiBridge?.setPreventSleep(checked).catch(() => {})
   }
 
   const handleLanguageChange = (lng: string) => {

@@ -1,20 +1,20 @@
 /**
  * agentWorkspaceSync —  Agent  OpenClaw workspace
  *
- *  Agent  ~/.openteam/agents/{id}/ AGENTS.md / IDENTITY.md / SOUL.md
- *  ~/.openteam/openteam.json  AgentRegistry  OpenClaw
+ *  Agent  ~/.teemai/agents/{id}/ AGENTS.md / IDENTITY.md / SOUL.md
+ *  ~/.teemai/teemai.json  AgentRegistry  OpenClaw
  */
 
 import { join } from 'path'
 import { mkdir, writeFile, rm, readFile } from 'fs/promises'
 import type { Agent } from '../config/types'
-import { OPENTEAM_HOME } from '../config/paths'
+import { TEEMAI_HOME } from '../config/paths'
 import { createLogger } from '../lib/logger'
 
 const log = createLogger('AgentWorkspaceSync')
 
-const USER_CONFIG_PATH = join(OPENTEAM_HOME, 'openteam.json')
-const AGENTS_DIR = join(OPENTEAM_HOME, 'agents')
+const USER_CONFIG_PATH = join(TEEMAI_HOME, 'teemai.json')
+const AGENTS_DIR = join(TEEMAI_HOME, 'agents')
 
 interface UserAgentEntry {
   id: string
@@ -102,7 +102,7 @@ function agentToConfigEntry(agent: Agent): UserAgentEntry {
 }
 
 /**
- *  Agent  workspace  + ~/.openteam/openteam.json
+ *  Agent  workspace  + ~/.teemai/teemai.json
  *  source=user  agent builtin
  */
 export const syncAgentToWorkspace = async (agent: Agent): Promise<void> => {
@@ -125,7 +125,7 @@ export const syncAgentToWorkspace = async (agent: Agent): Promise<void> => {
 
     await Promise.all(writes)
 
-    // Update ~/.openteam/openteam.json
+    // Update ~/.teemai/teemai.json
     const config = await readUserConfig()
     const entry = agentToConfigEntry(agent)
     const idx = config.agents.list.findIndex((e) => e.id === agent.id)
@@ -143,7 +143,7 @@ export const syncAgentToWorkspace = async (agent: Agent): Promise<void> => {
 }
 
 /**
- *  Agent  workspace  + ~/.openteam/openteam.json
+ *  Agent  workspace  + ~/.teemai/teemai.json
  */
 export const removeAgentWorkspace = async (agentId: string): Promise<void> => {
   const dir = join(AGENTS_DIR, agentId)

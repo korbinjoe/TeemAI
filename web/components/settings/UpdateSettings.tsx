@@ -145,7 +145,7 @@ const UpdateSettings = () => {
           <Package size={14} className="text-text-secondary" />
           <div>
             <div className="text-[13px] text-text-primary">
-              OpenTeam
+              TeemAI
               <span className="ml-1.5 font-mono text-accent-brand font-medium">
                 v{__APP_VERSION__}
               </span>
@@ -196,7 +196,7 @@ const UpdateSettings = () => {
               </span>
             </div>
             <span className="text-[11px] text-text-secondary font-mono">
-              npm update openteam
+              npm update teemai
             </span>
           </div>
           {updateInfo.changelog && (

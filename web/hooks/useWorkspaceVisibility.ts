@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE, authFetch } from '@/config/api'
 import type { WorkspaceLite } from './useAllChats'
 
-const LEGACY_STORAGE_KEY = 'openteam:v2:hiddenWorkspaces'
-const MIGRATION_FLAG_KEY = 'openteam:v2:hiddenWorkspaces:serverMigrated'
-const DIR_STORAGE_KEY = 'openteam:v2:hiddenDirs'
+const LEGACY_STORAGE_KEY = 'teemai:v2:hiddenWorkspaces'
+const MIGRATION_FLAG_KEY = 'teemai:v2:hiddenWorkspaces:serverMigrated'
+const DIR_STORAGE_KEY = 'teemai:v2:hiddenDirs'
 
 const putWorkspace = async (wsId: string, body: Record<string, unknown>): Promise<void> => {
   try {

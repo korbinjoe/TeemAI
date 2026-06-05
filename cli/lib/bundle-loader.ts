@@ -1,17 +1,17 @@
 /**
  * Bundle Loader — Shell + Bundle
  *
- *  ~/.openteam/current  bundle
+ *  ~/.teemai/current  bundle
  */
 
 import { join } from 'path'
 import { homedir } from 'os'
 import { existsSync, readlinkSync, readdirSync, lstatSync, readFileSync } from 'fs'
 import { createHash } from 'crypto'
-import { OPENTEAM_HOME } from '../../shared/openteam-home'
-const VERSIONS_DIR = join(OPENTEAM_HOME, 'versions')
-const CURRENT_LINK = join(OPENTEAM_HOME, 'current')
-const CONFIG_FILE = join(OPENTEAM_HOME, 'config.json')
+import { TEEMAI_HOME } from '../../shared/teemai-home'
+const VERSIONS_DIR = join(TEEMAI_HOME, 'versions')
+const CURRENT_LINK = join(TEEMAI_HOME, 'current')
+const CONFIG_FILE = join(TEEMAI_HOME, 'config.json')
 
 export interface DeviceConfig {
   deviceId: string
@@ -35,7 +35,7 @@ export const getDeviceConfig = (): DeviceConfig => {
   }
 
   const { writeFileSync, mkdirSync } = require('fs')
-  if (!existsSync(OPENTEAM_HOME)) mkdirSync(OPENTEAM_HOME, { recursive: true })
+  if (!existsSync(TEEMAI_HOME)) mkdirSync(TEEMAI_HOME, { recursive: true })
   writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8')
   return config
 }
@@ -50,7 +50,7 @@ export interface BundlePaths {
 
 /**
  *  bundle
- *  ~/.openteam/current
+ *  ~/.teemai/current
  */
 export const resolveBundle = (): BundlePaths | null => {
   if (existsSync(CURRENT_LINK)) {

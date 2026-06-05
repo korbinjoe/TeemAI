@@ -12,7 +12,7 @@ const onIpc = (channel: string, callback: (data: unknown) => void): (() => void)
   return () => ipcRenderer.removeListener(channel, handler)
 }
 
-contextBridge.exposeInMainWorld('openteamBridge', {
+contextBridge.exposeInMainWorld('teemaiBridge', {
   // ─── Main → Renderer StatusListen（Back unsubscribe Function） ───
   onAgentStatus: (callback: (data: unknown) => void) => onIpc('companion:agent-status', callback),
   onNotification: (callback: (data: unknown) => void) => onIpc('companion:notification', callback),

@@ -6,12 +6,12 @@ import { mkdirSync } from 'fs'
 import { SqliteBaseStore } from './SqliteBaseStore'
 import type { Workspace, Repository } from '../config/types'
 import { createLogger } from '../lib/logger'
-import { OPENTEAM_HOME } from '../config/paths'
+import { TEEMAI_HOME } from '../config/paths'
 
 const log = createLogger('WorkspaceStore')
 
 const DEFAULT_WORKSPACE_NAME = 'Default'
-const DEFAULT_WORKSPACE_PATH = join(OPENTEAM_HOME, 'workspace')
+const DEFAULT_WORKSPACE_PATH = join(TEEMAI_HOME, 'workspace')
 
 export class WorkspaceStore extends SqliteBaseStore<Workspace> {
   constructor(_filePath?: string) {

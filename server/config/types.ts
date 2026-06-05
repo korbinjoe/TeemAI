@@ -172,7 +172,7 @@ export interface Chat {
    *  it is enrichment, not persistence — every API surface that returns Chat
    *  to the client SHOULD populate this via enrichWithMembers(). */
   members?: ChatMember[]
-  /** Origin of the chat. 'native' = created in OpenTeam; 'external' = adopted
+  /** Origin of the chat. 'native' = created in TeemAI; 'external' = adopted
    *  from a pre-existing local CLI jsonl (Claude Code / Codex). Defaults to
    *  'native' for legacy rows. */
   source?: 'native' | 'external'
@@ -305,7 +305,7 @@ export interface BootConfig {
   prompt?: string
 }
 
-/** AgentDefinition — AgentRegistry  openteam.json +  */
+/** AgentDefinition — AgentRegistry  teemai.json +  */
 export interface AgentDefinition {
   id: string
   name: string

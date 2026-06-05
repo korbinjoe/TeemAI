@@ -44,7 +44,7 @@ Old names accepted as aliases for one release; emit deprecation log.
 
 ### Decision 3: Episodic memory = index over existing `plan.md`/`result.md`, not a new store
 
-**Decision**: Build a read-only index of `~/.openteam/tasks/{taskId}/result.md` files per agent, surfaced as a pre-task lookup hook ("similar tasks you completed: …"). Do not introduce a vector DB.
+**Decision**: Build a read-only index of `~/.teemai/tasks/{taskId}/result.md` files per agent, surfaced as a pre-task lookup hook ("similar tasks you completed: …"). Do not introduce a vector DB.
 
 **Why**: The substrate is already there (`server/mailbox/ExecutionPlanManager.ts:22`). The agent memory research calls out that "episodic memory = task trajectories" and that EvolveR / CASCADE achieve their gains from indexing trajectories, not from new storage. Adding a vector DB is a big infrastructure jump that the data volume (~tens to low hundreds of tasks per user) does not justify.
 
@@ -102,9 +102,9 @@ Old names accepted as aliases for one release; emit deprecation log.
                       └────────────────────────────────┘
 
   Filesystem state:
-   ~/.openteam/mailbox/{chatId}/{from}→{to}.jsonl     (point-to-point)
-   ~/.openteam/whiteboard/{chatId}/entries.jsonl      (chat-wide blackboard)
-   ~/.openteam/tasks/{taskId}/{plan,result}.md        (per-task scratch)
+   ~/.teemai/mailbox/{chatId}/{from}→{to}.jsonl     (point-to-point)
+   ~/.teemai/whiteboard/{chatId}/entries.jsonl      (chat-wide blackboard)
+   ~/.teemai/tasks/{taskId}/{plan,result}.md        (per-task scratch)
    ai-assets/agents/<id>/memory/{MEMORY.md, daily}    (per-agent long-term)
 ```
 

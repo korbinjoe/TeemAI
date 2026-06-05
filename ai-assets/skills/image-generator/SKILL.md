@@ -17,9 +17,9 @@ bash {SKILL_DIR}/scripts/generate-image.sh "<English prompt>"
 ```
 
 The script will:
-1. Automatically obtain Gemini API Key from openteam-server (via `OPENTEAM_TOKEN` env var)
+1. Automatically obtain Gemini API Key from teemai-server (via `TEEMAI_TOKEN` env var)
 2. Call Gemini generateContent API
-3. Save the generated image to `~/.openteam/images/` directory
+3. Save the generated image to `~/.teemai/images/` directory
 4. Output image path marker `[generated_image:<path>]`
 
 After generation, use the Read tool to view the image and verify the result.

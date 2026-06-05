@@ -22,7 +22,7 @@ const FALLBACK_MODEL = 'claude-haiku-4-5-20251001'
 const DEFAULT_MAX_TOKENS = 1024
 
 const resolveDefaultModel = (): string =>
-  process.env.OPENTEAM_LIGHT_MODEL || FALLBACK_MODEL
+  process.env.TEEMAI_LIGHT_MODEL || FALLBACK_MODEL
 
 export interface CliPromptOptions {
   prompt: string

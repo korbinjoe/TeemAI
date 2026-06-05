@@ -29,4 +29,4 @@ What actually happened.
 - OS: 
 - Node.js version: 
 - Browser: 
-- OpenTeam version: 
+- TeemAI version: 

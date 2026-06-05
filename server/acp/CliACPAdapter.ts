@@ -161,12 +161,12 @@ export class CliACPAdapter extends EventEmitter implements ACPAgentAdapter {
           list: false,
         },
         _meta: {
-          'openteam/modes': this.config.modes,
+          'teemai/modes': this.config.modes,
         },
       },
       agentInfo: {
         name: this.config.agentName,
-        title: `OpenTeam · ${this.config.agentName}`,
+        title: `TeemAI · ${this.config.agentName}`,
         version: this.cliVersion,
       },
       authMethods: [],
@@ -442,8 +442,8 @@ export class CliACPAdapter extends EventEmitter implements ACPAgentAdapter {
 
   replayMessages(messages: ParsedMessage[], type: 'full' | 'delta'): void {
     this.emitSessionUpdate({
-      sessionUpdate: '_openteam/messages_batch',
-      messages: messages as unknown as import('../../shared/acp-types').OpenTeamParsedMessage[],
+      sessionUpdate: '_teemai/messages_batch',
+      messages: messages as unknown as import('../../shared/acp-types').TeemAIParsedMessage[],
       replacedStatsId: null,
       batchType: type,
     }, true)
@@ -478,8 +478,8 @@ export class CliACPAdapter extends EventEmitter implements ACPAgentAdapter {
       replacedStatsId: string | null
     }) => {
       this.emitSessionUpdate({
-        sessionUpdate: '_openteam/messages_batch',
-        messages: data.messages as unknown as import('../../shared/acp-types').OpenTeamParsedMessage[],
+        sessionUpdate: '_teemai/messages_batch',
+        messages: data.messages as unknown as import('../../shared/acp-types').TeemAIParsedMessage[],
         replacedStatsId: data.replacedStatsId,
       })
 
@@ -515,7 +515,7 @@ export class CliACPAdapter extends EventEmitter implements ACPAgentAdapter {
     this.streamManager.on('activity', (state: ActivityState) => {
       const { phase, background, currentTool, toolCount, toolCompleted, hasText, cost, tokens, modelUsage, logLine, fileOp, recentTools, updatedAt } = state
       this.emitSessionUpdate({
-        sessionUpdate: '_openteam/activity',
+        sessionUpdate: '_teemai/activity',
         activity: { phase, background, currentTool, toolCount, toolCompleted, hasText, cost, tokens, modelUsage, logLine, fileOp, recentTools, updatedAt },
       })
     })
@@ -587,11 +587,11 @@ export class CliACPAdapter extends EventEmitter implements ACPAgentAdapter {
         return update.toolCall.title
       case 'tool_call_update':
         return `${update.toolCallUpdate.toolCallId.slice(0, 8)}… ${update.toolCallUpdate.status ?? 'partial'}`
-      case '_openteam/activity':
+      case '_teemai/activity':
         return `${(update as any).activity?.phase ?? ''}${(update as any).activity?.currentTool ? ` → ${(update as any).activity.currentTool}` : ''}`
-      case '_openteam/thinking':
+      case '_teemai/thinking':
         return `thinking: ${(update as any).text?.slice(0, 40) ?? ''}`
-      case '_openteam/messages_batch':
+      case '_teemai/messages_batch':
         return `${(update as any).messages?.length ?? 0} msgs`
       default:
         return update.sessionUpdate

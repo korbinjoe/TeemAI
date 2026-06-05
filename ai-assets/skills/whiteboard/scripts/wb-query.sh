@@ -2,7 +2,7 @@
 # wb-query.sh — Query war-room entries with filters
 # Usage: bash wb-query.sh [--types=...] [--tags=...] [--by=...] [--limit=N] [--status=active|archived|superseded] [--since=ISO]
 #
-# When OPENTEAM_INSTANCE_ID is set, a successful query also advances the cursor
+# When TEEMAI_INSTANCE_ID is set, a successful query also advances the cursor
 # (active read == known context, next PostToolUse hook won't re-push read entries).
 
 set -euo pipefail
@@ -11,8 +11,8 @@ set -euo pipefail
 source "$(dirname "$0")/_env.sh"
 
 API_BASE="${EXPERT_API_BASE:?Environment variable EXPERT_API_BASE is not set}"
-CHAT_ID="${OPENTEAM_CHAT_ID:?Environment variable OPENTEAM_CHAT_ID is not set}"
-INSTANCE_ID="${OPENTEAM_INSTANCE_ID:-}"
+CHAT_ID="${TEEMAI_CHAT_ID:?Environment variable TEEMAI_CHAT_ID is not set}"
+INSTANCE_ID="${TEEMAI_INSTANCE_ID:-}"
 
 QUERY=""
 for arg in "$@"; do

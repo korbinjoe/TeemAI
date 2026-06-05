@@ -1,5 +1,5 @@
 /** Electron preload  Bridge API  */
-interface OpenTeamBridge {
+interface TeemAIBridge {
   // Main → Renderer StatusListen（Back unsubscribe Function）
   onAgentStatus: (callback: (data: unknown) => void) => () => void
   onNotification: (callback: (data: unknown) => void) => () => void
@@ -23,7 +23,7 @@ interface OpenTeamBridge {
 
 declare global {
   interface Window {
-    openteamBridge?: OpenTeamBridge
+    teemaiBridge?: TeemAIBridge
   }
 }
 

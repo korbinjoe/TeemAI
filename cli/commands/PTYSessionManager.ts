@@ -11,7 +11,7 @@ import WebSocket from 'ws'
 import chalk from 'chalk'
 import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
-import { OPENTEAM_HOME } from '../../shared/openteam-home'
+import { TEEMAI_HOME } from '../../shared/teemai-home'
 import { cwdToClaudeProjectKey } from '../../shared/projectKey'
 import type { ChatReadyParams } from '../tui/App.js'
 
@@ -381,9 +381,9 @@ export class PTYSessionManager {
 
   private saveLastSession(): void {
     try {
-      mkdirSync(OPENTEAM_HOME, { recursive: true })
+      mkdirSync(TEEMAI_HOME, { recursive: true })
       writeFileSync(
-        join(OPENTEAM_HOME, 'last-session.json'),
+        join(TEEMAI_HOME, 'last-session.json'),
         JSON.stringify({
           workspaceId: this.params.workspaceId,
           workspaceName: this.params.workspaceName,

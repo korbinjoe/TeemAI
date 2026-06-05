@@ -203,8 +203,8 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
       return
     }
     const wsMsg = acpUpdateToWSMessage({
-      sessionUpdate: '_openteam/messages_batch',
-      messages: messages as unknown as import('../../shared/acp-types').OpenTeamParsedMessage[],
+      sessionUpdate: '_teemai/messages_batch',
+      messages: messages as unknown as import('../../shared/acp-types').TeemAIParsedMessage[],
       replacedStatsId: null,
       batchType: 'full',
     }, bridgeCtx)

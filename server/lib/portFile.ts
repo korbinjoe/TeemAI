@@ -1,7 +1,7 @@
 /**
  * portFile — daemon /PID
  *
- * daemon  ~/.openteam/daemon.port  ~/.openteam/daemon.pid
+ * daemon  ~/.teemai/daemon.port  ~/.teemai/daemon.pid
  * SIGTERM Electron/CLI daemon
  *
  *  IO warn server
@@ -10,18 +10,18 @@
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { fileURLToPath } from 'url'
-import { OPENTEAM_HOME } from '../config/paths'
+import { TEEMAI_HOME } from '../config/paths'
 
-const OPENTEAM_DIR = OPENTEAM_HOME
+const TEEMAI_DIR = TEEMAI_HOME
 
-const IS_DEV = process.env.OPENTEAM_DEV === '1' || fileURLToPath(import.meta.url).endsWith('.ts')
+const IS_DEV = process.env.TEEMAI_DEV === '1' || fileURLToPath(import.meta.url).endsWith('.ts')
 const SUFFIX = IS_DEV ? '.dev' : ''
-const PORT_FILE = join(OPENTEAM_DIR, `daemon${SUFFIX}.port`)
-const PID_FILE = join(OPENTEAM_DIR, `daemon${SUFFIX}.pid`)
+const PORT_FILE = join(TEEMAI_DIR, `daemon${SUFFIX}.port`)
+const PID_FILE = join(TEEMAI_DIR, `daemon${SUFFIX}.pid`)
 
 const ensureDir = () => {
-  if (!existsSync(OPENTEAM_DIR)) {
-    mkdirSync(OPENTEAM_DIR, { recursive: true })
+  if (!existsSync(TEEMAI_DIR)) {
+    mkdirSync(TEEMAI_DIR, { recursive: true })
   }
 }
 

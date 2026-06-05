@@ -64,8 +64,8 @@ interface ThemeContextValue {
   setColorTheme: (ct: ColorTheme) => void
 }
 
-const THEME_KEY = 'openteam:theme'
-const COLOR_THEME_KEY = 'openteam:color-theme'
+const THEME_KEY = 'teemai:theme'
+const COLOR_THEME_KEY = 'teemai:color-theme'
 
 const getInitialTheme = (): Theme => {
   try {

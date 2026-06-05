@@ -47,7 +47,7 @@ interface ChatTabContextValue extends ChatTabState {
 
 // ── Constants ──
 
-const STORAGE_KEY = 'openteam:chat-tabs'
+const STORAGE_KEY = 'teemai:chat-tabs'
 
 // ── Reducer ──
 

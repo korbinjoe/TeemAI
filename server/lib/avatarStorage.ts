@@ -1,7 +1,7 @@
 /**
  * Avatar Storage —  agent
  *
- *   ~/.openteam/avatars/<agentId>/<style>.png
+ *   ~/.teemai/avatars/<agentId>/<style>.png
  *
  * - saveAvatar
  * - deleteAgentAvatarsagent
@@ -17,7 +17,7 @@ import { AVATAR_STYLES, type AvatarStyle } from './geminiImage'
 
 const log = createLogger('AvatarStorage')
 
-export const AVATAR_ROOT = join(homedir(), '.openteam', 'avatars')
+export const AVATAR_ROOT = join(homedir(), '.teemai', 'avatars')
 
 const AGENT_ID_REGEX = /^[a-z0-9][a-z0-9-]{0,63}$/
 const STYLE_SET: ReadonlySet<string> = new Set<string>(AVATAR_STYLES)

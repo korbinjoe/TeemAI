@@ -14,7 +14,7 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import App, { type ChatReadyParams } from '../tui/App.js'
 import { PTYSessionManager } from './PTYSessionManager.js'
-import { OPENTEAM_HOME } from '../../shared/openteam-home'
+import { TEEMAI_HOME } from '../../shared/teemai-home'
 
 interface LastSession {
   workspaceId: string
@@ -27,7 +27,7 @@ type WorkspaceResolution =
   | { type: 'resolved'; workspace: any; chatId: string; agentName?: string }
   | { type: 'select'; candidates: any[] }
 
-const LAST_SESSION_FILE = join(OPENTEAM_HOME, 'last-session.json')
+const LAST_SESSION_FILE = join(TEEMAI_HOME, 'last-session.json')
 
 const loadLastSession = (): LastSession | null => {
   try {
@@ -67,12 +67,12 @@ const tryResume = async (port: number, last: LastSession): Promise<ChatReadyPara
 }
 
 const ensureAuthenticated = async (port: number): Promise<void> => {
-  const statusRes = await fetch(`http://127.0.0.1:${port}/api/auth/openteam/status`)
+  const statusRes = await fetch(`http://127.0.0.1:${port}/api/auth/teemai/status`)
   const status = await statusRes.json() as { authenticated: boolean }
 
   if (status.authenticated) return
 
-  const urlRes = await fetch(`http://127.0.0.1:${port}/api/auth/openteam/login-url`)
+  const urlRes = await fetch(`http://127.0.0.1:${port}/api/auth/teemai/login-url`)
   const { url } = await urlRes.json() as { url: string }
 
   console.log(chalk.yellow('Not signed in, opening browser...'))
@@ -86,7 +86,7 @@ const ensureAuthenticated = async (port: number): Promise<void> => {
 
   while (Date.now() - start < maxWait) {
     await new Promise((r) => setTimeout(r, pollInterval))
-    const pollRes = await fetch(`http://127.0.0.1:${port}/api/auth/openteam/status`)
+    const pollRes = await fetch(`http://127.0.0.1:${port}/api/auth/teemai/status`)
     const pollStatus = await pollRes.json() as { authenticated: boolean; name?: string }
     if (pollStatus.authenticated) {
       console.log(chalk.green(`Sign inSuccess${pollStatus.name ? ` (${pollStatus.name})` : ''}`))
@@ -94,7 +94,7 @@ const ensureAuthenticated = async (port: number): Promise<void> => {
     }
   }
 
-  console.error(chalk.red('Sign-in timed out, please re-run openteam'))
+  console.error(chalk.red('Sign-in timed out, please re-run teemai'))
   process.exit(1)
 }
 
@@ -186,7 +186,7 @@ const resolveWorkspace = async (port: number): Promise<WorkspaceResolution> => {
 const loadDefaultModel = (): string | undefined => {
   try {
     const cwd = process.cwd()
-    const configPath = join(cwd, 'openteam.json')
+    const configPath = join(cwd, 'teemai.json')
     if (!existsSync(configPath)) return undefined
     const config = JSON.parse(readFileSync(configPath, 'utf8'))
     return config?.agents?.defaults?.model
@@ -197,7 +197,7 @@ const loadDefaultModel = (): string | undefined => {
 
 const loadDefaultAgent = (): string => {
   try {
-    const configPath = join(OPENTEAM_HOME, 'config.json')
+    const configPath = join(TEEMAI_HOME, 'config.json')
     if (!existsSync(configPath)) return 'lead'
     const config = JSON.parse(readFileSync(configPath, 'utf8'))
     return config.defaultAgent || 'lead'

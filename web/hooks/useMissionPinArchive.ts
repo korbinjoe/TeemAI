@@ -20,9 +20,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE, authFetch } from '@/config/api'
 import type { Chat } from '../components/workspace/types'
 
-const LOCAL_STORAGE_KEY = 'openteam:v2:missionOrg:global'
-const LEGACY_STORAGE_PREFIX = 'openteam:v2:missionOrg:'
-const MIGRATION_FLAG_KEY = 'openteam:v2:missionOrg:serverMigrated'
+const LOCAL_STORAGE_KEY = 'teemai:v2:missionOrg:global'
+const LEGACY_STORAGE_PREFIX = 'teemai:v2:missionOrg:'
+const MIGRATION_FLAG_KEY = 'teemai:v2:missionOrg:serverMigrated'
 const AUTO_ARCHIVE_DAYS = 2
 const AUTO_ARCHIVE_MS = AUTO_ARCHIVE_DAYS * 24 * 60 * 60 * 1000
 // Re-evaluate auto-archive periodically so chats cross the threshold without

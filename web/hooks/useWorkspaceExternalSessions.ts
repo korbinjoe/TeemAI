@@ -138,7 +138,7 @@ export const useWorkspaceExternalSessions = (
   }, [fetchPage])
 
   // Optimistic drop after a row is adopted — server-side state will catch up
-  // via openteam:chat-created → useExternalCwds refresh, but the dropped row
+  // via teemai:chat-created → useExternalCwds refresh, but the dropped row
   // should disappear immediately.
   const hide = useCallback((sessionId: string) => {
     setSessions((prev) => prev.filter((s) => s.id !== sessionId))

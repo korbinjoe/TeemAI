@@ -3,7 +3,7 @@ import chalk from 'chalk'
 import { ensureDaemon } from '../lib/daemonConnect.js'
 
 export const serveCommand = new Command('serve')
-  .description('Start web server and access OpenTeam via browser')
+  .description('Start web server and access TeemAI via browser')
   .option('--no-open', 'Do not auto-open browser')
   .action(async (options) => {
     let actualPort: number
@@ -17,7 +17,7 @@ export const serveCommand = new Command('serve')
     }
 
     const url = `http://localhost:${actualPort}`
-    console.log(chalk.green('\n  OpenTeam is running at:'))
+    console.log(chalk.green('\n  TeemAI is running at:'))
     console.log(chalk.bold(`  → ${url}\n`))
 
     if (options.open !== false) {

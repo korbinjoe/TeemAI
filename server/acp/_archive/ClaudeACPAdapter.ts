@@ -240,7 +240,7 @@ export class ClaudeACPAdapter extends EventEmitter implements ACPAgentAdapter {
 
     this.streamManager.on('activity', (state: ActivityState) => {
       this.emitSessionUpdate({
-        sessionUpdate: 'openteam:activity',
+        sessionUpdate: 'teemai:activity',
         activity: state as unknown as Record<string, unknown>,
       })
     })
@@ -294,7 +294,7 @@ export class ClaudeACPAdapter extends EventEmitter implements ACPAgentAdapter {
 
       case 'thinking':
         return {
-          sessionUpdate: 'openteam:thinking',
+          sessionUpdate: 'teemai:thinking',
           text: msg.content,
         }
 

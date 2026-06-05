@@ -113,7 +113,7 @@ The system SHALL ship a reusable skill `x-promoter` under `ai-assets/skills/x-pr
 
 - **Given** a valid summary JSON
 - **When** `draft-tweet.sh --summary <path>` is invoked
-- **Then** a markdown draft is written to `~/.openteam/agents/growth-marketer/drafts/<owner>-<repo>-<timestamp>.md`
+- **Then** a markdown draft is written to `~/.teemai/agents/growth-marketer/drafts/<owner>-<repo>-<timestamp>.md`
 - **And** the draft contains 3 variants, each ≤280 characters
 - **And** the draft contains a Provenance section that cites the summary facts each variant relies on
 - **And** when invoked with `--thread`, each variant may be expressed as 2–5 tweets, with each individual tweet ≤280 characters
@@ -128,7 +128,7 @@ The system SHALL ship a reusable skill `x-promoter` under `ai-assets/skills/x-pr
 
 #### Scenario: Post primitive uses a persistent browser profile
 
-- **Given** the persistent profile directory `~/.openteam/browser-profiles/x/`
+- **Given** the persistent profile directory `~/.teemai/browser-profiles/x/`
 - **When** `post-tweet.sh` launches a Playwright context
 - **Then** it uses that directory as the user data dir so cookies persist between invocations
 - **And** the directory is created automatically on first run if missing
@@ -156,7 +156,7 @@ The system SHALL ship a reusable skill `x-promoter` under `ai-assets/skills/x-pr
 
 - **Given** an unexpected X UI layout where the composer cannot be located by ARIA role
 - **When** `post-tweet.sh --draft <path> --confirm` runs
-- **Then** the script captures a screenshot to `~/.openteam/agents/growth-marketer/drafts/<draft>-failure.png`
+- **Then** the script captures a screenshot to `~/.teemai/agents/growth-marketer/drafts/<draft>-failure.png`
 - **And** exits with code 20
 - **And** writes a `constraint` entry to the war room describing the selector failure
 - **And** does not retry the post on its own

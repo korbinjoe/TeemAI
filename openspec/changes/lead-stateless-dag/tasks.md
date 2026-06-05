@@ -17,8 +17,8 @@
 
 ### Phase 3: Skill Cleanup
 
-- [x] Remove `~/.openteam/skills/expert-dispatcher/scripts/watch-events.sh`
-- [x] Remove `~/.openteam/skills/expert-dispatcher/scripts/resume-workflow.sh`
+- [x] Remove `~/.teemai/skills/expert-dispatcher/scripts/watch-events.sh`
+- [x] Remove `~/.teemai/skills/expert-dispatcher/scripts/resume-workflow.sh`
 - [x] Update `expert-dispatcher/SKILL.md` — remove references to watch-events and resume-workflow
 
 ### Phase 4: Verification

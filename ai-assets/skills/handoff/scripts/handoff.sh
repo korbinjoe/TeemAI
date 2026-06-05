@@ -14,8 +14,8 @@ TASK="${2:?Usage: handoff.sh <targetAgentId> <task> <context-json>}"
 CONTEXT="${3:-{}}"
 
 API_BASE="${EXPERT_API_BASE:?Environment variable EXPERT_API_BASE is not set}"
-INSTANCE_ID="${OPENTEAM_INSTANCE_ID:?Environment variable OPENTEAM_INSTANCE_ID is not set}"
-CHAT_ID="${OPENTEAM_CHAT_ID:?Environment variable OPENTEAM_CHAT_ID is not set}"
+INSTANCE_ID="${TEEMAI_INSTANCE_ID:?Environment variable TEEMAI_INSTANCE_ID is not set}"
+CHAT_ID="${TEEMAI_CHAT_ID:?Environment variable TEEMAI_CHAT_ID is not set}"
 
 PAYLOAD=$(jq -n \
   --arg from "$INSTANCE_ID" \

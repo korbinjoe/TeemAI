@@ -1,5 +1,5 @@
 /**
- * Migrate legacy JSON files (~/.openteam/*.json) into SQLite tables.
+ * Migrate legacy JSON files (~/.teemai/*.json) into SQLite tables.
  * Renames migrated files to .bak on success.
  */
 

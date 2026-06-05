@@ -42,13 +42,13 @@ export const acpUpdateToWSMessage = (
         },
       }
 
-    case '_openteam/activity':
+    case '_teemai/activity':
       return {
         type: 'expert:activity',
         payload: { agentId, sessionId, chatId, activity: update.activity },
       }
 
-    case '_openteam/messages_batch':
+    case '_teemai/messages_batch':
       return {
         type: 'expert:structured-message',
         payload: {
@@ -89,7 +89,7 @@ export const acpUpdateToWSMessage = (
     case 'tool_call':
     case 'tool_call_update':
     case 'agent_thought_chunk':
-    case '_openteam/thinking':
+    case '_teemai/thinking':
       return null
 
     case 'config_option_update':
@@ -98,7 +98,7 @@ export const acpUpdateToWSMessage = (
     case 'user_message_chunk':
       return null
 
-    case '_openteam/cli_init':
+    case '_teemai/cli_init':
       return null
 
     default:

@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { API_BASE, authFetch } from '@/config/api'
 import type { WorkspaceInfo } from '@/components/home/types'
 
-const LAST_KEY = 'openteam:last-workspace'
+const LAST_KEY = 'teemai:last-workspace'
 
 /** Resolves `/` → last-visited workspace, else first workspace, else `/workspaces`
  *  (so the user can create one). */

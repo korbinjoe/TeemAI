@@ -2,15 +2,15 @@
  * Gemini Image Routes
  *
  *  URL  Gemini
- *  ~/.openteam/images/  gemini-
+ *  ~/.teemai/images/  gemini-
  */
 
 import { Router } from 'express'
 import { join } from 'path'
 import { existsSync } from 'fs'
-import { OPENTEAM_HOME } from '../../config/paths'
+import { TEEMAI_HOME } from '../../config/paths'
 
-const IMAGE_DIR = join(OPENTEAM_HOME, 'images')
+const IMAGE_DIR = join(TEEMAI_HOME, 'images')
 
 const router = Router()
 

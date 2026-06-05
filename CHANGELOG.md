@@ -19,7 +19,7 @@
 - Fix New Mission button UI freeze by removing useWorkspace() from memo-wrapped MissionRow
 - Fix handoff task being silently dropped when target agent is already running
 - Fix Lead agent bypassing multi-agent dispatch by using replace prompt mode and tightening tools
-- Fix empty state logo to use theme-aware OpenTeamLogo component
+- Fix empty state logo to use theme-aware TeemAILogo component
 - Fix war room misclassifying internal subagent spawns as handoffs
 
 ### Improvements
@@ -47,7 +47,7 @@
 - **Multiple agent instances**: support duplicate agents in a single mission with independent sessions
 - **DevPanel**: 5-tab architecture for full system observability including JSONL viewer
 - **Themes**: add Diancui (Kingfisher), Jiqing (Clear Sky), and Tanxiang (Sandalwood) brand themes
-- **Configurable models**: load model list from `~/.openteam/config.json` instead of hardcoding
+- **Configurable models**: load model list from `~/.teemai/config.json` instead of hardcoding
 - **Heartbeat bar**: scope heartbeat and queue indicators to current agent in single-agent view
 - **Continuation summary**: collapsible cross-session context handoff summary
 - **macOS sleep prevention**: keep system awake while missions are running
@@ -69,7 +69,7 @@
 - Fix war-room goal write failure when active goal already exists
 - Fix stale closure blocking queue flush in chat input
 - Fix image attachments not forwarded to model on cold start
-- Fix empty state avatar, replace with OpenTeam logo
+- Fix empty state avatar, replace with TeemAI logo
 - Fix Git Changes panel not refreshing after agent commits via PTY
 - Fix Electron dev/prod daemon port isolation and SingletonLock conflict
 - Fix black screen caused by Google Fonts CDN, switch to `@fontsource/inter`

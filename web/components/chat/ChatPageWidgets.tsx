@@ -5,7 +5,7 @@
 
 import { useTranslation } from 'react-i18next'
 import AgentAvatar from '@/components/ui/agent-avatar'
-import OpenTeamLogo from '@/components/icons/OpenTeamLogo'
+import TeemAILogo from '@/components/icons/TeemAILogo'
 import type { AgentActivity } from '@/types/chat'
 
 export const noDrag = { WebkitAppRegion: 'no-drag' } as React.CSSProperties
@@ -52,12 +52,12 @@ export const EmptyState = ({ connected, hasSession, reconnecting = false }: { co
     }}>
       {connected && hasSession ? (
         <>
-          <OpenTeamLogo size={64} />
+          <TeemAILogo size={64} />
           <div style={{
             fontSize: 22, fontWeight: 800, letterSpacing: '0.04em',
             color: 'rgb(var(--text-emphasis))',
           }}>
-            OpenTeam
+            TeemAI
           </div>
           <div style={{
             fontSize: 13, color: 'rgb(var(--text-muted))',

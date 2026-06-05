@@ -11,7 +11,7 @@
 - [x] 1.3 Create `ai-assets/agents/growth-marketer/TOOLS.md`
   - Allowed: Read/Write/Edit limited to drafts dir + skill dir, Bash, WebFetch, WebSearch, AskUserQuestion, playwright MCP
   - Forbidden: Write/Edit anywhere under `web/`, `server/`, `cli/`, `shared/`, `electron/`, `ai-assets/agents/**`; no git push; no posting to platforms other than X
-  - Env constraints: persistent profile dir `~/.openteam/browser-profiles/x/`, never log cookies
+  - Env constraints: persistent profile dir `~/.teemai/browser-profiles/x/`, never log cookies
 
 ## 2. x-promoter skill scaffold
 
@@ -29,13 +29,13 @@
 ## 4. draft-tweet.sh
 
 - [x] 4.1 Implement `draft-tweet.sh --summary <path> [--lang en|zh] [--thread] [--style hook|narrative|contrarian]`
-- [x] 4.2 Reserve the output path at `~/.openteam/agents/growth-marketer/drafts/<owner>-<repo>-<ts>.md` (created on first run); the script prints the prompt bundle + path on stdout so the calling agent writes the actual rendered draft to that path. This split keeps the LLM call in the agent's context rather than re-implementing an LLM CLI in bash.
+- [x] 4.2 Reserve the output path at `~/.teemai/agents/growth-marketer/drafts/<owner>-<repo>-<ts>.md` (created on first run); the script prints the prompt bundle + path on stdout so the calling agent writes the actual rendered draft to that path. This split keeps the LLM call in the agent's context rather than re-implementing an LLM CLI in bash.
 - [x] 4.3 280-char enforcement is performed by `post-tweet.sh` (exit 30) so it runs against the final agent-rendered draft, not a hypothetical pre-render output. The prompt template also instructs the model to enforce the limit at draft time.
 - [x] 4.4 Prompt template requires a Provenance section citing the summary JSON fields for each Variant A claim.
 
 ## 5. post-tweet.sh (Playwright)
 
-- [x] 5.1 Initialise persistent context at `~/.openteam/browser-profiles/x/`; created on first run by `post-tweet.mjs`
+- [x] 5.1 Initialise persistent context at `~/.teemai/browser-profiles/x/`; created on first run by `post-tweet.mjs`
 - [x] 5.2 Pre-flight: open `https://x.com/home`; if redirected to a `/login` or `/i/flow/login` URL → exit 10, write `constraint` to war-room via `wb-write.sh` when chat env vars are present
 - [x] 5.3 Locate Post composer via ARIA roles only (`getByRole('textbox', { name: /post text|what is happening|tweet/i })`)
 - [x] 5.4 Single-tweet path: type body via keyboard.type, click Post (`tweetButtonInline` testid with role-button fallback), wait for success state, capture permalink from the "View" link toast or URL
@@ -63,7 +63,7 @@
 ## 8. Docs
 
 - [x] 8.1 No central agents README exists in this repo (verified via `grep` for prior agent names in `README.md`). Per-agent descriptions live in their own `SOUL.md` / `TOOLS.md` files and in `openteam.json`; this matches the precedent set by `product-strategist`. No top-level README change in this proposal.
-- [x] 8.2 `ai-assets/skills/x-promoter/SKILL.md` documents the persistent profile path, the one-time interactive login snippet, and how to wipe the session (`rm -rf ~/.openteam/browser-profiles/x`).
+- [x] 8.2 `ai-assets/skills/x-promoter/SKILL.md` documents the persistent profile path, the one-time interactive login snippet, and how to wipe the session (`rm -rf ~/.teemai/browser-profiles/x`).
 
 ## 9. Validate proposal
 

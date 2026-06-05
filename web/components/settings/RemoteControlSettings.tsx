@@ -75,7 +75,7 @@ const RemoteControlSettings = () => {
           <div>
             <div className="text-[13px] text-text-primary">Remote Control</div>
             <div className="mt-0.5 text-xs text-text-secondary">
-              Control OpenTeam from your phone via LAN
+              Control TeemAI from your phone via LAN
             </div>
           </div>
         </div>

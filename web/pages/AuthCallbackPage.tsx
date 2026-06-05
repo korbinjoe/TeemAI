@@ -17,8 +17,8 @@ const ACCESS_DENIED_KEYS: Record<string, { title: string; desc: string }> = {
 /**
  *  /auth/callback
  *
- * /pre-openteam  302
- *  URL  token POST  /api/auth/openteam/save-token
+ * /pre-teemai  302
+ *  URL  token POST  /api/auth/teemai/save-token
  *
  *  callback  window.location.origin
  */
@@ -46,7 +46,7 @@ const AuthCallbackPage = () => {
       return
     }
 
-    fetch(`${API_BASE}/api/auth/openteam/save-token`, {
+    fetch(`${API_BASE}/api/auth/teemai/save-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, workid, name, expires_at, dept_path }),

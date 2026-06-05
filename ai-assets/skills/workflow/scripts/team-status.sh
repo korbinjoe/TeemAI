@@ -8,7 +8,7 @@ set -euo pipefail
 source "$(dirname "$0")/_env.sh"
 
 API_BASE="${EXPERT_API_BASE:?Environment variable EXPERT_API_BASE is not set}"
-CHAT_ID="${OPENTEAM_CHAT_ID:?Environment variable OPENTEAM_CHAT_ID is not set}"
+CHAT_ID="${TEEMAI_CHAT_ID:?Environment variable TEEMAI_CHAT_ID is not set}"
 
 ENCODED_CHAT=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${CHAT_ID}'))")
 RESPONSE=$(curl -s "${API_BASE}/api/expert/team-status?chatId=${ENCODED_CHAT}")

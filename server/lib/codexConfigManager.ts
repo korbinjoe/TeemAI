@@ -2,8 +2,8 @@
  * CodexConfigManager - Codex config.toml
  *
  * Codex config.toml  backup/restore
- * - backupCodexConfig() model_provider openteam-proxy provider
- * - restoreCodexConfig() openteam-proxy
+ * - backupCodexConfig() model_provider teemai-proxy provider
+ * - restoreCodexConfig() teemai-proxy
  *
  * -  Codex session  session  restore
  * -  Promise
@@ -19,14 +19,14 @@ import { createLogger } from './logger'
 const log = createLogger('CodexConfigManager')
 
 const CODEX_CONFIG_FILE = join(homedir(), '.codex', 'config.toml')
-const OPENTEAM_PROVIDER_NAME = 'openteam-proxy'
-const OPENTEAM_PROXY_BASE_URL = ''
-const BACKUP_KEY = '_openteam_backup_model_provider'
+const TEEMAI_PROVIDER_NAME = 'teemai-proxy'
+const TEEMAI_PROXY_BASE_URL = ''
+const BACKUP_KEY = '_teemai_backup_model_provider'
 
-const OPENTEAM_PROVIDER_CONFIG = {
-  name: 'OpenTeam Proxy',
-  base_url: OPENTEAM_PROXY_BASE_URL,
-  env_key: 'OPENTEAM_PROXY_API_KEY',
+const TEEMAI_PROVIDER_CONFIG = {
+  name: 'TeemAI Proxy',
+  base_url: TEEMAI_PROXY_BASE_URL,
+  env_key: 'TEEMAI_PROXY_API_KEY',
   responses: 'chat',
   stream_max_retries: 8,
   stream_idle_timeout_ms: 30000,
@@ -70,7 +70,7 @@ const writeConfig = async (config: TomlConfig): Promise<void> => {
 }
 
 /**
- *  model_provider openteam-proxy provider
+ *  model_provider teemai-proxy provider
  *
  * - count 0→1 backup + inject
  * - count 1→N
@@ -90,25 +90,25 @@ export const backupCodexConfig = async (): Promise<void> => {
       if (!config) return
 
       if (config[BACKUP_KEY]) {
-        log.debug('Codex config already has OpenTeam injection from previous session, skipping')
+        log.debug('Codex config already has TeemAI injection from previous session, skipping')
         return
       }
 
       const originalProvider = config.model_provider
-      if (originalProvider && originalProvider !== OPENTEAM_PROVIDER_NAME) {
+      if (originalProvider && originalProvider !== TEEMAI_PROVIDER_NAME) {
         config[BACKUP_KEY] = originalProvider
       }
 
       // Switch model_provider
-      config.model_provider = OPENTEAM_PROVIDER_NAME
+      config.model_provider = TEEMAI_PROVIDER_NAME
 
       if (!config.model_providers) {
         config.model_providers = {}
       }
-      config.model_providers[OPENTEAM_PROVIDER_NAME] = { ...OPENTEAM_PROVIDER_CONFIG }
+      config.model_providers[TEEMAI_PROVIDER_NAME] = { ...TEEMAI_PROVIDER_CONFIG }
 
       await writeConfig(config)
-      log.info('Injected openteam-proxy into config.toml', { originalProvider })
+      log.info('Injected teemai-proxy into config.toml', { originalProvider })
     } catch (err) {
       log.error('Failed to backup Codex config', { error: err instanceof Error ? err.message : String(err) })
     }
@@ -116,7 +116,7 @@ export const backupCodexConfig = async (): Promise<void> => {
 }
 
 /**
- *  model_provider openteam-proxy
+ *  model_provider teemai-proxy
  *
  * -  sessioncount N→N-1, N>1
  * -  sessioncount 1→0 restore
@@ -141,13 +141,13 @@ export const restoreCodexConfig = async (): Promise<void> => {
         config.model_provider = config[BACKUP_KEY]
         delete config[BACKUP_KEY]
         changed = true
-      } else if (config.model_provider === OPENTEAM_PROVIDER_NAME) {
+      } else if (config.model_provider === TEEMAI_PROVIDER_NAME) {
         delete config.model_provider
         changed = true
       }
 
-      if (config.model_providers?.[OPENTEAM_PROVIDER_NAME]) {
-        delete config.model_providers[OPENTEAM_PROVIDER_NAME]
+      if (config.model_providers?.[TEEMAI_PROVIDER_NAME]) {
+        delete config.model_providers[TEEMAI_PROVIDER_NAME]
         if (Object.keys(config.model_providers).length === 0) {
           delete config.model_providers
         }

@@ -80,7 +80,7 @@ interface WorkspaceContextValue extends WorkspaceState {
 
 // ── Constants ──
 
-const STORAGE_KEY = 'openteam:workspace-layout'
+const STORAGE_KEY = 'teemai:workspace-layout'
 const LAYOUT_CYCLE: LayoutMode[] = ['single', 'split', 'quad']
 
 // ── Reducer ──

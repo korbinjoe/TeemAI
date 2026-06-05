@@ -20,10 +20,10 @@ Scope: the project's multi-agent memory mechanism and agent growth/evolution mec
 | API | `GET /api/agents/:id/growth`, `POST .../growth/:metric` | `routes/agent/memoryRoutes.ts` | OK |
 | Prompt | `## Cross-Session Memory` block, top-20 by importance | `runtime/ConfigCompiler.ts:589-608` | Wired, **always empty** |
 | Prompt | `## Workspace Path` pointer to `MEMORY.md` + `memory/YYYY-MM-DD.md` | `runtime/ConfigCompiler.ts:474-477` | Wired, target dir does not exist |
-| Asset | Static `MEMORY.md` per agent | `~/.openteam/agents/<id>/MEMORY.md` | **Missing** for all 10 bundled agents |
-| Asset | Per-day workspace log `memory/YYYY-MM-DD.md` | `~/.openteam/agents/<id>/memory/` | **Directory does not exist** |
-| Asset | Cross-session war-room (per chat) | `~/.openteam/whiteboard/<chatId>/entries.jsonl` | **Functional** — entries appended |
-| Asset | Mailbox JSONL (per chat × instance pair) | `~/.openteam/mailbox/<chatId>/<from>→<to>.jsonl` | **Functional** |
+| Asset | Static `MEMORY.md` per agent | `~/.teemai/agents/<id>/MEMORY.md` | **Missing** for all 10 bundled agents |
+| Asset | Per-day workspace log `memory/YYYY-MM-DD.md` | `~/.teemai/agents/<id>/memory/` | **Directory does not exist** |
+| Asset | Cross-session war-room (per chat) | `~/.teemai/whiteboard/<chatId>/entries.jsonl` | **Functional** — entries appended |
+| Asset | Mailbox JSONL (per chat × instance pair) | `~/.teemai/mailbox/<chatId>/<from>→<to>.jsonl` | **Functional** |
 | UI | `EvolutionLog` timeline | `web/components/evolution/EvolutionLog.tsx` | Built, **no data source** |
 | UI | `growthRecord` section in agent editor | `web/pages/AgentEditorPage.tsx:452` | Renders placeholder copy |
 | Service | `SenseiUpgradeService` — user-triggered prompt rewriter | `server/services/update/SenseiUpgradeService.ts` | Throws on first call: prompt files missing |

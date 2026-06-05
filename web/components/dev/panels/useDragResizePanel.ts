@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 
-const STORAGE_KEY = 'openteam:devpanel-layout'
+const STORAGE_KEY = 'teemai:devpanel-layout'
 const DEFAULT_W = 420
 const DEFAULT_H = 600
 const MIN_W = 320
@@ -22,10 +22,10 @@ const loadLayout = (): PanelLayout => {
     }
   } catch { /* ignore */ }
   try {
-    const old = localStorage.getItem('openteam:devpanel-position')
+    const old = localStorage.getItem('teemai:devpanel-position')
     if (old) {
       const p = JSON.parse(old)
-      localStorage.removeItem('openteam:devpanel-position')
+      localStorage.removeItem('teemai:devpanel-position')
       return { x: p.x, y: p.y, w: DEFAULT_W, h: DEFAULT_H }
     }
   } catch { /* ignore */ }

@@ -129,16 +129,16 @@ export const useWorkspaceChats = (workspaceId: string | null | undefined): Works
         void refresh()
       }
     }
-    window.addEventListener('openteam:chat-created', handleChatMutated)
-    window.addEventListener('openteam:chat-updated', handleChatMutated)
+    window.addEventListener('teemai:chat-created', handleChatMutated)
+    window.addEventListener('teemai:chat-updated', handleChatMutated)
 
     return () => {
       wsClient.off('chat:status-changed', handleStatusChanged)
       wsClient.off('chat:activity', handleActivity)
       wsClient.off('chat:title-updated', handleTitleUpdated)
       document.removeEventListener('visibilitychange', handleVisibility)
-      window.removeEventListener('openteam:chat-created', handleChatMutated)
-      window.removeEventListener('openteam:chat-updated', handleChatMutated)
+      window.removeEventListener('teemai:chat-created', handleChatMutated)
+      window.removeEventListener('teemai:chat-updated', handleChatMutated)
     }
   }, [workspaceId, refresh])
 

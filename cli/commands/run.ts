@@ -2,7 +2,7 @@
  * run  —  sandbox
  *
  *  agent + prompt  CI/CD
- *  OPENTEAM_TOKEN
+ *  TEEMAI_TOKEN
  */
 
 import { Command } from 'commander'
@@ -66,24 +66,24 @@ const resolveWorkspace = async (port: number, cwd: string): Promise<WorkspaceRes
 }
 
 const ensureAuth = async (port: number): Promise<void> => {
-  const statusRes = await fetch(`http://127.0.0.1:${port}/api/auth/openteam/status`)
+  const statusRes = await fetch(`http://127.0.0.1:${port}/api/auth/teemai/status`)
   const status = await statusRes.json() as { authenticated: boolean }
   if (status.authenticated) return
 
-  const token = process.env.OPENTEAM_TOKEN
+  const token = process.env.TEEMAI_TOKEN
   if (!token) {
-    process.stderr.write(chalk.red('Error: Not authenticated. Set OPENTEAM_TOKEN environment variable.\n'))
+    process.stderr.write(chalk.red('Error: Not authenticated. Set TEEMAI_TOKEN environment variable.\n'))
     process.exit(1)
   }
 
-  const injectRes = await fetch(`http://127.0.0.1:${port}/api/auth/openteam/env-inject`, {
+  const injectRes = await fetch(`http://127.0.0.1:${port}/api/auth/teemai/env-inject`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       token,
-      userId: process.env.OPENTEAM_USER_ID,
-      userName: process.env.OPENTEAM_USER_NAME,
-      serverUrl: process.env.OPENTEAM_SERVER_URL,
+      userId: process.env.TEEMAI_USER_ID,
+      userName: process.env.TEEMAI_USER_NAME,
+      serverUrl: process.env.TEEMAI_SERVER_URL,
     }),
   })
 
@@ -106,8 +106,8 @@ const getPrompt = async (positionalArg?: string): Promise<string> => {
   }
 
   process.stderr.write(chalk.red('Error: No prompt provided.\n'))
-  process.stderr.write(chalk.dim('Usage: openteam run -a <agent> "your prompt"\n'))
-  process.stderr.write(chalk.dim('   or: echo "prompt" | openteam run -a <agent>\n'))
+  process.stderr.write(chalk.dim('Usage: teemai run -a <agent> "your prompt"\n'))
+  process.stderr.write(chalk.dim('   or: echo "prompt" | teemai run -a <agent>\n'))
   process.exit(1)
 }
 
@@ -154,7 +154,7 @@ export const runCommand = new Command('run')
       }).catch(() => {})
     }
 
-    process.stderr.write(chalk.dim(`[openteam] agent=${agentId} workspace=${workspace.name} chat=${chatId}\n`))
+    process.stderr.write(chalk.dim(`[teemai] agent=${agentId} workspace=${workspace.name} chat=${chatId}\n`))
 
     // 5. WS Connect + Start agent
     const ws = new WebSocket(`ws://localhost:${port}/ws`)
@@ -199,7 +199,7 @@ export const runCommand = new Command('run')
           case 'expert:started':
             if (msg.payload.agentId !== agentId) break
             started = true
-            process.stderr.write(chalk.dim(`[openteam] Agent started (session=${msg.payload.sessionId})\n`))
+            process.stderr.write(chalk.dim(`[teemai] Agent started (session=${msg.payload.sessionId})\n`))
             break
 
           case 'expert:partial-text':
@@ -224,14 +224,14 @@ export const runCommand = new Command('run')
           case 'expert:activity':
             if (msg.payload.agentId !== agentId) break
             if (msg.payload.activity?.state) {
-              process.stderr.write(chalk.dim(`[openteam] ${msg.payload.activity.state}\n`))
+              process.stderr.write(chalk.dim(`[teemai] ${msg.payload.activity.state}\n`))
             }
             break
 
           case 'expert:exit': {
             if (msg.payload.agentId !== agentId) break
             const exitCode = msg.payload.exitCode ?? 0
-            process.stderr.write(chalk.dim(`[openteam] Agent exited (code=${exitCode})\n`))
+            process.stderr.write(chalk.dim(`[teemai] Agent exited (code=${exitCode})\n`))
             process.stdout.write('\n')
             cleanup()
             process.exit(exitCode)

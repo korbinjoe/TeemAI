@@ -11,7 +11,7 @@ import AgentAvatar from '@/components/ui/agent-avatar'
 import type { AgentSummary } from '@/types/agentConfig'
 import type { AgentActivity, AgentPhase } from '@/types/chat'
 
-const MRU_STORAGE_KEY = 'openteam:agent-switcher:mru'
+const MRU_STORAGE_KEY = 'teemai:agent-switcher:mru'
 const MRU_CAP = 10
 
 const PHASE_COLOR: Record<AgentPhase | 'idle', string> = {

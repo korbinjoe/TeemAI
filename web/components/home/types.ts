@@ -1,9 +1,9 @@
 import type { ChatActivityPayload } from '../../types/chat'
 
-export const DIR_HISTORY_STORAGE_KEY = 'openteam:dir-picker-history'
-export const LAST_SESSION_KEY = 'openteam:last-session'
-export const HIDDEN_WORKSPACES_KEY = 'openteam:hidden-quick-workspaces'
-export const QUICK_ORDER_KEY = 'openteam:quick-items-order'
+export const DIR_HISTORY_STORAGE_KEY = 'teemai:dir-picker-history'
+export const LAST_SESSION_KEY = 'teemai:last-session'
+export const HIDDEN_WORKSPACES_KEY = 'teemai:hidden-quick-workspaces'
+export const QUICK_ORDER_KEY = 'teemai:quick-items-order'
 
 export interface LastSessionConfig {
   repos: string[]

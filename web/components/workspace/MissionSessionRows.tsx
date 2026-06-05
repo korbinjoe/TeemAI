@@ -126,7 +126,7 @@ export const MissionRow = memo(({ chat, isSelected, agentNames, onPin, onArchive
       if (failures.length > 0) {
         toast.warning(`Mission deleted, but some session files could not be removed:\n${failures.join('\n')}`)
       }
-      window.dispatchEvent(new CustomEvent('openteam:chat-updated', { detail: { chatId: chat.id } }))
+      window.dispatchEvent(new CustomEvent('teemai:chat-updated', { detail: { chatId: chat.id } }))
     } catch (err) {
       const msg = extractServerError(err) ?? (err instanceof Error ? err.message : 'Unknown error')
       toast.error(`Failed to delete mission: ${msg}`)
@@ -295,7 +295,7 @@ export const AgentRow = memo(({ agentId, agentName, isLead, chat, member, isSele
         if (failures.length > 0) {
           toast.warning(`Mission deleted, but some session files could not be removed:\n${failures.join('\n')}`)
         }
-        window.dispatchEvent(new CustomEvent('openteam:chat-updated', { detail: { chatId: chat.id } }))
+        window.dispatchEvent(new CustomEvent('teemai:chat-updated', { detail: { chatId: chat.id } }))
       } catch (err) {
         const msg = extractServerError(err) ?? (err instanceof Error ? err.message : 'Unknown error')
         toast.error(`Failed to delete mission: ${msg}`)
@@ -311,7 +311,7 @@ export const AgentRow = memo(({ agentId, agentName, isLead, chat, member, isSele
       if (failures.length > 0) {
         toast.warning(`Agent removed, but session file could not be deleted:\n${failures.join('\n')}`)
       }
-      window.dispatchEvent(new CustomEvent('openteam:chat-updated', { detail: { chatId: chat.id } }))
+      window.dispatchEvent(new CustomEvent('teemai:chat-updated', { detail: { chatId: chat.id } }))
     } catch (err) {
       const msg = extractServerError(err) ?? (err instanceof Error ? err.message : 'Unknown error')
       toast.error(`Failed to remove ${agentName}: ${msg}`)
@@ -385,7 +385,7 @@ export const CompletedRow = memo(({ chat, isSelected, archived, agentNames, onPi
       if (failures.length > 0) {
         toast.warning(`Mission deleted, but some session files could not be removed:\n${failures.join('\n')}`)
       }
-      window.dispatchEvent(new CustomEvent('openteam:chat-updated', { detail: { chatId: chat.id } }))
+      window.dispatchEvent(new CustomEvent('teemai:chat-updated', { detail: { chatId: chat.id } }))
     } catch (err) {
       const msg = extractServerError(err) ?? (err instanceof Error ? err.message : 'Unknown error')
       toast.error(`Failed to delete mission: ${msg}`)

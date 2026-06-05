@@ -54,7 +54,7 @@ describe('useChatViewMode', () => {
 
   it('plain chatId key does not collide with agentScopeOverride key', () => {
     const chatId = 'mission-1'
-    expect(chatViewStorageKey(chatId)).toBe('openteam:chat-view:mission-1')
-    expect(chatViewStorageKey(chatId, 'fullstack')).toBe('openteam:chat-view:mission-1:fullstack')
+    expect(chatViewStorageKey(chatId)).toBe('teemai:chat-view:mission-1')
+    expect(chatViewStorageKey(chatId, 'fullstack')).toBe('teemai:chat-view:mission-1:fullstack')
   })
 })

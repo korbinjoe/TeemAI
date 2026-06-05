@@ -4,7 +4,7 @@ import {
   type RefObject,
 } from 'react'
 
-const DEFAULT_STORAGE_KEY = 'openteam:agent-editor:identity-split-left-px'
+const DEFAULT_STORAGE_KEY = 'teemai:agent-editor:identity-split-left-px'
 const DEFAULT_LEFT_PX = 360
 const GUTTER_PX = 6
 

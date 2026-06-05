@@ -17,7 +17,7 @@ export const initEventTracker = (store: EventStore): void => {
 }
 
 const getClientSource = (): 'cli' | 'electron' | 'server' => {
-  if (process.env.OPENTEAM_CLI) return 'cli'
+  if (process.env.TEEMAI_CLI) return 'cli'
   if (process.env.ELECTRON) return 'electron'
   return 'server'
 }

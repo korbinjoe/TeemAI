@@ -1,7 +1,7 @@
 /**
  * ExecutionPlanManager -
  *
- *  ~/.openteam/tasks/{taskId}/plan.md
+ *  ~/.teemai/tasks/{taskId}/plan.md
  * -  TaskEnvelope  plan.md
  * -  plan.md  Agent
  * - / plan.mdAgent

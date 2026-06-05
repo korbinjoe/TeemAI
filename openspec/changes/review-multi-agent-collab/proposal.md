@@ -13,10 +13,10 @@ A structured review of OpenTeam's current multi-Agent collaboration mechanism (L
 Today OpenTeam runs a **Supervisor + Mailbox + Blackboard** hybrid:
 
 - `lead` agent dispatches to up to 9 experts via `expert-dispatcher` skill (`ai-assets/skills/expert-dispatcher/SKILL.md:1`) over an HTTP API (`server/routes/agent/expertRoutes.ts:68-175`)
-- Inter-agent messages flow through a file-based mailbox at `~/.openteam/mailbox/{chatId}/{from}→{to}.jsonl` (`server/mailbox/MailboxManager.ts:56`), exposed as `/api/expert/inbox/:instanceId` with per-instance byte cursors
+- Inter-agent messages flow through a file-based mailbox at `~/.teemai/mailbox/{chatId}/{from}→{to}.jsonl` (`server/mailbox/MailboxManager.ts:56`), exposed as `/api/expert/inbox/:instanceId` with per-instance byte cursors
 - A SSE stream at `/api/expert/events` pushes only terminal phase transitions and a fixed subset of task events (`expertRoutes.ts:324-371`)
 - A chat-scoped whiteboard (`server/whiteboard/WhiteboardManager.ts:55`) captures `goal | decision | artifact | progress | open_question | constraint | handoff` entries
-- Each task gets a `plan.md` + `result.md` under `~/.openteam/tasks/{taskId}/` (`server/mailbox/ExecutionPlanManager.ts:22`)
+- Each task gets a `plan.md` + `result.md` under `~/.teemai/tasks/{taskId}/` (`server/mailbox/ExecutionPlanManager.ts:22`)
 - Each agent has filesystem memory under `ai-assets/agents/<id>/memory/` and a heartbeat loop (`openteam.json:48-52`)
 
 ### What the research surfaces
@@ -59,7 +59,7 @@ Four spec deltas, each independently shippable:
 |---|---|---|---|
 | `multi-agent-orchestration` | NEW | New spec; new `openspec/specs/multi-agent-orchestration/` after archive | Low — codifies existing behavior + 2 small clarifications |
 | `agent-messaging` | NEW | New spec; refactors `message-protocol.md`, fixes 2 SSE bugs, aligns state machine | Medium — touches `expertRoutes.ts`, `check-inbox.sh`, `MailboxManager` |
-| `agent-memory` | NEW | Adds `EpisodicMemoryIndex` service + pre-task hook; reuses `~/.openteam/tasks/` | Low — additive read-side |
+| `agent-memory` | NEW | Adds `EpisodicMemoryIndex` service + pre-task hook; reuses `~/.teemai/tasks/` | Low — additive read-side |
 | `agent-evolution` | NEW | Cost ledger + budget guardrail + pre-execution check | Medium — touches expert lifecycle and team-status output |
 
 Each capability gets its own spec folder per OpenSpec convention. See `design.md` for architectural reasoning and trade-offs.

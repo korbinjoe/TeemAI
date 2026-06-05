@@ -1,6 +1,6 @@
 # Capability: Agent Messaging Protocol
 
-The inter-agent message protocol used over the file-based mailbox (`~/.openteam/mailbox/{chatId}/{from}→{to}.jsonl`) and the SSE event stream (`/api/expert/events`). This capability hardens the existing protocol: canonical state names aligned with A2A/ACP, a state alias layer for backward compatibility, two bug fixes in the SSE filter and event delivery, and a documented state machine.
+The inter-agent message protocol used over the file-based mailbox (`~/.teemai/mailbox/{chatId}/{from}→{to}.jsonl`) and the SSE event stream (`/api/expert/events`). This capability hardens the existing protocol: canonical state names aligned with A2A/ACP, a state alias layer for backward compatibility, two bug fixes in the SSE filter and event delivery, and a documented state machine.
 
 ## ADDED Requirements
 
@@ -113,11 +113,11 @@ When `getConnectionWs` returns undefined at the moment an `expert:data` (or any 
 
 ### Requirement: Mailbox Path and Format Stability
 
-The mailbox file path `~/.openteam/mailbox/{chatId}/{from}→{to}.jsonl` and the logfmt JSONL line format SHALL remain stable. This proposal does NOT change the transport, the serializer, or the byte-cursor read API. The only mailbox change is the canonical type set in the `type=` field plus the alias normalization on write.
+The mailbox file path `~/.teemai/mailbox/{chatId}/{from}→{to}.jsonl` and the logfmt JSONL line format SHALL remain stable. This proposal does NOT change the transport, the serializer, or the byte-cursor read API. The only mailbox change is the canonical type set in the `type=` field plus the alias normalization on write.
 
 #### Scenario: Existing consumers continue to work
 
-- **Given** an external script reads `~/.openteam/mailbox/{chatId}/architect→lead.jsonl` directly
+- **Given** an external script reads `~/.teemai/mailbox/{chatId}/architect→lead.jsonl` directly
 - **When** the script parses each line as logfmt
 - **Then** the parse succeeds with the same shape as before
 - **And** only the value of the `type` field changes (canonical preferred, legacy still accepted on read)

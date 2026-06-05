@@ -1,6 +1,6 @@
-# Contributing to OpenTeam
+# Contributing to TeemAI
 
-Thank you for your interest in contributing to OpenTeam!
+Thank you for your interest in contributing to TeemAI!
 
 ## Development Setup
 

@@ -3,9 +3,9 @@ import { Command } from 'commander'
 import chalk from 'chalk'
 import { join } from 'path'
 import { AgentStore } from '../../server/stores/AgentStore.js'
-import { OPENTEAM_HOME } from '../../shared/openteam-home'
+import { TEEMAI_HOME } from '../../shared/teemai-home'
 
-const storeDir = OPENTEAM_HOME
+const storeDir = TEEMAI_HOME
 
 export const agentsCommand = new Command('agents')
   .description('List all available agents')

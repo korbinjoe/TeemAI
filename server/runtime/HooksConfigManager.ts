@@ -6,7 +6,7 @@
 import { writeFile, mkdir, unlink } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
-import { TMP_HOOKS_DIR, OPENTEAM_HOME } from '../config/paths'
+import { TMP_HOOKS_DIR, TEEMAI_HOME } from '../config/paths'
 import type { HooksConfig } from '../config/types'
 
 export class HooksConfigManager {
@@ -19,7 +19,7 @@ export class HooksConfigManager {
    * @param additionalAllowPaths
    * @param systemHooks    hooks userHooks  hook
    * @param envOverrides   settings.env  claude CLI
-   *   `--settings > user settings.json` openteam UI  model/
+   *   `--settings > user settings.json` teemai UI  model/
    *    ~/.claude/settings.json  env.*
    */
   async writeConfig(
@@ -46,7 +46,7 @@ export class HooksConfigManager {
     mergeEntries('Stop')
 
     const allowPatterns: string[] = [
-      OPENTEAM_HOME + '/**',
+      TEEMAI_HOME + '/**',
       ...(additionalAllowPaths ?? []),
     ]
 

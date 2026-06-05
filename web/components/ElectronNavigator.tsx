@@ -15,7 +15,7 @@ export const ElectronNavigator = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const bridge = window.openteamBridge
+    const bridge = window.teemaiBridge
     if (!bridge?.onNavigateToChat) return
 
     const unsubscribe = bridge.onNavigateToChat(async ({ chatId }) => {

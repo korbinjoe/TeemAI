@@ -49,9 +49,9 @@ You only need to **manually call** `wb-write.sh` in these scenarios:
 
 | Variable | Description |
 |----------|-------------|
-| `EXPERT_API_BASE` | openteam-server HTTP address |
-| `OPENTEAM_CHAT_ID` | Current chat ID |
-| `OPENTEAM_INSTANCE_ID` | Your instance ID (injected as `by` field) |
+| `EXPERT_API_BASE` | teemai-server HTTP address |
+| `TEEMAI_CHAT_ID` | Current chat ID |
+| `TEEMAI_INSTANCE_ID` | Your instance ID (injected as `by` field) |
 
 ## Commands
 
@@ -110,4 +110,4 @@ All wb-* script calls must use Bash's `description` parameter, e.g., "Write to w
 - ❌ Use war-room as a chat log, writing every thought
 - ❌ Repeatedly refresh the same goal with `goal` (should `supersede` the old one)
 - ❌ Write summary as a long paragraph (hard limit: 120 characters)
-- ❌ Write without `by` (script auto-injects from `OPENTEAM_INSTANCE_ID`)
+- ❌ Write without `by` (script auto-injects from `TEEMAI_INSTANCE_ID`)

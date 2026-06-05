@@ -141,7 +141,7 @@ const MissionSidebar = ({ collapsed }: MissionSidebarProps) => {
               aria-label="Back to home"
             >
               <Logo size={20} />
-              <span className="font-nunito text-[13px] font-extrabold text-text-primary">OpenTeam</span>
+              <span className="font-nunito text-[13px] font-extrabold text-text-primary">TeemAI</span>
             </button>
           )}
           <span className="flex-1" />

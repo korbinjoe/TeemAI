@@ -1,10 +1,10 @@
-# Cogents
+# TeemAI
 
 **Your AI teammates — with names, memory, and growing expertise.**
 
 You already use Claude Code or Codex. But every session starts from zero. Your agent doesn't remember your stack, your conventions, or the 20 times you told it "we use Tailwind, not CSS modules." And when you need three things done at once, you're stuck in one terminal, waiting.
 
-OpenTeam turns disposable AI sessions into a **persistent, professional team** — agents that know your project, work in parallel, and keep going while you're away.
+TeemAI turns disposable AI sessions into a **persistent, professional team** — agents that know your project, work in parallel, and keep going while you're away.
 
 ```
 You:    "Build the auth module, add tests, and update the docs."
@@ -21,39 +21,39 @@ You:    "Build the auth module, add tests, and update the docs."
 
 ---
 
-## Why Cogents?
+## Why TeemAI?
 
 ### Your agents start from zero every time
 
 Every Claude Code session is a blank slate. No memory of your project, no awareness of your coding standards, no specialization. You re-explain the same context over and over.
 
-**OpenTeam fix**: Each agent has a persistent identity (IDENTITY.md), defined expertise (AGENTS.md), and personality (SOUL.md). They accumulate memory across sessions. A built-in coach (Sensei) analyzes their task history and automatically optimizes their capabilities.
+**TeemAI fix**: Each agent has a persistent identity (IDENTITY.md), defined expertise (AGENTS.md), and personality (SOUL.md). They accumulate memory across sessions. A built-in coach (Sensei) analyzes their task history and automatically optimizes their capabilities.
 
 ### You're stuck running one agent at a time
 
 You have three things to do, but your single terminal blocks you from doing any of them in parallel.
 
-**OpenTeam fix**: Dispatch multiple agents simultaneously. Engineer writes code while Reviewer audits while Designer prototypes — each in its own isolated git worktree, no merge conflicts.
+**TeemAI fix**: Dispatch multiple agents simultaneously. Engineer writes code while Reviewer audits while Designer prototypes — each in its own isolated git worktree, no merge conflicts.
 
 ### You have to babysit every step
 
 Context-switch between agents, relay information manually, confirm every small decision. Managing AI is more exhausting than doing the work yourself.
 
-**OpenTeam fix**: Agents coordinate through a shared War Room — they see each other's goals, decisions, and artifacts. They self-decide when possible and only escalate when human judgment is genuinely needed.
+**TeemAI fix**: Agents coordinate through a shared War Room — they see each other's goals, decisions, and artifacts. They self-decide when possible and only escalate when human judgment is genuinely needed.
 
 ### When you leave, everything stops
 
 You go to a meeting, and your AI stops working. Your time away is wasted productivity.
 
-**OpenTeam fix**: Pulse-mode — batch-dispatch tasks, walk away, come back to results. The workflow engine handles dependencies, retries, and failure policies. When you return: "You were away for 2 hours. 3 completed, 1 needs your review."
+**TeemAI fix**: Pulse-mode — batch-dispatch tasks, walk away, come back to results. The workflow engine handles dependencies, retries, and failure policies. When you return: "You were away for 2 hours. 3 completed, 1 needs your review."
 
 ---
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/korbinjoe/openteam.git
-cd openteam && npm install
+git clone https://github.com/korbinjoe/teemai.git
+cd teemai && npm install
 
 # Run (frontend + backend)
 npm run dev
@@ -80,7 +80,7 @@ ai-assets/agents/code-reviewer/
 └── SOUL.md        ← personality, tone, collaboration style
 ```
 
-Or configure via `openteam.json`:
+Or configure via `teemai.json`:
 
 ```jsonc
 {
@@ -122,7 +122,7 @@ Agents work in isolated git worktrees. The workflow engine handles task dependen
 
 Every agent remembers. Sensei watches their task history and evolves their capabilities over time. The team gets better the more you use it.
 
-Adding a custom agent = create a directory with a `SOUL.md` and add one entry to `openteam.json`.
+Adding a custom agent = create a directory with a `SOUL.md` and add one entry to `teemai.json`.
 
 ---
 
@@ -232,27 +232,27 @@ Skills are composable — any agent can carry any combination. Build your own by
 ## CLI
 
 ```bash
-npx openteam serve       # Start as web service
-npx openteam agents      # List configured agents
-npx openteam workspaces  # Manage workspaces
-npx openteam config      # View/edit configuration
-npx openteam run         # Run a task directly
-npx openteam chat        # Interactive chat mode
-npx openteam daemon      # Manage background daemon
-npx openteam update      # Check for updates
+npx teemai serve       # Start as web service
+npx teemai agents      # List configured agents
+npx teemai workspaces  # Manage workspaces
+npx teemai config      # View/edit configuration
+npx teemai run         # Run a task directly
+npx teemai chat        # Interactive chat mode
+npx teemai daemon      # Manage background daemon
+npx teemai update      # Check for updates
 ```
 
 ---
 
 ## Configuration
 
-Runtime data lives in `~/.openteam/`. Team config in `openteam.json` at the project root.
+Runtime data lives in `~/.teemai/`. Team config in `teemai.json` at the project root.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `ANTHROPIC_API_KEY` | Anthropic API key | — |
 | `ANTHROPIC_BASE_URL` | Custom API base URL | `https://api.anthropic.com` |
-| `OPENTEAM_HOME` | Data directory | `~/.openteam` |
+| `TEEMAI_HOME` | Data directory | `~/.teemai` |
 | `PORT` | Server port | `13001` |
 
 ---

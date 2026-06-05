@@ -57,12 +57,12 @@ describe('ConfigCompiler envOverrides flow into --settings', () => {
       makeAgent({ model: 'claude-opus-4-7' }),
       { repositories: [{ path: ROOT }], serverPort: 3210 },
       'claude',
-      { ANTHROPIC_AUTH_TOKEN: 'sk-openteam-token', ANTHROPIC_BASE_URL: 'https://openteam-proxy.example.com' },
+      { ANTHROPIC_AUTH_TOKEN: 'sk-teemai-token', ANTHROPIC_BASE_URL: 'https://teemai-proxy.example.com' },
     )
     const settings = await readSettingsFromArgs(compiled.args)
     const env = settings.env as Record<string, string>
-    expect(env.ANTHROPIC_AUTH_TOKEN).toBe('sk-openteam-token')
-    expect(env.ANTHROPIC_BASE_URL).toBe('https://openteam-proxy.example.com')
+    expect(env.ANTHROPIC_AUTH_TOKEN).toBe('sk-teemai-token')
+    expect(env.ANTHROPIC_BASE_URL).toBe('https://teemai-proxy.example.com')
     expect(env.ANTHROPIC_MODEL).toBe('claude-opus-4-7')
     await compiled.cleanup()
   })

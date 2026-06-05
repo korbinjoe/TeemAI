@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { isElectron, isMacElectron } from '../../utils/env'
 import { useTheme } from '../../contexts/ThemeContext'
 import WorkspaceIcon from '../icons/WorkspaceIcon'
-import OpenTeamLogo from '../icons/OpenTeamLogo'
+import TeemAILogo from '../icons/TeemAILogo'
 import { useNotification } from '../../contexts/NotificationContext'
 import MessageCenter from './MessageCenter'
 
@@ -206,7 +206,7 @@ const AppSidebar = () => {
             tabIndex={0}
             className="h-10 w-10 flex items-center justify-center mb-2 shrink-0 rounded-lg transition-all hover:scale-105 hover:shadow-[0_0_12px_rgba(90,143,202,0.3)] cursor-pointer -webkit-app-region-no-drag"
           >
-            <OpenTeamLogo size={28} />
+            <TeemAILogo size={28} />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={6}>{t('common:nav.home')}</TooltipContent>

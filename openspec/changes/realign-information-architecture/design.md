@@ -127,7 +127,7 @@ but it makes the IA feel arbitrary.
 
 Rationale for the split:
 - **Agents catalog is global** because the Agent Library is the same across
-  workspaces (agent definitions live in `~/.openteam/agents/` and
+  workspaces (agent definitions live in `~/.teemai/agents/` and
   `ai-assets/agents/`, not per-workspace storage).
 - **Tasks (chats) are workspace-scoped** because every chat belongs to exactly
   one workspace (`chats.workspace_id` foreign key in the SQLite schema).

@@ -2,7 +2,7 @@
  * PluginCommandsScanner — discovers slash commands exposed by Claude Code plugins.
  *
  * Claude Code's stream-json `system init` event does not enumerate plugin-provided
- * slash commands. We scan ~/.claude/plugins so OpenTeam's slash-command menu can
+ * slash commands. We scan ~/.claude/plugins so TeemAI's slash-command menu can
  * surface them. Naming follows Claude Code convention: `<plugin>:<skill-or-command>`.
  */
 

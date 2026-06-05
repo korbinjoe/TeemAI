@@ -5,7 +5,7 @@
  *  Agent  Agent  +
  *
  * Claude Code CLI  Pondering... (12s · 3.2k tokens · esc to interrupt)
- * OpenTeam  Agent  Agent  +
+ * TeemAI  Agent  Agent  +
  */
 
 import { useState, useEffect, useMemo, memo } from 'react'

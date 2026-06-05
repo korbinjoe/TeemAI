@@ -10,7 +10,7 @@ import { PORTS } from '../shared/ports'
 import { setServerPort } from './lib/serverPort'
 import { writePortFile, writePidFile, removePorts } from './lib/portFile'
 
-const IS_DAEMON_FILE_OWNER = process.env.OPENTEAM_NO_PORTFILE !== '1'
+const IS_DAEMON_FILE_OWNER = process.env.TEEMAI_NO_PORTFILE !== '1'
 
 import './config/loadServerEnv'
 import { warmupShellPath } from './lib/resolveCliCommand'
@@ -18,7 +18,7 @@ import { warmupShellPath } from './lib/resolveCliCommand'
 import { AgentRegistry } from './config/AgentRegistry'
 import { SkillManager } from './config/SkillManager'
 import { agentDefToAgent } from './config/types'
-import { OPENTEAM_HOME } from './config/paths'
+import { TEEMAI_HOME } from './config/paths'
 
 import { ConfigCompiler } from './runtime/ConfigCompiler'
 import { HooksConfigManager } from './runtime/HooksConfigManager'
@@ -99,14 +99,14 @@ const bundledAssetsDir = isBundled
   ? join(__dirname, '..', '..', '..', 'ai-assets')
   : join(PROJECT_ROOT, 'ai-assets')
 
-const sharedWorkspaceDir = join(OPENTEAM_HOME, 'system')
+const sharedWorkspaceDir = join(TEEMAI_HOME, 'system')
 
-const skillManager = new SkillManager(join(OPENTEAM_HOME, 'skills'))
+const skillManager = new SkillManager(join(TEEMAI_HOME, 'skills'))
 const agentRegistry = new AgentRegistry(
-  join(OPENTEAM_HOME, 'agents'),
-  join(OPENTEAM_HOME, 'system'),
-  join(PROJECT_ROOT, 'openteam.json'),
-  join(OPENTEAM_HOME, 'openteam.json'),
+  join(TEEMAI_HOME, 'agents'),
+  join(TEEMAI_HOME, 'system'),
+  join(PROJECT_ROOT, 'teemai.json'),
+  join(TEEMAI_HOME, 'teemai.json'),
 )
 
 const agentStore = new AgentStore()
@@ -272,7 +272,7 @@ export async function startServer(port?: number): Promise<number> {
   const finalPort = port ?? (Number(process.env.PORT) || PORTS.DEV_SERVER)
 
   try {
-    await new WorkspaceSeeder(bundledAssetsDir, OPENTEAM_HOME).seed()
+    await new WorkspaceSeeder(bundledAssetsDir, TEEMAI_HOME).seed()
 
     await skillManager.loadBuiltinSkills()
     await skillManager.syncBuiltinToClaudeHome()
@@ -296,7 +296,7 @@ export async function startServer(port?: number): Promise<number> {
     })
 
     if (!isBundled) {
-      watchAiAssetsDev({ bundledAssetsDir, openteamHome: OPENTEAM_HOME, agentRegistry, skillManager, seederFactory: () => new WorkspaceSeeder(bundledAssetsDir, OPENTEAM_HOME) })
+      watchAiAssetsDev({ bundledAssetsDir, teemaiHome: TEEMAI_HOME, agentRegistry, skillManager, seederFactory: () => new WorkspaceSeeder(bundledAssetsDir, TEEMAI_HOME) })
     }
 
     healStaleChatStatuses(chatStore)
@@ -340,7 +340,7 @@ export async function startServer(port?: number): Promise<number> {
   }
 }
 
-if (!process.env.ELECTRON && !process.env.OPENTEAM_CLI) {
+if (!process.env.ELECTRON && !process.env.TEEMAI_CLI) {
   startServer()
 }
 
@@ -379,7 +379,7 @@ const gracefulShutdown = async (signal: string) => {
   })
 }
 
-if (process.env.OPENTEAM_CLI) {
+if (process.env.TEEMAI_CLI) {
   process.on('SIGINT', () => {})
 } else {
   process.on('SIGINT', () => gracefulShutdown('SIGINT'))

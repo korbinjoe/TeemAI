@@ -30,7 +30,7 @@ const WorkspaceToolbar = () => {
   if (!activeChatId) {
     return (
       <div className={cn('h-8 border-b border-border-subtle flex items-center px-3 gap-2 flex-shrink-0 bg-bg-tertiary', isElectron && '-webkit-app-region-drag')}>
-        <span className="text-[11px] font-semibold text-text-secondary">OpenTeam</span>
+        <span className="text-[11px] font-semibold text-text-secondary">TeemAI</span>
         <ChevronRight size={11} className="text-text-muted flex-shrink-0" />
         <span className="text-[11px] font-medium text-text-secondary">{meta?.name ?? 'Workspace'}</span>
         <span className="flex-1" />
@@ -57,7 +57,7 @@ const BrandCrumb = ({ onClick }: { onClick: () => void }) => (
     onClick={onClick}
     className="text-[11px] font-semibold text-text-secondary hover:text-text-primary transition-colors"
   >
-    OpenTeam
+    TeemAI
   </button>
 )
 

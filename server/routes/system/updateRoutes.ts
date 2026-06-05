@@ -73,7 +73,7 @@ export const createUpdateRoutes = ({ updateManager, bundleStorage, updateMonitor
    */
   router.get('/api/update/check-npm', async (req, res) => {
     const currentVersion = String(req.query.currentVersion ?? '0.0.0')
-    const pkgName = 'openteam'
+    const pkgName = 'teemai'
     const registry = 'https://registry.npmjs.org'
 
     try {

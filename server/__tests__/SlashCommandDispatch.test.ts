@@ -23,7 +23,7 @@ const { setProjectRoot } = await import('../runtime/SlashCommandResolver')
 const { createExpertDirectInput } = await import('../ws/ExpertDirectInput')
 const { ExpertSessionStore, compositeKey } = await import('../ws/ExpertSessionStore')
 
-const PROJECT_ROOT = join(FAKE_HOME, 'openteam')
+const PROJECT_ROOT = join(FAKE_HOME, 'teemai')
 
 beforeAll(async () => {
   await mkdir(join(PROJECT_ROOT, '.claude', 'commands', 'openspec'), { recursive: true })

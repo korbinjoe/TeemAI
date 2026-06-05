@@ -21,7 +21,7 @@ if [ -z "$GEMINI_API_KEY" ]; then
   exit 1
 fi
 
-IMAGE_DIR="$HOME/.openteam/images"
+IMAGE_DIR="$HOME/.teemai/images"
 mkdir -p "$IMAGE_DIR"
 
 REQUEST_BODY=$(jq -n --arg prompt "$PROMPT" '{

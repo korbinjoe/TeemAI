@@ -1,6 +1,6 @@
 # Capability: Agent Episodic Memory
 
-A per-Agent index of completed task trajectories, built on the existing `~/.openteam/tasks/{taskId}/{plan,result}.md` substrate. Provides pre-task lookup so Experts begin with context from prior similar tasks, closing the missing "episodic" tier in OpenTeam's memory layering (CoALA taxonomy: working / episodic / semantic / procedural — OpenTeam previously had only the last three). No vector DB; BM25 over title+summary+tags is sufficient at current corpus sizes.
+A per-Agent index of completed task trajectories, built on the existing `~/.teemai/tasks/{taskId}/{plan,result}.md` substrate. Provides pre-task lookup so Experts begin with context from prior similar tasks, closing the missing "episodic" tier in OpenTeam's memory layering (CoALA taxonomy: working / episodic / semantic / procedural — OpenTeam previously had only the last three). No vector DB; BM25 over title+summary+tags is sufficient at current corpus sizes.
 
 ## ADDED Requirements
 
@@ -27,7 +27,7 @@ The system SHALL add a new SQLite table `episodic_tasks` via migration `v22`, wi
 
 ### Requirement: Recording Task Completion
 
-When a task reaches a terminal state (`completed | failed | canceled`), the system SHALL parse `~/.openteam/tasks/{taskId}/result.md` (extracting the `## Summary` section if present), gather token usage from `ExpertTokenTracker`, and insert a row into `episodic_tasks`. Recording is best-effort: an exception during recording SHALL be logged but SHALL NOT block the task-completion code path.
+When a task reaches a terminal state (`completed | failed | canceled`), the system SHALL parse `~/.teemai/tasks/{taskId}/result.md` (extracting the `## Summary` section if present), gather token usage from `ExpertTokenTracker`, and insert a row into `episodic_tasks`. Recording is best-effort: an exception during recording SHALL be logged but SHALL NOT block the task-completion code path.
 
 #### Scenario: Successful task is recorded
 

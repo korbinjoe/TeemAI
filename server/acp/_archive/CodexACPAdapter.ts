@@ -213,7 +213,7 @@ export class CodexACPAdapter extends EventEmitter implements ACPAgentAdapter {
 
     this.streamManager.on('activity', (state: ActivityState) => {
       this.emitSessionUpdate({
-        sessionUpdate: 'openteam:activity',
+        sessionUpdate: 'teemai:activity',
         activity: state as unknown as Record<string, unknown>,
       })
     })

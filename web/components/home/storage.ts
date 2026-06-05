@@ -60,7 +60,7 @@ export const persistQuickOrder = (keys: string[]) => {
   try { localStorage.setItem(QUICK_ORDER_KEY, JSON.stringify(keys)) } catch { /* ignore */ }
 }
 
-const LAST_HOME_VISIT_KEY = 'openteam:last-home-visit'
+const LAST_HOME_VISIT_KEY = 'teemai:last-home-visit'
 
 export const loadLastHomeVisit = (): number | null => {
   try {

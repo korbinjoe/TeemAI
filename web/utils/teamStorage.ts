@@ -7,8 +7,8 @@
 
 import { API_BASE, authFetch } from '@/config/api'
 
-const LEGACY_HIRED_KEY = 'openteam:hired-agents'
-const LEGACY_INIT_KEY = 'openteam:hired-agents-initialized'
+const LEGACY_HIRED_KEY = 'teemai:hired-agents'
+const LEGACY_INIT_KEY = 'teemai:hired-agents-initialized'
 
 interface HiredAgentsResponse {
   ids: string[]
@@ -111,7 +111,7 @@ export const isAgentHired = async (id: string): Promise<boolean> => {
   return ids.includes(id)
 }
 
-const AGENT_ORDER_KEY = 'openteam:agent-order'
+const AGENT_ORDER_KEY = 'teemai:agent-order'
 
 export const DEFAULT_AGENT_ORDER = [
   'lead',

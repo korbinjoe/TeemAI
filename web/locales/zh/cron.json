@@ -67,7 +67,7 @@
     "or": "或者",
     "error": {
       "parseFailed": "智能解析失败，已切换到手动填写",
-      "noCredentials": "请先配置 OpenTeam Token 以启用 AI 功能",
+      "noCredentials": "请先配置 TeemAI Token 以启用 AI 功能",
       "networkError": "网络错误，已切换到手动填写"
     }
   }

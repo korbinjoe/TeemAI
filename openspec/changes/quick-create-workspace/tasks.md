@@ -19,7 +19,7 @@
 ### Phase 3: Frontend (depends on T1-T4)
 
 - [x] **T5**: Add `handleQuickCreate()` in `WorkspacesPage.tsx`
-  - Electron path: call `window.openteamBridge.pickDirectory()` → on result → call quick-start API → navigate
+  - Electron path: call `window.teemaiBridge.pickDirectory()` → on result → call quick-start API → navigate
   - Web path: open DirPickerDialog in quick-create mode → on pick → call quick-start API → navigate
 - [x] **T6**: Wire "+ New" button to `handleQuickCreate()` instead of `openCreateDialog()`
 - [x] **T7**: Show appropriate toast: "Workspace created" vs "Navigating to existing workspace"

@@ -37,7 +37,7 @@ const version = getArg('version', pkg.version ?? '1.0.0')
 const serverUrl = getArg('server-url', `http://localhost:${PORTS.DEV_SERVER}`)
 const shellVersion = getArg('min-shell', '1.0.0')
 
-console.log(`\n📦 Building OpenTeam Bundle v${version}\n`)
+console.log(`\n📦 Building TeemAI Bundle v${version}\n`)
 
 // ── Step 0: Clean up ──
 

@@ -10,15 +10,15 @@
 #   3-7. (Removed) artifact/progress/decision/open_question/constraint now written by agents manually
 #   Flush: aggregate per-file artifact accumulator (from wb-post-tool-write.sh) into one entry
 #
-# Writes tagged with by=${OPENTEAM_INSTANCE_ID}:auto to distinguish from Agent's own writes
+# Writes tagged with by=${TEEMAI_INSTANCE_ID}:auto to distinguish from Agent's own writes
 # All errors are silent (exit 0), never blocks the Agent main flow
 
 set -uo pipefail
 
 # -- Environment check (non-Agent sessions exit silently) --
 API_BASE="${EXPERT_API_BASE:-}"
-CHAT_ID="${OPENTEAM_CHAT_ID:-}"
-INSTANCE_ID="${OPENTEAM_INSTANCE_ID:-}"
+CHAT_ID="${TEEMAI_CHAT_ID:-}"
+INSTANCE_ID="${TEEMAI_INSTANCE_ID:-}"
 
 if [ -z "$API_BASE" ] || [ -z "$CHAT_ID" ] || [ -z "$INSTANCE_ID" ]; then
   exit 0
@@ -33,7 +33,7 @@ if [ -z "$TRANSCRIPT" ] || [ ! -f "$TRANSCRIPT" ]; then
 fi
 
 # -- Fingerprint directory (dedup) --
-FP_DIR="${HOME}/.openteam/whiteboard/${CHAT_ID}"
+FP_DIR="${HOME}/.teemai/whiteboard/${CHAT_ID}"
 mkdir -p "$FP_DIR" 2>/dev/null || exit 0
 FP_FILE="${FP_DIR}/.auto-fp.txt"
 touch "$FP_FILE" 2>/dev/null || exit 0

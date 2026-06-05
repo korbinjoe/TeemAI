@@ -52,7 +52,7 @@ The Electron main process MUST expose a `pick-directory` IPC channel for native 
 #### Scenario: Renderer invokes pickDirectory and user selects a folder
 
 Given the Electron app is running
-When the renderer calls `window.openteamBridge.pickDirectory()`
+When the renderer calls `window.teemaiBridge.pickDirectory()`
 Then the main process opens a native `showOpenDialog` with `openDirectory` property
 When the user selects a folder
 Then the promise resolves with the absolute path string
@@ -60,7 +60,7 @@ Then the promise resolves with the absolute path string
 #### Scenario: Renderer invokes pickDirectory and user cancels
 
 Given the Electron app is running
-When the renderer calls `window.openteamBridge.pickDirectory()`
+When the renderer calls `window.teemaiBridge.pickDirectory()`
 And the user cancels the native dialog
 Then the promise resolves with `null`
 

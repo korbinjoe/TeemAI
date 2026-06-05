@@ -203,7 +203,7 @@ no server module. JSONL is the source of truth; satisfaction is a derived metric
 Trigger:  ExpertExit hook (existing hook mechanism)
 Input:    JSONL session file path + agent ID + chat ID
 Process:  Parse user text messages → regex-match 7 signal types → compute MSS
-Output:   Append entry to ~/.openteam/agents/<agent>/memory/satisfaction.md
+Output:   Append entry to ~/.teemai/agents/<agent>/memory/satisfaction.md
 
 Entry format (appended per session):
   ## <chat_id> — <date>

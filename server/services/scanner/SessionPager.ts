@@ -291,7 +291,7 @@ export class SessionPager {
 
     // After indexing this cwd's files, link any rows whose sessionId is
     // already referenced by an existing chat. This covers the timing where
-    // OpenTeam created a chat (writing expertSessions) before the user ever
+    // TeemAI created a chat (writing expertSessions) before the user ever
     // expanded the directory in the sidebar — the row appears here with
     // adopted_chat_id NULL and would otherwise duplicate the native TaskRow.
     this.linkAdoptedRowsForCwd(cwd)

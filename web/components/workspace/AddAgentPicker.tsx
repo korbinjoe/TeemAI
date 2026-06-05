@@ -57,7 +57,7 @@ const AddAgentPicker = () => {
         body: JSON.stringify({ teamAgentIds }),
       })
       if (!putRes.ok) throw new Error('Update failed')
-      window.dispatchEvent(new CustomEvent('openteam:chat-updated', {
+      window.dispatchEvent(new CustomEvent('teemai:chat-updated', {
         detail: { workspaceId, chatId: addAgentTaskId },
       }))
       toast.success('Agent added to mission')

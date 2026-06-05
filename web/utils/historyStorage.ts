@@ -5,7 +5,7 @@
 
 import type { HistoryMetadata } from '../types/chat'
 
-const HISTORY_STORAGE_KEY = 'openteam:history'
+const HISTORY_STORAGE_KEY = 'teemai:history'
 const MAX_HISTORY_RECORDS = 50
 
 export function loadHistory(): HistoryMetadata[] {

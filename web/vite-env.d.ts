@@ -3,7 +3,7 @@
 declare const __APP_VERSION__: string
 
 /** Electron preload  Bridge API electron/preload.ts  */
-interface OpenTeamBridge {
+interface TeemAIBridge {
   onAgentStatus: (callback: (data: unknown) => void) => () => void
   onNotification: (callback: (data: unknown) => void) => () => void
   onNavigateToChat: (callback: (data: { chatId: string }) => void) => () => void
@@ -23,7 +23,7 @@ interface OpenTeamBridge {
 }
 
 interface Window {
-  openteamBridge?: OpenTeamBridge
+  teemaiBridge?: TeemAIBridge
 }
 
 declare module '*.css' {

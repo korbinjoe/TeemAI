@@ -11,8 +11,8 @@ set -uo pipefail
 
 # -- Environment check --
 API_BASE="${EXPERT_API_BASE:-}"
-CHAT_ID="${OPENTEAM_CHAT_ID:-}"
-INSTANCE_ID="${OPENTEAM_INSTANCE_ID:-}"
+CHAT_ID="${TEEMAI_CHAT_ID:-}"
+INSTANCE_ID="${TEEMAI_INSTANCE_ID:-}"
 
 if [ -z "$API_BASE" ] || [ -z "$CHAT_ID" ] || [ -z "$INSTANCE_ID" ]; then
   exit 0
@@ -24,7 +24,7 @@ TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || echo "")
 [ -z "$TOOL_NAME" ] && exit 0
 
 # -- Fingerprint directory --
-FP_DIR="${HOME}/.openteam/whiteboard/${CHAT_ID}"
+FP_DIR="${HOME}/.teemai/whiteboard/${CHAT_ID}"
 mkdir -p "$FP_DIR" 2>/dev/null || exit 0
 FP_FILE="${FP_DIR}/.auto-fp.txt"
 touch "$FP_FILE" 2>/dev/null || exit 0
@@ -117,7 +117,7 @@ write_wb() {
 is_valid_path() {
   local p="$1"
   [ -z "$p" ] && return 1
-  echo "$p" | grep -qE '/(tmp|\.cache|node_modules|\.r2c|\.openteam/whiteboard)/' && return 1
+  echo "$p" | grep -qE '/(tmp|\.cache|node_modules|\.r2c|\.teemai/whiteboard)/' && return 1
   echo "$p" | grep -qE '\.(ts|tsx|js|jsx|go|py|java|md|json|yaml|yml|css|scss|sh|sql|html|vue|svelte)$' || return 1
   return 0
 }

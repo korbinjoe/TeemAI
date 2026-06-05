@@ -8,6 +8,6 @@ DAG_JSON="${1:?Usage: create-workflow.sh '<dag-json>'}"
 
 RESPONSE=$(curl -s -X POST "${EXPERT_API_BASE}/api/workflow/create" \
   -H "Content-Type: application/json" \
-  -d "{\"chatId\":\"${OPENTEAM_CHAT_ID}\",\"createdBy\":\"${OPENTEAM_INSTANCE_ID}\",\"dag\":${DAG_JSON}}")
+  -d "{\"chatId\":\"${TEEMAI_CHAT_ID}\",\"createdBy\":\"${TEEMAI_INSTANCE_ID}\",\"dag\":${DAG_JSON}}")
 
 echo "$RESPONSE"

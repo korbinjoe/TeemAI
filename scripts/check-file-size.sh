@@ -18,7 +18,7 @@ fi
 # Collect .ts / .tsx files + line counts (path<TAB>lines)
 FILE_SIZES=$(find "$REPO_ROOT/server" "$REPO_ROOT/web" "$REPO_ROOT/shared" "$REPO_ROOT/cli" "$REPO_ROOT/electron" \
   -type f \( -name "*.ts" -o -name "*.tsx" \) \
-  -not -path "*/node_modules/*" -not -path "*/dist/*" -not -path "*/.openteam/*" 2>/dev/null \
+  -not -path "*/node_modules/*" -not -path "*/dist/*" -not -path "*/.teemai/*" 2>/dev/null \
   | xargs wc -l 2>/dev/null \
   | awk -v root="$REPO_ROOT/" '$2 != "total" { sub(root, "", $2); print $2"\t"$1 }')
 

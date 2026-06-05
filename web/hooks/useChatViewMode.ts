@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 
 export type ChatViewMode = 'message' | 'terminal'
 
-const KEY_PREFIX = 'openteam:chat-view:'
+const KEY_PREFIX = 'teemai:chat-view:'
 
 export const chatViewStorageKey = (
   chatId: string,

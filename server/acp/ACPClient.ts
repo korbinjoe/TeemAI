@@ -1,5 +1,5 @@
 /**
- * ACPClient - OpenTeam  ACP
+ * ACPClient - TeemAI  ACP
  *
  *  ACPAgentAdapter API
  * ExpertLifecycle  Agent
@@ -34,7 +34,7 @@ export class ACPClient {
         fs: { readTextFile: true, writeTextFile: true },
         terminal: true,
       },
-      clientInfo: { name: 'openteam', title: 'OpenTeam AI OS', version: '1.0.0' },
+      clientInfo: { name: 'teemai', title: 'TeemAI AI OS', version: '1.0.0' },
     })
   }
 

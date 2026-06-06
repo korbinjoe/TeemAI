@@ -42,15 +42,15 @@ export class CronJobLauncher {
   async launch(job: CronJob, chat: Chat): Promise<LaunchResult> {
     const workspace = this.workspaceStore.get(job.workspaceId)
     const cwd = workspace?.repositories[0]?.path ?? process.env.HOME ?? '/'
-    const agentId = job.agentId ?? chat.primaryAgentId
+    const rawAgentId = job.agentId ?? chat.primaryAgentId
     const connectionId = `cron-${job.id}-${Date.now()}`
 
-    const agentDef = agentId
-      ? (this.agentRegistry.get(agentId) ?? this.agentRegistry.list().find((a) => a.id === agentId))
+    const agentDef = rawAgentId
+      ? (this.agentRegistry.get(rawAgentId) ?? this.agentRegistry.list().find((a) => a.id === rawAgentId) ?? this.agentRegistry.list()[0])
       : this.agentRegistry.list()[0]
 
     if (!agentDef) {
-      throw new Error(`Agent not found: ${agentId}`)
+      throw new Error(`Agent not found: ${rawAgentId}`)
     }
 
     const freshDef = this.sharedWorkspaceDir && agentDef.workspaceDir
@@ -75,6 +75,7 @@ export class CronJobLauncher {
       let settled = false
       let promptSent = false
       let fallbackTimer: ReturnType<typeof setTimeout> | null = null
+      let autoKilled = false
 
       const settle = (exitCode: number) => {
         if (settled) return
@@ -97,9 +98,9 @@ export class CronJobLauncher {
         promptSent = true
         try {
           manager.write(job.prompt)
-          log.info('Prompt sent', { agentId })
+          log.info('Prompt sent', { agentId: freshDef.id })
         } catch (err) {
-          log.error('Failed to send prompt', { agentId, error: err instanceof Error ? err.message : String(err) })
+          log.error('Failed to send prompt', { agentId: freshDef.id, error: err instanceof Error ? err.message : String(err) })
           fail(err instanceof Error ? err : new Error('Failed to send prompt'))
         }
       }
@@ -108,12 +109,13 @@ export class CronJobLauncher {
         sendPrompt()
         this.chatStore.update(chat.id, {
           expertSessions: { ...chat.expertSessions, [freshDef.id]: { cliSessionId, provider, cwd } },
-        }).catch((err) => log.error('Failed to persist cron session', { agentId, error: String(err) }))
+        }).catch((err) => log.error('Failed to persist cron session', { agentId: freshDef.id, error: String(err) }))
       })
 
       manager.on('activity', ({ phase }: { phase: string }) => {
         if (phase === 'waiting_input' && promptSent && !settled) {
-          log.info('Task completed, auto-killing agent', { agentId })
+          log.info('Task completed, auto-killing agent', { agentId: freshDef.id })
+          autoKilled = true
           try { manager.kill() } catch { /* ignore */ }
         }
       })
@@ -121,8 +123,8 @@ export class CronJobLauncher {
       fallbackTimer = setTimeout(() => sendPrompt(), 10000)
 
       manager.on('exit', ({ exitCode }: { exitCode: number }) => {
-        log.info('Agent exited', { exitCode })
-        settle(exitCode)
+        log.info('Agent exited', { exitCode, autoKilled })
+        settle(autoKilled ? 0 : exitCode)
       })
 
       this.sessionRegistry.register({

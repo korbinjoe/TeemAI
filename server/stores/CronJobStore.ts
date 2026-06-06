@@ -36,6 +36,7 @@ export class CronJobStore extends SqliteBaseStore<CronJob> {
     prompt: string
     retryOnFailure?: boolean
     maxRetries?: number
+    expiresAt?: string
   }): Promise<CronJob> {
     const now = new Date().toISOString()
     const job: CronJob = {
@@ -50,6 +51,7 @@ export class CronJobStore extends SqliteBaseStore<CronJob> {
       enabled: true,
       retryOnFailure: params.retryOnFailure ?? true,
       maxRetries: params.maxRetries ?? 2,
+      expiresAt: params.expiresAt,
       createdAt: now,
       updatedAt: now,
       executions: [],
@@ -148,6 +150,7 @@ export class CronJobStore extends SqliteBaseStore<CronJob> {
       enabled: row.enabled === 1,
       retryOnFailure: row.retry_on_failure === 1,
       maxRetries: row.max_retries as number,
+      expiresAt: row.expires_at as string | undefined,
       createdAt: row.created_at as string,
       updatedAt: row.updated_at as string,
       lastRunAt: row.last_run_at as string | undefined,
@@ -199,6 +202,7 @@ export class CronJobStore extends SqliteBaseStore<CronJob> {
       enabled: row.enabled === 1,
       retryOnFailure: row.retry_on_failure === 1,
       maxRetries: row.max_retries as number,
+      expiresAt: row.expires_at as string | undefined,
       createdAt: row.created_at as string,
       updatedAt: row.updated_at as string,
       lastRunAt: row.last_run_at as string | undefined,
@@ -220,6 +224,7 @@ export class CronJobStore extends SqliteBaseStore<CronJob> {
       enabled: entity.enabled ? 1 : 0,
       retry_on_failure: entity.retryOnFailure ? 1 : 0,
       max_retries: entity.maxRetries,
+      expires_at: entity.expiresAt ?? null,
       created_at: entity.createdAt,
       updated_at: entity.updatedAt,
       last_run_at: entity.lastRunAt ?? null,

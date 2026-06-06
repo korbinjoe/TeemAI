@@ -33,7 +33,9 @@
     "prompt": "初期プロンプト",
     "promptPlaceholder": "タスク開始時にエージェントに送信するメッセージ...",
     "retryOnFailure": "失敗時にリトライ",
-    "maxRetries": "最大リトライ回数"
+    "maxRetries": "最大リトライ回数",
+    "expiresAt": "有効期限",
+    "expiresAtHelp": "空欄の場合は無期限です。この時間を過ぎるとタスクは自動的に無効化されます。"
   },
   "status": {
     "enabled": "有効",
@@ -44,6 +46,8 @@
   },
   "executions": "実行履歴",
   "noExecutions": "実行履歴なし",
+  "expiresAt": "期限",
+  "expired": "期限切れ",
   "lastRun": "最終実行",
   "nextRun": "次回実行",
   "neverRun": "未実行",

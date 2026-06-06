@@ -33,7 +33,9 @@
     "prompt": "Initialer Prompt",
     "promptPlaceholder": "Die Nachricht, die beim Start an den Agenten gesendet wird...",
     "retryOnFailure": "Bei Fehler wiederholen",
-    "maxRetries": "Maximale Wiederholungen"
+    "maxRetries": "Maximale Wiederholungen",
+    "expiresAt": "Ablaufzeit",
+    "expiresAtHelp": "Leer lassen für kein Ablaufdatum. Die Aufgabe wird nach dieser Zeit automatisch deaktiviert."
   },
   "status": {
     "enabled": "Aktiviert",
@@ -44,6 +46,8 @@
   },
   "executions": "Ausführungsverlauf",
   "noExecutions": "Noch keine Ausführungen",
+  "expiresAt": "Läuft ab",
+  "expired": "abgelaufen",
   "lastRun": "Letzte Ausführung",
   "nextRun": "Nächste Ausführung",
   "neverRun": "Nie",

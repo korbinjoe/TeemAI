@@ -1,15 +1,16 @@
 /**
- * loadServerEnv — apply the top-level `env` block from ~/.teemai/teemai.json
- * to process.env before the rest of the server boots.
+ * loadServerEnv — apply env vars from config files to process.env before the
+ * rest of the server boots.
  *
- * Shell-exported variables always win: a key already present in process.env is
- * never overwritten. Missing keys are populated from the JSON file.
+ * Sources (in order — first writer wins per key):
+ *   1. Shell-exported variables already in process.env
+ *   2. ~/.teemai/teemai.json  → "env" block
+ *   3. ~/.claude/settings.json → "env" block (LLM credentials fallback)
+ *
+ * A key already present in process.env is never overwritten.
  *
  * Runs as an import-time side effect so it executes before any subsequent
  * module reads env. Re-exports applyServerEnv for tests.
- *
- * Schema (subset):
- *   { "env": { "TEEMAI_LIGHT_MODEL": "claude-opus-4-7", ... } }
  *
  * Failure modes (missing file, bad JSON, wrong type) are silent — config-driven
  * env is optional and must not block startup.
@@ -17,11 +18,13 @@
 
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { homedir } from 'os'
 import { TEEMAI_HOME } from './paths'
 
 const USER_CONFIG_PATH = join(TEEMAI_HOME, 'teemai.json')
+const CLAUDE_SETTINGS_PATH = join(homedir(), '.claude', 'settings.json')
 
-export const applyServerEnv = (configPath: string = USER_CONFIG_PATH): string[] => {
+const applyEnvFromFile = (configPath: string): string[] => {
   let raw: string
   try {
     raw = readFileSync(configPath, 'utf-8')
@@ -47,6 +50,15 @@ export const applyServerEnv = (configPath: string = USER_CONFIG_PATH): string[] 
     applied.push(key)
   }
   return applied
+}
+
+export const applyServerEnv = (
+  configPath: string = USER_CONFIG_PATH,
+  claudeSettingsPath: string = CLAUDE_SETTINGS_PATH,
+): string[] => {
+  const applied = applyEnvFromFile(configPath)
+  const claudeApplied = applyEnvFromFile(claudeSettingsPath)
+  return [...applied, ...claudeApplied]
 }
 
 applyServerEnv()

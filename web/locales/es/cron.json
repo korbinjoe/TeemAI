@@ -33,7 +33,9 @@
     "prompt": "Prompt inicial",
     "promptPlaceholder": "El mensaje enviado al agente al iniciar la tarea...",
     "retryOnFailure": "Reintentar en caso de fallo",
-    "maxRetries": "Máximo de reintentos"
+    "maxRetries": "Máximo de reintentos",
+    "expiresAt": "Fecha de expiración",
+    "expiresAtHelp": "Dejar vacío para sin expiración. La tarea se desactivará automáticamente después de esta hora."
   },
   "status": {
     "enabled": "Habilitado",
@@ -44,6 +46,8 @@
   },
   "executions": "Historial de ejecución",
   "noExecutions": "Sin ejecuciones aún",
+  "expiresAt": "Expira",
+  "expired": "expirado",
   "lastRun": "Última ejecución",
   "nextRun": "Próxima ejecución",
   "neverRun": "Nunca",

@@ -19,6 +19,7 @@ export interface NLParsedCronJob {
   model?: string
   retryOnFailure: boolean
   maxRetries: number
+  expiresAt?: string
 }
 
 export interface NLParseResult {
@@ -37,7 +38,7 @@ export interface AvailableAgent {
   description: string
 }
 
-const TIMEOUT_MS = 15_000
+const TIMEOUT_MS = 45_000
 
 export class NLCronParser {
   async parse(
@@ -87,7 +88,8 @@ export class NLCronParser {
   },
   "prompt": "string - detailed, executable Agent instruction",
   "workspaceId": "string - matched workspace ID if applicable",
-  "agentName": "string - matched Agent name if applicable"
+  "agentName": "string - matched Agent name if applicable",
+  "expiresAt": "string - optional ISO 8601 timestamp when the job should auto-disable"
 }
 
 ## Schedule Conversion
@@ -109,6 +111,14 @@ ${wsListStr}
 ## Available Agents
 ${agentListStr}
 - Match the most suitable Agent based on description
+
+## Expiration (expiresAt)
+- When the user specifies a deadline, end date, or limited duration, set expiresAt to the corresponding ISO 8601 timestamp
+- "run for the next 3 days" → expiresAt = current time + 3 days
+- "until next Friday" → expiresAt = next Friday 23:59:59
+- "only run 5 times, every hour" → expiresAt = current time + 5 hours (estimate based on interval × count)
+- "execute N times, every M minutes" → expiresAt = current time + N × M minutes
+- If no expiration is mentioned, omit expiresAt
 
 ## Important
 - Always output valid JSON even with incomplete information, use reasonable defaults
@@ -168,6 +178,7 @@ ${agentListStr}
         prompt: (input.prompt as string) || '',
         workspaceId: input.workspaceId as string | undefined,
         agentName: input.agentName as string | undefined,
+        expiresAt: input.expiresAt as string | undefined,
         retryOnFailure: true,
         maxRetries: 2,
       },

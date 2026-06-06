@@ -265,6 +265,7 @@ export interface CronJob {
   enabled: boolean
   retryOnFailure: boolean
   maxRetries: number
+  expiresAt?: string
   createdAt: string
   updatedAt: string
   lastRunAt?: string

@@ -11,6 +11,7 @@ interface Workspace {
 }
 
 interface Agent {
+  id: string
   name: string
   description: string
   role: string
@@ -36,6 +37,7 @@ export interface CronJobFormData {
   prompt: string
   retryOnFailure: boolean
   maxRetries: number
+  expiresAt?: string
 }
 
 const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, workspaces, agents }: CronJobFormProps) => {
@@ -46,7 +48,7 @@ const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, worksp
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [workspaceId, setWorkspaceId] = useState('')
-  const [agentName, setAgentName] = useState('')
+  const [agentId, setAgentId] = useState('')
   const [model, setModel] = useState('')
   const [triggerKind, setTriggerKind] = useState<'cron' | 'once' | 'interval'>('cron')
   const [cronExpression, setCronExpression] = useState('')
@@ -57,6 +59,7 @@ const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, worksp
   const [prompt, setPrompt] = useState('')
   const [retryOnFailure, setRetryOnFailure] = useState(true)
   const [maxRetries, setMaxRetries] = useState(2)
+  const [expiresAt, setExpiresAt] = useState('')
 
   const applyTrigger = (tr: CronTrigger) => {
     setTriggerKind(tr.kind)
@@ -83,7 +86,7 @@ const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, worksp
     setName('')
     setDescription('')
     setWorkspaceId(workspaces[0]?.id || '')
-    setAgentName('')
+    setAgentId('')
     setModel('')
     setTriggerKind('cron')
     setCronExpression('')
@@ -94,6 +97,7 @@ const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, worksp
     setPrompt('')
     setRetryOnFailure(true)
     setMaxRetries(2)
+    setExpiresAt('')
   }
 
   // Reset on open / initialData / prefillData change
@@ -104,22 +108,24 @@ const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, worksp
       setName(initialData.name)
       setDescription(initialData.description || '')
       setWorkspaceId(initialData.workspaceId)
-      setAgentName(initialData.agentId || '')
+      setAgentId(initialData.agentId || '')
       setModel(initialData.model || '')
       setPrompt(initialData.prompt)
       setRetryOnFailure(initialData.retryOnFailure)
       setMaxRetries(initialData.maxRetries)
+      setExpiresAt(initialData.expiresAt ? initialData.expiresAt.slice(0, 16) : '')
       applyTrigger(initialData.trigger)
     } else if (prefillData) {
       resetToDefaults()
       if (prefillData.name) setName(prefillData.name)
       if (prefillData.description) setDescription(prefillData.description)
       if (prefillData.workspaceId) setWorkspaceId(prefillData.workspaceId)
-      if (prefillData.agentId) setAgentName(prefillData.agentId)
+      if (prefillData.agentId) setAgentId(prefillData.agentId)
       if (prefillData.model) setModel(prefillData.model)
       if (prefillData.prompt) setPrompt(prefillData.prompt)
       if (prefillData.retryOnFailure !== undefined) setRetryOnFailure(prefillData.retryOnFailure)
       if (prefillData.maxRetries !== undefined) setMaxRetries(prefillData.maxRetries)
+      if (prefillData.expiresAt) setExpiresAt(prefillData.expiresAt.slice(0, 16))
       if (prefillData.trigger) applyTrigger(prefillData.trigger)
     } else {
       resetToDefaults()
@@ -150,12 +156,13 @@ const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, worksp
         name: name.trim(),
         description: description.trim() || undefined,
         workspaceId,
-        agentId: agentName || undefined,
+        agentId: agentId || undefined,
         model: model || undefined,
         trigger: buildTrigger(),
         prompt: prompt.trim(),
         retryOnFailure,
         maxRetries,
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
       })
       onClose()
     } finally {
@@ -211,10 +218,10 @@ const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, worksp
 
             {/* Agent */}
             <FormField label={t('form.agent')}>
-              <select value={agentName} onChange={(e) => setAgentName(e.target.value)} className="form-input">
+              <select value={agentId} onChange={(e) => setAgentId(e.target.value)} className="form-input">
                 <option value="">—</option>
                 {availableAgents.map((a) => (
-                  <option key={a.name} value={a.name}>{a.name}</option>
+                  <option key={a.id} value={a.id}>{a.name}</option>
                 ))}
               </select>
             </FormField>
@@ -313,6 +320,19 @@ const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, worksp
                 rows={4}
                 className="form-input resize-none"
               />
+            </FormField>
+
+            {/* Expires at */}
+            <FormField label={t('form.expiresAt')}>
+              <input
+                type="datetime-local"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                className="form-input"
+              />
+              <p className="text-xs text-text-secondary mt-1">
+                {t('form.expiresAtHelp')}
+              </p>
             </FormField>
 
             {/* Retry */}

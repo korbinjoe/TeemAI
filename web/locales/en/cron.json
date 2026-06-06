@@ -33,7 +33,9 @@
     "prompt": "Initial Prompt",
     "promptPlaceholder": "The message sent to the agent when the task starts...",
     "retryOnFailure": "Retry on failure",
-    "maxRetries": "Max retries"
+    "maxRetries": "Max retries",
+    "expiresAt": "Expires at",
+    "expiresAtHelp": "Leave empty for no expiration. Job will be auto-disabled after this time."
   },
   "status": {
     "enabled": "Enabled",
@@ -44,6 +46,8 @@
   },
   "executions": "Execution History",
   "noExecutions": "No executions yet",
+  "expiresAt": "Expires",
+  "expired": "expired",
   "lastRun": "Last run",
   "nextRun": "Next run",
   "neverRun": "Never",

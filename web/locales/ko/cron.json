@@ -33,7 +33,9 @@
     "prompt": "초기 프롬프트",
     "promptPlaceholder": "작업 시작 시 에이전트에 전송할 메시지...",
     "retryOnFailure": "실패 시 재시도",
-    "maxRetries": "최대 재시도 횟수"
+    "maxRetries": "최대 재시도 횟수",
+    "expiresAt": "만료 시간",
+    "expiresAtHelp": "비워두면 만료되지 않습니다. 이 시간 이후 작업이 자동으로 비활성화됩니다."
   },
   "status": {
     "enabled": "활성화됨",
@@ -44,6 +46,8 @@
   },
   "executions": "실행 이력",
   "noExecutions": "실행 이력 없음",
+  "expiresAt": "만료",
+  "expired": "만료됨",
   "lastRun": "마지막 실행",
   "nextRun": "다음 실행",
   "neverRun": "없음",

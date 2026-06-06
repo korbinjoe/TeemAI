@@ -31,13 +31,13 @@ export const createCronJobRoutes = ({ cronJobStore, cronScheduler, nlCronParser,
 
   router.post('/api/cron-jobs', async (req, res) => {
     try {
-      const { name, description, workspaceId, agentId, model, trigger, prompt, retryOnFailure, maxRetries } = req.body
+      const { name, description, workspaceId, agentId, model, trigger, prompt, retryOnFailure, maxRetries, expiresAt } = req.body
       if (!name || !workspaceId || !trigger || !prompt) {
         return res.status(400).json({ error: 'Missing required fields: name, workspaceId, trigger, prompt' })
       }
       const job = await cronJobStore.create({
         name, description, workspaceId, agentId, model,
-        trigger, prompt, retryOnFailure, maxRetries,
+        trigger, prompt, retryOnFailure, maxRetries, expiresAt,
       })
       res.status(201).json(job)
     } catch (err) {
@@ -47,7 +47,7 @@ export const createCronJobRoutes = ({ cronJobStore, cronScheduler, nlCronParser,
 
   router.put('/api/cron-jobs/:id', async (req, res) => {
     try {
-      const allowedFields = ['name', 'description', 'workspaceId', 'agentId', 'model', 'trigger', 'prompt', 'retryOnFailure', 'maxRetries']
+      const allowedFields = ['name', 'description', 'workspaceId', 'agentId', 'model', 'trigger', 'prompt', 'retryOnFailure', 'maxRetries', 'expiresAt']
       const updates: Record<string, unknown> = {}
       for (const key of allowedFields) {
         if (req.body[key] !== undefined) updates[key] = req.body[key]

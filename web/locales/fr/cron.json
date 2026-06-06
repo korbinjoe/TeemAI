@@ -33,7 +33,9 @@
     "prompt": "Prompt initial",
     "promptPlaceholder": "Le message envoyé à l'agent au démarrage de la tâche...",
     "retryOnFailure": "Réessayer en cas d'échec",
-    "maxRetries": "Nombre max de tentatives"
+    "maxRetries": "Nombre max de tentatives",
+    "expiresAt": "Date d'expiration",
+    "expiresAtHelp": "Laisser vide pour aucune expiration. La tâche sera automatiquement désactivée après cette heure."
   },
   "status": {
     "enabled": "Activé",
@@ -44,6 +46,8 @@
   },
   "executions": "Historique d'exécution",
   "noExecutions": "Aucune exécution",
+  "expiresAt": "Expire",
+  "expired": "expiré",
   "lastRun": "Dernière exécution",
   "nextRun": "Prochaine exécution",
   "neverRun": "Jamais",

@@ -58,12 +58,43 @@ export class CronScheduler {
 
     for (const job of jobs) {
       if (this.runningJobs.has(job.id)) continue
+
+      if (job.expiresAt && now.getTime() >= new Date(job.expiresAt).getTime()) {
+        this.disableExpiredJob(job)
+        continue
+      }
+
       if (!this.shouldRun(job, now)) continue
 
       this.executeJob(job).catch((err) => {
         log.error('executeJob error', { jobId: job.id, error: err instanceof Error ? err.message : String(err) })
       })
     }
+  }
+
+  private disableExpiredJob(job: CronJob): void {
+    log.info('Job expired, disabling', { jobId: job.id, name: job.name, expiresAt: job.expiresAt })
+    this.cronJobStore.setEnabled(job.id, false).catch((e) =>
+      log.warn('Failed to disable expired job', { jobId: job.id, error: e instanceof Error ? e.message : String(e) })
+    )
+    this.cronJobStore.update(job.id, { nextRunAt: undefined }).catch(() => {})
+
+    this.notificationStore.create({
+      category: 'system',
+      title: 'Scheduled task expired',
+      body: `"${job.name}" has reached its expiration time and was automatically disabled`,
+      link: undefined,
+      meta: { cronJobId: job.id, workspaceId: job.workspaceId },
+    }).then((notification) => {
+      if (notification) {
+        this.broadcast({ type: 'notification:new', payload: notification })
+      }
+    }).catch(() => {})
+
+    this.broadcast({
+      type: 'cron:job-expired',
+      payload: { jobId: job.id, jobName: job.name },
+    })
   }
 
   private shouldRun(job: CronJob, now: Date): boolean {
@@ -158,6 +189,7 @@ export class CronScheduler {
         workspaceId: job.workspaceId,
         title: `[Cron] ${job.name}`,
         model: job.model,
+        primaryAgentId: job.agentId || undefined,
       })
       execution.chatId = chat.id
 

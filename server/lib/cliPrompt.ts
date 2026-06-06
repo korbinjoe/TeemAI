@@ -1,17 +1,23 @@
 /**
  * cliPrompt — Lightweight one-shot LLM calls.
  *
- * Default path: Anthropic SDK (no JSONL session files written to disk).
- *   Auth source priority:
- *     1. ANTHROPIC_API_KEY (x-api-key header)
- *     2. ANTHROPIC_AUTH_TOKEN (Bearer token, e.g. proxied gateways)
- *   Honors ANTHROPIC_BASE_URL for self-hosted / proxied endpoints.
+ * Credential resolution:
+ *   1. ~/.claude/settings.json "env" block (always the real gateway)
+ *   2. process.env fallback
+ *   When Electron sets ANTHROPIC_BASE_URL to a localhost proxy, the proxy may
+ *   not be running. Reading ~/.claude/settings.json directly bypasses this.
  *
- * Fallback: local `claude --print` CLI when neither auth env var is set.
- *   Kept for backward compatibility — same JSONL-creating behavior as before.
+ * Auth priority:
+ *   1. ANTHROPIC_API_KEY (x-api-key header)
+ *   2. ANTHROPIC_AUTH_TOKEN (Bearer token, e.g. proxied gateways)
+ *
+ * Fallback: local `claude --print` CLI when neither auth source is available.
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import { homedir } from 'os'
 import { execFile } from 'child_process'
 import { createLogger } from './logger'
 import { resolveCliCommandAsync, resolveInterpreter } from './resolveCliCommand'
@@ -21,8 +27,30 @@ const log = createLogger('cliPrompt')
 const FALLBACK_MODEL = 'claude-haiku-4-5-20251001'
 const DEFAULT_MAX_TOKENS = 1024
 
+let claudeSettingsCache: Record<string, string> | null = null
+
+const readClaudeSettingsEnv = (): Record<string, string> => {
+  if (claudeSettingsCache) return claudeSettingsCache
+  try {
+    const raw = readFileSync(join(homedir(), '.claude', 'settings.json'), 'utf-8')
+    const parsed = JSON.parse(raw)
+    const env = parsed?.env
+    if (env && typeof env === 'object' && !Array.isArray(env)) {
+      claudeSettingsCache = env as Record<string, string>
+      return claudeSettingsCache
+    }
+  } catch { /* silent — config is optional */ }
+  claudeSettingsCache = {}
+  return claudeSettingsCache
+}
+
+const resolveEnv = (key: string): string | undefined => {
+  const claudeEnv = readClaudeSettingsEnv()
+  return claudeEnv[key] || process.env[key]
+}
+
 const resolveDefaultModel = (): string =>
-  process.env.TEEMAI_LIGHT_MODEL || FALLBACK_MODEL
+  resolveEnv('TEEMAI_LIGHT_MODEL') || resolveEnv('ANTHROPIC_MODEL') || resolveEnv('ANTHROPIC_SMALL_FAST_MODEL') || FALLBACK_MODEL
 
 export interface CliPromptOptions {
   prompt: string
@@ -41,14 +69,15 @@ export interface CliPromptResult {
 let cachedClient: Anthropic | null = null
 
 const getClient = (): Anthropic | null => {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  const authToken = process.env.ANTHROPIC_AUTH_TOKEN
-  if (!apiKey && !authToken) return null
   if (cachedClient) return cachedClient
+  const apiKey = resolveEnv('ANTHROPIC_API_KEY')
+  const authToken = resolveEnv('ANTHROPIC_AUTH_TOKEN')
+  if (!apiKey && !authToken) return null
   cachedClient = new Anthropic({
     apiKey: apiKey || undefined,
     authToken: !apiKey && authToken ? authToken : undefined,
-    baseURL: process.env.ANTHROPIC_BASE_URL || undefined,
+    baseURL: resolveEnv('ANTHROPIC_BASE_URL') || undefined,
+    defaultHeaders: { 'User-Agent': 'teemai (claude-code-extension)' },
   })
   return cachedClient
 }
@@ -56,7 +85,9 @@ const getClient = (): Anthropic | null => {
 export const cliPrompt = async (options: CliPromptOptions): Promise<CliPromptResult> => {
   const client = getClient()
   if (client) {
-    return promptViaSdk(client, options)
+    const sdkResult = await promptViaSdk(client, options)
+    if (sdkResult.success) return sdkResult
+    log.debug('SDK call failed, falling back to CLI', { error: sdkResult.error })
   }
   return promptViaCli(options)
 }

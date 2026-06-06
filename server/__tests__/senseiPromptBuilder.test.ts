@@ -9,13 +9,13 @@ describe('buildFullSuitePrompt', () => {
     expect(out).not.toContain('MODE: FULL_SUITE')
   })
 
-  it('emits FULL_SUITE marker when mode=full-suite', () => {
+  it('includes format spec and section markers when mode=full-suite', () => {
     const out = buildFullSuitePrompt('Rigorous data analyst', 'full-suite')
-    expect(out.startsWith('MODE: FULL_SUITE')).toBe(true)
     expect(out).toContain('===IDENTITY===')
     expect(out).toContain('===AGENTS===')
     expect(out).toContain('===SOUL===')
     expect(out).toContain('Rigorous data analyst')
+    expect(out).toContain('MUST be in English')
   })
 
   it('trims user description', () => {

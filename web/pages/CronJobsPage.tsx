@@ -63,11 +63,14 @@ const CronJobsPage = () => {
     const ws = getWebSocketClient()
     const handleStarted = () => fetchJobs()
     const handleFinished = () => fetchJobs()
+    const handleExpired = () => fetchJobs()
     ws.on('cron:job-started', handleStarted)
     ws.on('cron:job-finished', handleFinished)
+    ws.on('cron:job-expired', handleExpired)
     return () => {
       ws.off('cron:job-started', handleStarted)
       ws.off('cron:job-finished', handleFinished)
+      ws.off('cron:job-expired', handleExpired)
     }
   }, [fetchJobs])
 
@@ -245,6 +248,14 @@ const CronJobsPage = () => {
                       <span className="mx-1.5">·</span>
                       {t('nextRun')}: {job.nextRunAt ? new Date(job.nextRunAt).toLocaleString() : t('neverRun')}
                     </p>
+                    {job.expiresAt && (
+                      <p className={cn(
+                        new Date(job.expiresAt).getTime() <= Date.now() ? 'text-red-400' : 'text-text-secondary',
+                      )}>
+                        {t('expiresAt')}: {new Date(job.expiresAt).toLocaleString()}
+                        {new Date(job.expiresAt).getTime() <= Date.now() && ` (${t('expired')})`}
+                      </p>
+                    )}
                   </div>
 
                   {/* Actions */}
@@ -342,7 +353,13 @@ const CronJobsPage = () => {
         open={nlDialogOpen}
         onClose={() => setNlDialogOpen(false)}
         onParsed={(data) => {
-          setPrefillData(data)
+          const parsed = { ...data }
+          const rawAgentName = (data as Record<string, unknown>).agentName as string | undefined
+          if (rawAgentName && !parsed.agentId) {
+            const matched = agents.find((a) => a.name === rawAgentName || a.id === rawAgentName)
+            if (matched) parsed.agentId = matched.id
+          }
+          setPrefillData(parsed)
           setFormOpen(true)
         }}
         onSkip={() => {

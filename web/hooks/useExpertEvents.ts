@@ -259,7 +259,7 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
 
     setExpertActivities((prev) => {
       const existing = prev[payload.agentId]
-      if (existing && existing.phase !== 'completed' && existing.phase !== 'error') return prev
+      if (existing && existing.phase !== 'completed' && existing.phase !== 'error' && existing.phase !== 'waiting_input') return prev
       const next: AgentActivity = {
         phase: 'initializing',
         background: false,

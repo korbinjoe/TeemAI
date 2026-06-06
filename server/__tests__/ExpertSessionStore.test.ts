@@ -463,6 +463,126 @@ describe('getExpertListForConnection', () => {
   })
 })
 
+// ── collectByChatId ──
+
+describe('collectByChatId', () => {
+  it('returns only entries matching the chatId', () => {
+    const store = new ExpertSessionStore()
+    store.set(compositeKey('c1', 'chat-1', 'a'), makeEntry({ chatId: 'chat-1' }))
+    store.set(compositeKey('c1', 'chat-2', 'b'), makeEntry({ chatId: 'chat-2' }))
+    store.set(compositeKey('c2', 'chat-1', 'c'), makeEntry({ chatId: 'chat-1' }))
+
+    const result = store.collectByChatId('chat-1')
+    expect(result).toHaveLength(2)
+    expect(result.map(r => parseAgentId(r.key)).sort()).toEqual(['a', 'c'])
+  })
+
+  it('returns empty when no entries match', () => {
+    const store = new ExpertSessionStore()
+    store.set(compositeKey('c1', 'chat-1', 'a'), makeEntry({ chatId: 'chat-1' }))
+    expect(store.collectByChatId('chat-99')).toEqual([])
+  })
+})
+
+// ── cleanupConnection ──
+
+describe('cleanupConnection', () => {
+  it('removes running and completed entries for a connectionId', () => {
+    const store = new ExpertSessionStore()
+    const k1 = compositeKey('conn-1', 'chat-1', 'a')
+    const k2 = compositeKey('conn-1', 'chat-2', 'b')
+    const k3 = compositeKey('conn-2', 'chat-1', 'c')
+
+    store.set(k1, makeEntry({ connectionId: 'conn-1' }))
+    store.set(k2, makeEntry({ connectionId: 'conn-1' }))
+    store.set(k3, makeEntry({ connectionId: 'conn-2' }))
+
+    store.setCompleted(k1, {
+      sessionId: 'sess-1', agentName: 'A', agentIcon: 'A',
+      exitCode: 0, completedAt: new Date().toISOString(),
+      connectionId: 'conn-1', chatId: 'chat-1',
+    })
+
+    store.cleanupConnection('conn-1')
+
+    expect(store.has(k1)).toBe(false)
+    expect(store.has(k2)).toBe(false)
+    expect(store.has(k3)).toBe(true)
+    expect(store.getCompleted(k1)).toBeUndefined()
+  })
+})
+
+// ── findKeyByAgentId ──
+
+describe('findKeyByAgentId', () => {
+  it('prioritizes running entry over completed', () => {
+    const store = new ExpertSessionStore()
+    const runKey = compositeKey('c1', 'chat-1', 'agent-a')
+    store.set(runKey, makeEntry())
+    store.setCompleted(compositeKey('c2', 'chat-1', 'agent-a'), {
+      sessionId: 'sess-old', agentName: 'A', agentIcon: 'A',
+      exitCode: 0, completedAt: new Date().toISOString(),
+      connectionId: 'c2', chatId: 'chat-1',
+    })
+
+    expect(store.findKeyByAgentId('agent-a')).toBe(runKey)
+  })
+
+  it('falls back to completed entry key when no running entry', () => {
+    const store = new ExpertSessionStore()
+    const compKey = compositeKey('c1', 'chat-1', 'agent-b')
+    store.setCompleted(compKey, {
+      sessionId: 'sess-1', agentName: 'B', agentIcon: 'B',
+      exitCode: 0, completedAt: new Date().toISOString(),
+      connectionId: 'c1', chatId: 'chat-1',
+    })
+
+    expect(store.findKeyByAgentId('agent-b')).toBe(compKey)
+  })
+
+  it('returns undefined when agent not found anywhere', () => {
+    const store = new ExpertSessionStore()
+    expect(store.findKeyByAgentId('ghost')).toBeUndefined()
+  })
+})
+
+// ── Second set() overwrites: critical for re-assignment ──
+
+describe('second set() overwrite behavior', () => {
+  it('second set() on same key replaces entry without error', () => {
+    const store = new ExpertSessionStore()
+    const key = compositeKey('conn-1', 'chat-1', 'agent-a')
+    const first = makeEntry({ sessionId: 'sess-first' })
+    const second = makeEntry({ sessionId: 'sess-second' })
+
+    store.set(key, first)
+    store.set(key, second)
+
+    expect(store.get(key)?.sessionId).toBe('sess-second')
+    expect(store.collectByConnection('conn-1')).toHaveLength(1)
+  })
+})
+
+// ── Concurrency: markStarting prevents duplicate ──
+
+describe('concurrency: markStarting lock prevents duplicate start', () => {
+  it('two concurrent starts — second caller sees isStarting=true', () => {
+    const store = new ExpertSessionStore()
+    const key = compositeKey('conn-1', 'chat-1', 'agent-a')
+
+    store.markStarting(key)
+    expect(store.isStarting(key)).toBe(true)
+
+    // Second "start" attempt should see the lock
+    const shouldSkip = store.isStarting(key)
+    expect(shouldSkip).toBe(true)
+
+    // After first start completes
+    store.clearStarting(key)
+    expect(store.isStarting(key)).toBe(false)
+  })
+})
+
 // ── clearCompleted ──
 
 describe('clearCompleted', () => {

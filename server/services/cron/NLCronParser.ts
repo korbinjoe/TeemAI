@@ -89,7 +89,12 @@ export class NLCronParser {
   "prompt": "string - detailed, executable Agent instruction",
   "workspaceId": "string - matched workspace ID if applicable",
   "agentName": "string - matched Agent name if applicable",
-  "expiresAt": "string - optional ISO 8601 timestamp when the job should auto-disable"
+  "expiration": {
+    "type": "after_count | after_duration | at_time",
+    "count": "number - how many times to run (when type=after_count)",
+    "durationMinutes": "number - total minutes from now (when type=after_duration)",
+    "at": "string - ISO 8601 absolute deadline (when type=at_time)"
+  }
 }
 
 ## Schedule Conversion
@@ -112,18 +117,63 @@ ${wsListStr}
 ${agentListStr}
 - Match the most suitable Agent based on description
 
-## Expiration (expiresAt)
-- When the user specifies a deadline, end date, or limited duration, set expiresAt to the corresponding ISO 8601 timestamp
-- "run for the next 3 days" → expiresAt = current time + 3 days
-- "until next Friday" → expiresAt = next Friday 23:59:59
-- "only run 5 times, every hour" → expiresAt = current time + 5 hours (estimate based on interval × count)
-- "execute N times, every M minutes" → expiresAt = current time + N × M minutes
-- If no expiration is mentioned, omit expiresAt
+## Expiration
+- When the user specifies a limited number of runs: type=after_count, count=N
+  - "only run 5 times" → { "type": "after_count", "count": 5 }
+- When the user specifies a duration: type=after_duration, durationMinutes=N
+  - "run for 2 hours" → { "type": "after_duration", "durationMinutes": 120 }
+  - "run for 3 days" → { "type": "after_duration", "durationMinutes": 4320 }
+- When the user specifies an absolute deadline: type=at_time, at=ISO8601
+  - "until next Friday" → { "type": "at_time", "at": "2026-06-12T23:59:59Z" }
+- If no expiration is mentioned, omit the expiration field entirely
+- Do NOT calculate timestamps yourself — just output the structured hint
 
 ## Important
 - Always output valid JSON even with incomplete information, use reasonable defaults
 - The prompt field should be detailed and executable, suitable for sending directly to an AI Agent
 - Output ONLY the JSON object, nothing else`
+  }
+
+  private computeExpiresAt(
+    expiration: Record<string, unknown> | undefined,
+    trigger: CronTrigger,
+  ): string | undefined {
+    if (!expiration || !expiration.type) return undefined
+
+    const now = Date.now()
+
+    switch (expiration.type) {
+      case 'after_count': {
+        const count = Number(expiration.count) || 1
+        let intervalMs: number
+        if (trigger.kind === 'interval') {
+          intervalMs = trigger.intervalMs
+        } else if (trigger.kind === 'cron') {
+          try {
+            const parsed = CronExpressionParser.parse(trigger.expression, { tz: trigger.timezone, currentDate: new Date() })
+            const first = parsed.next().toDate().getTime()
+            const second = parsed.next().toDate().getTime()
+            intervalMs = second - first
+          } catch {
+            intervalMs = 60_000
+          }
+        } else {
+          return undefined
+        }
+        return new Date(now + count * intervalMs).toISOString()
+      }
+      case 'after_duration': {
+        const minutes = Number(expiration.durationMinutes) || 60
+        return new Date(now + minutes * 60_000).toISOString()
+      }
+      case 'at_time': {
+        const at = expiration.at as string
+        if (at && !isNaN(new Date(at).getTime())) return new Date(at).toISOString()
+        return undefined
+      }
+      default:
+        return undefined
+    }
   }
 
   private parseJsonResponse(text: string): NLParseResult {
@@ -178,7 +228,7 @@ ${agentListStr}
         prompt: (input.prompt as string) || '',
         workspaceId: input.workspaceId as string | undefined,
         agentName: input.agentName as string | undefined,
-        expiresAt: input.expiresAt as string | undefined,
+        expiresAt: this.computeExpiresAt(input.expiration as Record<string, unknown> | undefined, trigger),
         retryOnFailure: true,
         maxRetries: 2,
       },

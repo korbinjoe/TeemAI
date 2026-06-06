@@ -126,7 +126,7 @@ const CronJobsPage = () => {
   const formatTrigger = (job: CronJob) => {
     const tr = job.trigger
     if (tr.kind === 'cron') return `cron: ${tr.expression}${tr.timezone ? ` (${tr.timezone})` : ''}`
-    if (tr.kind === 'once') return `${t('form.triggerOnce')}: ${new Date(tr.at).toLocaleString()}`
+    if (tr.kind === 'once') return `${t('form.triggerOnce')}: ${new Date(tr.at).toLocaleString(undefined, { timeZoneName: 'short' })}`
     if (tr.kind === 'interval') {
       const ms = tr.intervalMs
       if (ms >= 86400000) return `${t('form.triggerInterval')}: ${ms / 86400000} ${t('form.days')}`
@@ -246,13 +246,13 @@ const CronJobsPage = () => {
                         </span>
                       )}
                       <span className="mx-1.5">·</span>
-                      {t('nextRun')}: {job.nextRunAt ? new Date(job.nextRunAt).toLocaleString() : t('neverRun')}
+                      {t('nextRun')}: {job.nextRunAt ? new Date(job.nextRunAt).toLocaleString(undefined, { timeZoneName: 'short' }) : t('neverRun')}
                     </p>
                     {job.expiresAt && (
                       <p className={cn(
                         new Date(job.expiresAt).getTime() <= Date.now() ? 'text-red-400' : 'text-text-secondary',
                       )}>
-                        {t('expiresAt')}: {new Date(job.expiresAt).toLocaleString()}
+                        {t('expiresAt')}: {new Date(job.expiresAt).toLocaleString(undefined, { timeZoneName: 'short' })}
                         {new Date(job.expiresAt).getTime() <= Date.now() && ` (${t('expired')})`}
                       </p>
                     )}
@@ -301,7 +301,7 @@ const CronJobsPage = () => {
                           {exec.status === 'failed' && <XCircle size={13} className="text-red-500 shrink-0" />}
                           {exec.status === 'running' && <Loader2 size={13} className="text-amber-500 animate-spin shrink-0" />}
                           <span className="text-text-secondary w-28 shrink-0">
-                            {new Date(exec.startedAt).toLocaleString(undefined, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                            {new Date(exec.startedAt).toLocaleString(undefined, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })}
                           </span>
                           <span className={cn(
                             'font-medium',

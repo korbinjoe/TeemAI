@@ -52,7 +52,7 @@ const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, worksp
   const [model, setModel] = useState('')
   const [triggerKind, setTriggerKind] = useState<'cron' | 'once' | 'interval'>('cron')
   const [cronExpression, setCronExpression] = useState('')
-  const [timezone, setTimezone] = useState('Asia/Shanghai')
+  const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone)
   const [scheduledAt, setScheduledAt] = useState('')
   const [intervalValue, setIntervalValue] = useState(30)
   const [intervalUnit, setIntervalUnit] = useState<'minutes' | 'hours' | 'days'>('minutes')
@@ -61,11 +61,18 @@ const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, worksp
   const [maxRetries, setMaxRetries] = useState(2)
   const [expiresAt, setExpiresAt] = useState('')
 
+  const isoToLocalInput = (iso: string) => {
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return ''
+    const p = (n: number) => n.toString().padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+  }
+
   const applyTrigger = (tr: CronTrigger) => {
     setTriggerKind(tr.kind)
     if (tr.kind === 'cron') {
       setCronExpression(tr.expression)
-      setTimezone(tr.timezone || 'Asia/Shanghai')
+      setTimezone(tr.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone)
     } else if (tr.kind === 'once') {
       setScheduledAt(tr.at.slice(0, 16))
     } else if (tr.kind === 'interval') {
@@ -90,7 +97,7 @@ const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, worksp
     setModel('')
     setTriggerKind('cron')
     setCronExpression('')
-    setTimezone('Asia/Shanghai')
+    setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone)
     setScheduledAt('')
     setIntervalValue(30)
     setIntervalUnit('minutes')
@@ -113,7 +120,7 @@ const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, worksp
       setPrompt(initialData.prompt)
       setRetryOnFailure(initialData.retryOnFailure)
       setMaxRetries(initialData.maxRetries)
-      setExpiresAt(initialData.expiresAt ? initialData.expiresAt.slice(0, 16) : '')
+      setExpiresAt(initialData.expiresAt ? isoToLocalInput(initialData.expiresAt) : '')
       applyTrigger(initialData.trigger)
     } else if (prefillData) {
       resetToDefaults()
@@ -125,7 +132,7 @@ const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, worksp
       if (prefillData.prompt) setPrompt(prefillData.prompt)
       if (prefillData.retryOnFailure !== undefined) setRetryOnFailure(prefillData.retryOnFailure)
       if (prefillData.maxRetries !== undefined) setMaxRetries(prefillData.maxRetries)
-      if (prefillData.expiresAt) setExpiresAt(prefillData.expiresAt.slice(0, 16))
+      if (prefillData.expiresAt) setExpiresAt(isoToLocalInput(prefillData.expiresAt))
       if (prefillData.trigger) applyTrigger(prefillData.trigger)
     } else {
       resetToDefaults()
@@ -323,7 +330,7 @@ const CronJobForm = ({ open, onClose, onSubmit, initialData, prefillData, worksp
             </FormField>
 
             {/* Expires at */}
-            <FormField label={t('form.expiresAt')}>
+            <FormField label={`${t('form.expiresAt')} (${Intl.DateTimeFormat().resolvedOptions().timeZone})`}>
               <input
                 type="datetime-local"
                 value={expiresAt}

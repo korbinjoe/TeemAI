@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.0-beta.3] - 2026-06-07
+
+### Breaking Changes
+
+- **Rebrand OpenTeam → TeemAI**: rename across entire codebase including package name, UI strings, config paths, and documentation
+
+### Features
+
+- **Cron job expiration**: add `expiresAt` support for scheduled tasks with i18n and natural language parsing (e.g. "every hour until tomorrow 5pm")
+
+### Bug Fixes
+
+- Fix NL parser expiration calculation and timezone display
+- Fix second agent dispatch not showing messages in conversation
+- Fix sensei English output enforcement and identity parser trimming
+- Fix terminal slash command rendering and improve command discovery
+
 ## [0.1.0-beta.2] - 2026-06-02
 
 ### Features

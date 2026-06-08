@@ -277,7 +277,7 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
         previousContext: payload.previousContext,
       }, provider, llmEnv)
 
-      if (provider === 'claude') {
+      if (provider === 'claude' || provider === 'codex') {
         const effectiveSessionId = compiled.presetSessionId || payload.resumeSessionId
         if (effectiveSessionId) {
           streamManager.setCliSessionId(effectiveSessionId)
@@ -344,9 +344,6 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
         : expandedTask
 
       const spawnArgs = compiled.args.slice()
-      if (provider === 'codex' && wrappedTask) {
-        spawnArgs.push(wrappedTask)
-      }
 
       store.set(key, {
         sessionId,
@@ -393,22 +390,18 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
       if (task && wrappedTask) {
         const briefingInjected = wrappedTask !== task
         const initialImages = payload.images?.map(i => ({ data: i.data, mimeType: i.mediaType }))
-        if (provider === 'codex') {
-          if (initialImages?.length) {
-            log.warn('Codex provider does not support image attachments on initial task; dropping images', { agentId, imageCount: initialImages.length })
-          }
-          log.debug('Codex task passed as CLI arg', { task: wrappedTask.substring(0, 50), briefingInjected })
-        } else {
-          log.info('Sending task via ACP prompt', { agentId, task: task.substring(0, 50), briefingInjected, imageCount: initialImages?.length ?? 0, expanded: wrappedTask !== task })
-          acpClient.prompt(sessionId, wrappedTask, initialImages).catch(err => {
-            const errorMsg = err instanceof Error ? err.message : String(err)
-            log.warn('ACP initial prompt failed', { agentId, error: errorMsg })
-            sendTo(connectionId, {
-              type: 'expert:error',
-              payload: { agentId, chatId, error: 'prompt_failed', message: errorMsg },
-            })
-          })
+        if (provider === 'codex' && initialImages?.length) {
+          log.warn('Codex provider does not support image attachments on initial task; dropping images', { agentId, imageCount: initialImages.length })
         }
+        log.info('Sending task via ACP prompt', { agentId, task: task.substring(0, 50), briefingInjected, imageCount: initialImages?.length ?? 0, expanded: wrappedTask !== task, provider })
+        acpClient.prompt(sessionId, wrappedTask, initialImages).catch(err => {
+          const errorMsg = err instanceof Error ? err.message : String(err)
+          log.warn('ACP initial prompt failed', { agentId, error: errorMsg })
+          sendTo(connectionId, {
+            type: 'expert:error',
+            payload: { agentId, chatId, error: 'prompt_failed', message: errorMsg },
+          })
+        })
       }
 
       // Codex readiness boundary: drain any messages enqueued during the

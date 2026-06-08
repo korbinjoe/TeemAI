@@ -15,17 +15,73 @@ import type { ExpertTokenTracker } from './ExpertTokenTracker'
 import type { FileOperationCollector } from '../terminal/FileOperationCollector'
 import type { ActivityState } from '../terminal/ActivityDeriver'
 import { existsSync } from 'fs'
+import { readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 import type { ChatStore } from '../stores/ChatStore'
 import type { AgentStore } from '../stores/AgentStore'
-import { parseConversationFile } from '../terminal/ConversationParser'
+import { createParserState, parseConversationFile, type ParsedMessage } from '../terminal/ConversationParser'
 import { acpUpdateToWSMessage } from '../acp/ACPToFrontendBridge'
 import { cwdToClaudeProjectKey } from '../../shared/projectKey'
+import { codexOutputParser } from '../terminal/CodexParser'
+import { locateCodexRollout } from '../terminal/CodexRolloutLocator'
 import { createLogger } from '../lib/logger'
 import { trackEvent } from '../lib/eventTracker'
 
 const log = createLogger('ExpertExit')
+
+const buildMessageMergeKey = (msg: ParsedMessage): string => {
+  if (msg.jsonlUuid) return `uuid:${msg.jsonlUuid}:${msg.type}:${msg.role}`
+  if (msg.type === 'toolUse' && msg.toolUse) return `toolUse:${msg.toolUse.toolId}:${msg.turnIndex ?? -1}`
+  if (msg.type === 'toolResult' && msg.toolResult) return `toolResult:${msg.toolResult.toolUseId}:${msg.turnIndex ?? -1}`
+  if (msg.type === 'stats') return `stats:${msg.turnIndex ?? -1}`
+  return `fallback:${msg.role}:${msg.type}:${msg.timestamp}:${msg.content}`
+}
+
+const parseCodexRolloutMessages = (threadId?: string): ParsedMessage[] | null => {
+  if (!threadId) return null
+  const rollout = locateCodexRollout(threadId)
+  if (!rollout) return null
+  try {
+    const raw = readFileSync(rollout, 'utf8')
+    const lines = raw.split('\n')
+    const state = createParserState()
+    const { newMessages } = codexOutputParser.parseNewLines(lines, 0, state)
+    const all = state.messages.length > 0 ? state.messages : newMessages
+    return all.length > 0 ? all : null
+  } catch (err) {
+    log.warn('Failed to parse Codex rollout on exit fallback', {
+      threadId,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return null
+  }
+}
+
+export const buildCodexExitReplay = (
+  currentMessages: ParsedMessage[] | null,
+  rolloutMessages: ParsedMessage[] | null,
+): ParsedMessage[] => {
+  const current = currentMessages ?? []
+  const rollout = rolloutMessages ?? []
+  if (rollout.length === 0) return []
+
+  const hasCurrentAgentText = current.some((m) => m.role === 'agent' && m.type === 'text' && !!m.content?.trim())
+  if (hasCurrentAgentText) return []
+
+  const latestUserTurn = rollout
+    .filter((m) => m.role === 'user')
+    .reduce((max, m) => Math.max(max, m.turnIndex ?? -1), -1)
+  const targetTurn = latestUserTurn >= 0
+    ? latestUserTurn
+    : rollout.reduce((max, m) => Math.max(max, m.turnIndex ?? -1), -1)
+  if (targetTurn < 0) return []
+
+  const currentKeys = new Set(current.map(buildMessageMergeKey))
+  const replay = rollout.filter((m) => m.role === 'agent' && (m.turnIndex ?? -1) === targetTurn)
+
+  return replay.filter((m) => !currentKeys.has(buildMessageMergeKey(m)))
+}
 
 export interface ExitContext {
   agentId: string
@@ -108,11 +164,16 @@ export const createExpertExitHandler = (deps: ExitHandlerDeps) => {
       const cwd = expertInfo?.cwd
       let jsonlPath: string | null = null
       if (cwd && ctx.resumeSessionId) {
-        const projectKey = cwdToClaudeProjectKey(cwd)
-        const candidatePath = join(homedir(), '.claude', 'projects', projectKey, `${ctx.resumeSessionId}.jsonl`)
-        if (existsSync(candidatePath)) {
-          jsonlPath = candidatePath
+        if (expertInfo.provider === 'codex') {
+          jsonlPath = locateCodexRollout(ctx.resumeSessionId)
         } else {
+          const projectKey = cwdToClaudeProjectKey(cwd)
+          const candidatePath = join(homedir(), '.claude', 'projects', projectKey, `${ctx.resumeSessionId}.jsonl`)
+          if (existsSync(candidatePath)) {
+            jsonlPath = candidatePath
+          }
+        }
+        if (!jsonlPath) {
           const chat = chatStore.get(chatId)
           if (chat?.expertSessions?.[agentId]) {
             const updatedSessions = { ...chat.expertSessions }
@@ -179,6 +240,32 @@ export const createExpertExitHandler = (deps: ExitHandlerDeps) => {
     trackEvent('agent', 'agent.exited', { agentId, exitCode, chatId: expertInfo.chatId, connectionId: currentConnectionId })
 
     const taskCompleted = finalActivity?.phase !== 'error'
+
+    // Codex `exec` runs one turn per process. If stream parsing missed assistant
+    // text but rollout persisted it, backfill from rollout before final exit so
+    // the UI doesn't end as "Mission Complete" with an empty turn.
+    if (exitCode === 0 && expertInfo.provider === 'codex') {
+      const streamMessages = sessionRegistry.get(sessionId)?.streamManager.getCurrentMessages() ?? null
+      const rolloutMessages = parseCodexRolloutMessages(expertInfo.cliSessionId)
+      const replay = buildCodexExitReplay(streamMessages, rolloutMessages)
+      if (replay.length > 0) {
+        const wsMsg = acpUpdateToWSMessage({
+          sessionUpdate: '_teemai/messages_batch',
+          messages: replay as unknown as import('../../shared/acp-types').TeemAIParsedMessage[],
+          replacedStatsId: null,
+          batchType: 'delta',
+        }, { agentId, sessionId, chatId })
+        if (wsMsg) {
+          sessionRegistry.sendToSession(sessionId, wsMsg as Record<string, unknown>)
+          log.info('Applied Codex exit replay fallback', {
+            agentId,
+            chatId,
+            sessionId,
+            replayCount: replay.length,
+          })
+        }
+      }
+    }
 
     const chat = chatStore.get(chatId)
     if (chat?.expertSessions?.[agentId]) {

@@ -12,6 +12,7 @@ import { createLogger } from '../lib/logger'
 import { expandSlashCommand } from '../runtime/SlashCommandResolver'
 import { trackEvent } from '../lib/eventTracker'
 import { cwdToClaudeProjectKey } from '../../shared/projectKey'
+import { locateCodexRollout } from '../terminal/CodexRolloutLocator'
 import { isPlaceholderTitle } from '../../shared/placeholderTitles'
 
 const log = createLogger('Expert')
@@ -152,14 +153,18 @@ export const createExpertDirectInput = (deps: ExpertDirectInputDeps) => {
         const oldCliSessionId = typeof oldSession === 'string'
           ? oldSession
           : oldSession.cliSessionId
+        const oldProvider = typeof oldSession === 'object' && oldSession.provider
+          ? oldSession.provider
+          : 'claude'
         const sessionCwd = (typeof oldSession === 'object' && oldSession.cwd) || effectiveCwd || process.cwd()
         if (oldCliSessionId) {
-          const projectKey = cwdToClaudeProjectKey(sessionCwd)
-          const jsonlPath = join(homedir(), '.claude', 'projects', projectKey, `${oldCliSessionId}.jsonl`)
-          if (existsSync(jsonlPath)) {
+          const canResume = oldProvider === 'codex'
+            ? !!locateCodexRollout(oldCliSessionId)
+            : existsSync(join(homedir(), '.claude', 'projects', cwdToClaudeProjectKey(sessionCwd), `${oldCliSessionId}.jsonl`))
+          if (canResume) {
             resumeSessionId = oldCliSessionId
             if (!effectiveCwd) effectiveCwd = sessionCwd
-            log.info('Resuming dead expert with --resume', { agentId, chatId, resumeSessionId, jsonlPath })
+            log.info('Resuming dead expert with --resume', { agentId, chatId, resumeSessionId, provider: oldProvider })
           }
         }
       }

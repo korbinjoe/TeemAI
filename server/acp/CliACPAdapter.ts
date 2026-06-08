@@ -80,7 +80,7 @@ const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
     supportsSessionLoad: false,
     supportsImages: false,
     supportsThinking: false,
-    captureCliSessionId: false,
+    captureCliSessionId: true,
     needsStandardPermission: false,
     modes: ['code'],
   },

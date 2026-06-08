@@ -315,9 +315,12 @@ export class ConfigCompiler {
     const args: string[] = []
     const cleanupFns: Array<() => Promise<void>> = []
 
-    args.push('exec')
+    if (context.resumeSessionId) {
+      args.push('exec', 'resume', context.resumeSessionId)
+    } else {
+      args.push('exec')
+    }
     args.push('--json')
-
     args.push('--dangerously-bypass-approvals-and-sandbox')
 
     if (agent.model) {

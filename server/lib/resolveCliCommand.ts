@@ -87,11 +87,48 @@ const runLoginShellPath = (): Promise<string | null> => {
   })
 }
 
+const runLoginShellEnv = (): Promise<Record<string, string> | null> => {
+  const shell = process.env.SHELL || '/bin/zsh'
+  return new Promise((resolve) => {
+    execFile(shell, ['-ilc', 'env'], {
+      timeout: 7000,
+      env: { HOME: homedir(), USER: process.env.USER || '' },
+      maxBuffer: 1024 * 1024 * 8,
+    }, (err, stdout) => {
+      if (err) {
+        log.warn('Failed to recover shell env', { error: err.message })
+        resolve(null)
+        return
+      }
+      const out = stdout.toString()
+      const parsed: Record<string, string> = {}
+      for (const line of out.split('\n')) {
+        const idx = line.indexOf('=')
+        if (idx <= 0) continue
+        const k = line.slice(0, idx).trim()
+        const v = line.slice(idx + 1)
+        if (!k) continue
+        parsed[k] = v
+      }
+      resolve(parsed)
+    })
+  })
+}
+
 const getLoginShellPathAsync = (): Promise<string | null> => {
   if (cachedShellPath !== undefined) return Promise.resolve(cachedShellPath)
   return runLoginShellPath().then((p) => {
     cachedShellPath = p
     return p
+  })
+}
+
+let cachedShellEnv: Record<string, string> | null | undefined
+const getLoginShellEnvAsync = (): Promise<Record<string, string> | null> => {
+  if (cachedShellEnv !== undefined) return Promise.resolve(cachedShellEnv)
+  return runLoginShellEnv().then((envMap) => {
+    cachedShellEnv = envMap
+    return envMap
   })
 }
 
@@ -297,6 +334,21 @@ export const resolveCliCommandAsync = async (command: string): Promise<string | 
 
   recordResolve(command, null, null)
   return null
+}
+
+export const getLoginShellEnvSubsetAsync = async (keys: string[]): Promise<Record<string, string>> => {
+  if (keys.length === 0) return {}
+  const shellEnv = await getLoginShellEnvAsync()
+  if (!shellEnv) return {}
+  const out: Record<string, string> = {}
+  for (const key of keys) {
+    if (!/^[A-Z_][A-Z0-9_]*$/.test(key)) continue
+    const val = shellEnv[key]
+    if (typeof val === 'string' && val.length > 0) {
+      out[key] = val
+    }
+  }
+  return out
 }
 
 const MACHO_32_BE = 0xFEEDFACE

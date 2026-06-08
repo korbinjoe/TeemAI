@@ -61,6 +61,42 @@ const readConfig = async (): Promise<TomlConfig | null> => {
   }
 }
 
+const ENV_KEY_PATTERN = /^[A-Z_][A-Z0-9_]*$/
+
+export const extractEnvVarNamesFromCodexConfig = (config: TomlConfig): string[] => {
+  const names = new Set<string>()
+
+  const walk = (node: unknown): void => {
+    if (!node || typeof node !== 'object') return
+    for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+      if (typeof value === 'string') {
+        const looksLikeEnvValue = ENV_KEY_PATTERN.test(value)
+        const keyHintsEnv = /env/i.test(key) || /key/i.test(key)
+        if (looksLikeEnvValue && keyHintsEnv) {
+          names.add(value)
+        }
+        continue
+      }
+      if (Array.isArray(value)) {
+        for (const item of value) walk(item)
+        continue
+      }
+      if (value && typeof value === 'object') {
+        walk(value)
+      }
+    }
+  }
+
+  walk(config)
+  return [...names]
+}
+
+export const getCodexRequiredEnvVarNames = async (): Promise<string[]> => {
+  const config = await readConfig()
+  if (!config) return []
+  return extractEnvVarNamesFromCodexConfig(config)
+}
+
 const writeConfig = async (config: TomlConfig): Promise<void> => {
   const dir = dirname(CODEX_CONFIG_FILE)
   if (!existsSync(dir)) {

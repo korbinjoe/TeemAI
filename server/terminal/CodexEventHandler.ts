@@ -6,6 +6,28 @@ const log = createLogger('CodexEventHandler')
 
 const stableId = (seq: number) => `stream-${seq}`
 
+const extractTextFromItem = (item: any): string => {
+  if (!item || typeof item !== 'object') return ''
+  if (typeof item.text === 'string' && item.text) return item.text
+
+  const tryBlocks = (blocks: unknown): string => {
+    if (!Array.isArray(blocks)) return ''
+    return blocks
+      .filter((b: any) => b && (b.type === 'output_text' || b.type === 'text') && typeof b.text === 'string')
+      .map((b: any) => b.text as string)
+      .filter(Boolean)
+      .join('')
+  }
+
+  const direct = tryBlocks(item.content)
+  if (direct) return direct
+
+  const nested = tryBlocks(item.message?.content)
+  if (nested) return nested
+
+  return ''
+}
+
 export const handleCodexExecEvent = (
   data: any,
   eventType: string,
@@ -41,8 +63,8 @@ export const handleCodexExecEvent = (
       const itemType = item.type as string
       const itemId = (item.id as string | undefined) || stableId(state.messageSeq)
 
-      if (itemType === 'agent_message') {
-        const text = item.text as string | undefined
+      if (itemType === 'agent_message' || itemType === 'message') {
+        const text = extractTextFromItem(item)
         if (text) {
           newMessages.push({
             id: stableId(state.messageSeq++), role: 'agent', content: text,

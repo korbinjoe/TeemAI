@@ -107,4 +107,16 @@ describe('ConfigCompiler envOverrides flow into --settings', () => {
     expect(env.ANTHROPIC_MODEL).toBe('claude-opus-4-7')
     await compiled.cleanup()
   })
+
+  it('codex exec path ignores resumeSessionId', async () => {
+    const compiled = await compiler.compile(
+      makeAgent({ model: 'gpt-5-codex' }),
+      { repositories: [{ path: ROOT }], serverPort: 3210, resumeSessionId: 'codex-thread-1' },
+      'codex',
+    )
+    expect(compiled.command).toBe('codex')
+    expect(compiled.args).toContain('exec')
+    expect(compiled.args).not.toContain('--resume')
+    await compiled.cleanup()
+  })
 })

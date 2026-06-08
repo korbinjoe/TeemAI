@@ -356,6 +356,8 @@ process.on('uncaughtException', (err) => {
   process.exit(1)
 })
 
+let isShuttingDown = false
+
 const gracefulShutdown = async (signal: string) => {
   log.info(`${signal} received, shutting down gracefully...`)
   if (IS_DAEMON_FILE_OWNER) removePorts()
@@ -379,10 +381,15 @@ const gracefulShutdown = async (signal: string) => {
   })
 }
 
-if (process.env.TEEMAI_CLI) {
-  process.on('SIGINT', () => {})
-} else {
-  process.on('SIGINT', () => gracefulShutdown('SIGINT'))
+const handleSignal = (signal: 'SIGINT' | 'SIGTERM') => {
+  if (isShuttingDown) {
+    log.warn(`${signal} received during shutdown, forcing exit now`)
+    process.exit(signal === 'SIGINT' ? 130 : 143)
+    return
+  }
+  isShuttingDown = true
+  void gracefulShutdown(signal)
 }
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
+process.on('SIGINT', () => handleSignal('SIGINT'))
+process.on('SIGTERM', () => handleSignal('SIGTERM'))

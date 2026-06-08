@@ -326,6 +326,7 @@ const cmdStatus = async () => {
 
 const cmdRun = async () => {
   process.env.TEEMAI_CLI = '1'
+  process.env.TEEMAI_DAEMON = '1'
   if (IS_DEV) {
     process.env.TEEMAI_DEV = '1'
   }

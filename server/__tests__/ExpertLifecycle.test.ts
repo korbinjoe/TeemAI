@@ -433,4 +433,44 @@ describe('ExpertLifecycle', () => {
       expect(store.has(key)).toBe(true)
     })
   })
+
+  describe('codex resume propagation', () => {
+    it('passes resumeSessionId into configCompiler context for codex spawn', async () => {
+      const compileMock = vi.fn().mockResolvedValue({
+        command: 'codex',
+        args: ['exec', '--json', '--resume', 'thread-xyz'],
+        cwd: '/tmp/test',
+        env: {},
+        cleanup: vi.fn(),
+      })
+      const deps = createMockDeps(store, {
+        configCompiler: { compile: compileMock } as any,
+        agentRegistry: {
+          get: vi.fn().mockReturnValue({
+            name: 'Codex Agent',
+            icon: 'C',
+            description: 'test',
+            provider: 'codex',
+            subAgentNames: [],
+            tags: [],
+          }),
+        } as any,
+      })
+      const { handleStart } = createExpertLifecycle(deps)
+      const { ws } = mockWs()
+
+      const result = await handleStart(ws, {
+        agentId: 'agent-codex',
+        task: 'resume this',
+        chatId: 'chat-1',
+        resumeSessionId: 'thread-xyz',
+      }, 'conn-1')
+
+      expect(result.started).toBe(true)
+      expect(result.method).toBe('spawned')
+      expect(compileMock).toHaveBeenCalledTimes(1)
+      expect(compileMock.mock.calls[0][1].resumeSessionId).toBe('thread-xyz')
+      expect(compileMock.mock.calls[0][2]).toBe('codex')
+    })
+  })
 })

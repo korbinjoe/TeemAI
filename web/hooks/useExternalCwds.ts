@@ -2,9 +2,9 @@
  * useExternalCwds — surfaces external (auto-discovered) local CLI sessions
  * in the sidebar.
  *
- * Calls GET /api/sidebar/groups once and stays live via two WS events:
+ * Calls GET /api/sidebar/groups once and stays live via scanner WS events:
  *   - external-dirs:ready    — initial enumeration finished, refetch once
- *   - external-dirs:changed  — fs watcher tripped, refetch
+ *   - external-dirs:changed  — scanner state updated, refetch
  *
  * Returns:
  *   - externalDirsByWs:  workspaceId → { cwd, providers, sessionCount } list
@@ -76,16 +76,10 @@ export const useExternalCwds = (): UseExternalCwdsResult => {
     const handler = () => { void refresh() }
     wsClient.on('external-dirs:ready', handler)
     wsClient.on('external-dirs:changed', handler)
-    wsClient.on('reconnected', handler)
-
-    const handleVisibility = () => { if (!document.hidden) void refresh() }
-    document.addEventListener('visibilitychange', handleVisibility)
 
     return () => {
       wsClient.off('external-dirs:ready', handler)
       wsClient.off('external-dirs:changed', handler)
-      wsClient.off('reconnected', handler)
-      document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [refresh])
 

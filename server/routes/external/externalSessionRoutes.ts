@@ -48,8 +48,29 @@ export const createExternalSessionRoutes = ({
 }: ExternalSessionRouteDeps): Router => {
   const router = Router()
   const pager = new SessionPager()
+  let bootstrappingScan: Promise<void> | null = null
 
-  router.get('/api/sidebar/groups', (_req, res) => {
+  const ensureInitialScan = async (): Promise<void> => {
+    const db = getDatabase()
+    const row = db
+      .prepare('SELECT COUNT(*) as count FROM external_dir_index')
+      .get() as { count: number } | undefined
+    if ((row?.count ?? 0) > 0) return
+    if (bootstrappingScan) return bootstrappingScan
+    bootstrappingScan = (async () => {
+      const result = await new DirectoryEnumerator().enumerate()
+      broadcast?.({
+        type: 'external-dirs:ready',
+        payload: result,
+      })
+    })().finally(() => {
+      bootstrappingScan = null
+    })
+    return bootstrappingScan
+  }
+
+  router.get('/api/sidebar/groups', async (_req, res) => {
+    await ensureInitialScan()
     const db = getDatabase()
     const workspaces = workspaceStore.listSorted()
 

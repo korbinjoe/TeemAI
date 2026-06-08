@@ -2,15 +2,13 @@ import { createLogger } from '../lib/logger'
 import { CliAutoInstaller, type CliAutoInstallResult } from '../services/CliAutoInstaller'
 import { PreflightChecker, type PreflightResult } from '../services/PreflightChecker'
 import { DirectoryEnumerator } from '../services/scanner/DirectoryEnumerator'
-import { ExternalDirWatcher } from '../services/scanner/ExternalDirWatcher'
 import { SessionPager } from '../services/scanner/SessionPager'
 import { backfillExternalChatTitles } from '../services/scanner/backfillExternalChatTitles'
 import { isExternalScanEnabled } from '../services/scanSettings'
 
 const log = createLogger('AsyncBoot')
 
-let externalDirWatcher: ExternalDirWatcher | null = null
-export const getExternalDirWatcher = (): ExternalDirWatcher | null => externalDirWatcher
+export const getExternalDirWatcher = (): null => null
 
 export interface AsyncBootResult {
   envCheckResult: CliAutoInstallResult | null
@@ -47,10 +45,6 @@ export const runAsyncBoot = (broadcast: (msg: Record<string, unknown>) => void):
     new DirectoryEnumerator().enumerate()
       .then((r) => {
         broadcast({ type: 'external-dirs:ready', payload: r })
-        if (!externalDirWatcher) {
-          externalDirWatcher = new ExternalDirWatcher(broadcast)
-          externalDirWatcher.start()
-        }
       })
       .catch((err) => {
         log.warn('Tier-1 enumeration failed', {

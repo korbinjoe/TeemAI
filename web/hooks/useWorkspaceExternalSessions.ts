@@ -7,8 +7,7 @@
  * workspace group, so the user sees "all sessions for this project" in one
  * time-ordered list — regardless of where the bytes live on disk.
  *
- * Refetches when external-dirs:ready / external-dirs:changed fires, so newly
- * created jsonl files surface without a manual reload.
+ * Refetches when external-dirs:ready / external-dirs:changed fires.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -115,16 +114,10 @@ export const useWorkspaceExternalSessions = (
     const handler = () => { void fetchPage(true) }
     wsClient.on('external-dirs:ready', handler)
     wsClient.on('external-dirs:changed', handler)
-    wsClient.on('reconnected', handler)
-
-    const handleVisibility = () => { if (!document.hidden) void fetchPage(true) }
-    document.addEventListener('visibilitychange', handleVisibility)
 
     return () => {
       wsClient.off('external-dirs:ready', handler)
       wsClient.off('external-dirs:changed', handler)
-      wsClient.off('reconnected', handler)
-      document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [enabled, workspaceId, fetchPage])
 

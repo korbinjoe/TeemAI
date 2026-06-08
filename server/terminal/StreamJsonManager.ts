@@ -97,10 +97,6 @@ export class StreamJsonManager extends EventEmitter {
       this.startTime = Date.now()
       this.provider = options.provider || 'claude'
 
-      if (this.provider === 'codex') {
-        this.child.stdin?.end()
-      }
-
       this.lastOutputAt = Date.now()
 
       this.readline = createInterface({ input: this.child.stdout! })

@@ -16,9 +16,10 @@ import type { WhiteboardManager } from '../whiteboard/WhiteboardManager'
 import { ContextBriefing } from '../whiteboard/ContextBriefing'
 import { isWhiteboardOnDemandEnabled } from './featureFlags'
 import { HooksConfigManager } from './HooksConfigManager'
-import { resolveCliCommandAsync } from '../lib/resolveCliCommand'
+import { resolveCliCommandAsync, getLoginShellEnvSubsetAsync } from '../lib/resolveCliCommand'
 import { createLogger } from '../lib/logger'
 import { silentlyIgnore } from '../lib/silentlyIgnore'
+import { getCodexRequiredEnvVarNames } from '../lib/codexConfigManager'
 
 const log = createLogger('ConfigCompiler')
 
@@ -60,6 +61,7 @@ export interface CompileContext {
 }
 
 export class ConfigCompiler {
+  private static codexFileLocks = new Map<string, Promise<void>>()
   private _projectRoot: string
 
   constructor(
@@ -331,31 +333,36 @@ export class ConfigCompiler {
       await mkdir(codexHome, { recursive: true })
       const overridePath = join(codexHome, 'AGENTS.override.md')
 
-      let fileContent: string | null = null
-      try {
-        fileContent = await readFile(overridePath, 'utf-8')
-      } catch {
-      }
+      let userOriginal: string | null = null
+      await this.withCodexFileLock(overridePath, async () => {
+        let fileContent: string | null = null
+        try {
+          fileContent = await readFile(overridePath, 'utf-8')
+        } catch {
+        }
 
-      const TEEMAI_MARKER = '<!-- TeemAI Agent Instructions -->'
-      const userOriginal = fileContent !== null
-        ? fileContent.split(TEEMAI_MARKER)[0].trimEnd()
-        : null
+        const TEEMAI_MARKER = '<!-- TeemAI Agent Instructions -->'
+        userOriginal = fileContent !== null
+          ? fileContent.split(TEEMAI_MARKER)[0].trimEnd()
+          : null
 
-      const newContent = userOriginal
-        ? `${userOriginal}\n\n${TEEMAI_MARKER}\n${promptContent}`
-        : promptContent
+        const newContent = userOriginal
+          ? `${userOriginal}\n\n${TEEMAI_MARKER}\n${promptContent}`
+          : promptContent
 
-      await writeFile(overridePath, newContent, 'utf-8')
+        await writeFile(overridePath, newContent, 'utf-8')
+      })
       log.info('Wrote ~/.codex/AGENTS.override.md', { agentName: agent.name })
 
       cleanupFns.push(async () => {
         try {
-          if (userOriginal) {
-            await writeFile(overridePath, userOriginal, 'utf-8')
-          } else {
-            await unlink(overridePath)
-          }
+          await this.withCodexFileLock(overridePath, async () => {
+            if (userOriginal) {
+              await writeFile(overridePath, userOriginal, 'utf-8')
+            } else {
+              await unlink(overridePath)
+            }
+          })
           log.info('Cleaned up ~/.codex/AGENTS.override.md', { agentName: agent.name })
         } catch {
         }
@@ -369,34 +376,38 @@ export class ConfigCompiler {
       const codexHooksPath = join(codexDir, 'hooks.json')
 
       let existingContent: string | null = null
-      try {
-        existingContent = await readFile(codexHooksPath, 'utf-8')
-      } catch { /* Filedoes not exist */ }
-
-      let merged = codexHooks
-      if (existingContent) {
+      await this.withCodexFileLock(codexHooksPath, async () => {
         try {
-          const existing = JSON.parse(existingContent) as { hooks?: Record<string, unknown[]> }
-          if (existing.hooks?.Stop) {
-            merged = {
-              hooks: {
-                ...existing.hooks,
-                Stop: [...(existing.hooks.Stop as unknown[]), ...codexHooks.hooks.Stop],
-              },
-            }
-          }
-        } catch { /* invalid existing hooks.json, overwrite */ }
-      }
+          existingContent = await readFile(codexHooksPath, 'utf-8')
+        } catch { /* Filedoes not exist */ }
 
-      await writeFile(codexHooksPath, JSON.stringify(merged, null, 2), 'utf-8')
+        let merged = codexHooks
+        if (existingContent) {
+          try {
+            const existing = JSON.parse(existingContent) as { hooks?: Record<string, unknown[]> }
+            if (existing.hooks?.Stop) {
+              merged = {
+                hooks: {
+                  ...existing.hooks,
+                  Stop: [...(existing.hooks.Stop as unknown[]), ...codexHooks.hooks.Stop],
+                },
+              }
+            }
+          } catch { /* invalid existing hooks.json, overwrite */ }
+        }
+
+        await writeFile(codexHooksPath, JSON.stringify(merged, null, 2), 'utf-8')
+      })
       log.info('Wrote .codex/hooks.json', { agentName: agent.name })
       cleanupFns.push(async () => {
         try {
-          if (existingContent) {
-            await writeFile(codexHooksPath, existingContent, 'utf-8')
-          } else {
-            await unlink(codexHooksPath)
-          }
+          await this.withCodexFileLock(codexHooksPath, async () => {
+            if (existingContent) {
+              await writeFile(codexHooksPath, existingContent, 'utf-8')
+            } else {
+              await unlink(codexHooksPath)
+            }
+          })
         } catch { /* cleanup best-effort */ }
       })
     }
@@ -408,6 +419,26 @@ export class ConfigCompiler {
     if (context.chatId) env.TEEMAI_CHAT_ID = context.chatId
     if (context.instanceId) env.TEEMAI_INSTANCE_ID = context.instanceId
     if (context.connectionId) env.EXPERT_CONNECTION_ID = context.connectionId
+
+    try {
+      const requiredVars = await getCodexRequiredEnvVarNames()
+      const missing = requiredVars.filter((k) => !process.env[k])
+      if (missing.length > 0) {
+        const recovered = await getLoginShellEnvSubsetAsync(missing)
+        for (const [k, v] of Object.entries(recovered)) {
+          env[k] = v
+        }
+        const unresolved = missing.filter((k) => !recovered[k])
+        if (recovered && Object.keys(recovered).length > 0) {
+          log.info('Recovered Codex env vars from login shell', {
+            recoveredCount: Object.keys(recovered).length,
+            unresolvedCount: unresolved.length,
+          })
+        }
+      }
+    } catch (err) {
+      log.warn('Failed to auto-inject Codex env vars', { error: err instanceof Error ? err.message : String(err) })
+    }
 
     return {
       command: 'codex',
@@ -435,6 +466,24 @@ export class ConfigCompiler {
     }))
 
     return { hooks: { Stop: stopEntries } }
+  }
+
+  private async withCodexFileLock<T>(filePath: string, fn: () => Promise<T>): Promise<T> {
+    const prev = ConfigCompiler.codexFileLocks.get(filePath) ?? Promise.resolve()
+    let release!: () => void
+    const gate = new Promise<void>(resolve => { release = resolve })
+    const currentLock = prev.then(() => gate)
+    ConfigCompiler.codexFileLocks.set(filePath, currentLock)
+
+    await prev
+    try {
+      return await fn()
+    } finally {
+      release()
+      if (ConfigCompiler.codexFileLocks.get(filePath) === currentLock) {
+        ConfigCompiler.codexFileLocks.delete(filePath)
+      }
+    }
   }
 
   /** base prompt + skills + personality + memory +  */

@@ -8,6 +8,7 @@ import { DEFAULT_AGENT, DEFAULT_MODEL } from '@/lib/models'
 import { createExpertEventHandlers, type ExpertEventHandlers } from './useExpertEvents'
 import { usePermissionEvents } from './usePermissionEvents'
 import { useAgentMessages, SYSTEM_MESSAGE_AGENT } from './useAgentMessages'
+import type { PrefetchedWorkspaceData } from '../components/chat/ChatInstance'
 
 interface UseChatWebSocketOptions {
   workspaceId?: string
@@ -25,6 +26,7 @@ interface UseChatWebSocketOptions {
   /** Tab  Tab —  Tab  chat:set-context */
   isActive?: boolean
   onInitError?: () => void
+  prefetchedWorkspace?: PrefetchedWorkspaceData | null
 }
 
 /**
@@ -41,7 +43,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     uid, t,
     setExpertActivities,
     selectedAgentId, availableAgents, handleSetSelectedAgentId, setAvailableAgents,
-    isActive = true, onInitError,
+    isActive = true, onInitError, prefetchedWorkspace,
   } = opts
   const wsClient = getWebSocketClient()
   const isActiveRef = useRef(isActive)
@@ -178,45 +180,65 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
   }
 
   // ── Workspace Initialize ──
+  const prefetchedRef = useRef(prefetchedWorkspace)
+  prefetchedRef.current = prefetchedWorkspace
+
   useEffect(() => {
     if (!workspaceId) return
     let cancelled = false
 
     const init = async () => {
       try {
+        const cached = prefetchedRef.current
+        const hasCachedWs = cached && cached.name
+
         const [wsRes, chatRes, agentsRes] = await Promise.all([
-          authFetch(`${API_BASE}/api/workspaces/${workspaceId}`),
+          hasCachedWs ? Promise.resolve(null) : authFetch(`${API_BASE}/api/workspaces/${workspaceId}`),
           chatId ? authFetch(`${API_BASE}/api/chats/${chatId}`) : Promise.resolve(null),
-          authFetch(`${API_BASE}/api/agents`),
+          hasCachedWs ? Promise.resolve(null) : authFetch(`${API_BASE}/api/agents`),
         ])
-        if (!wsRes.ok) throw new Error('Workspace not found')
-        const ws = await wsRes.json()
+
+        let wsName = ''
+        let wsRepositories: Array<{ id: string; path: string; name: string }> = []
+        let wsAgentTeam: { primaryAgentId?: string } | undefined
+        let agents: AgentSummary[] = []
+
+        if (hasCachedWs) {
+          wsName = cached.name
+          wsRepositories = cached.repositories
+          wsAgentTeam = cached.agentTeam
+          agents = cached.agents
+        } else {
+          if (!wsRes!.ok) throw new Error('Workspace not found')
+          const ws = await wsRes!.json()
+          if (cancelled) return
+          wsName = ws.name || workspaceId || ''
+          wsRepositories = ws.repositories ?? []
+          wsAgentTeam = ws.agentTeam
+          agents = agentsRes!.ok ? await agentsRes!.json() : []
+        }
         if (cancelled) return
 
-        setWorkspaceName(ws.name || workspaceId || '')
+        setWorkspaceName(wsName)
 
-        if (ws.repositories?.length > 0) {
-          const paths = ws.repositories.map((r: { path: string }) => r.path)
-          setCurrentWorkingDirectory(paths[0])
-          setWsRepositories(ws.repositories)
+        if (wsRepositories.length > 0) {
+          setCurrentWorkingDirectory(wsRepositories[0].path)
+          setWsRepositories(wsRepositories)
         }
 
-        const agents: AgentSummary[] = agentsRes.ok ? await agentsRes.json() : []
-        if (cancelled) return
         if (agents.length > 0) setAvailableAgents(agents)
 
         const chat = chatRes?.ok ? await chatRes.json() : null
 
-        // Priority：chat.lastAgentId > workspace.primaryAgentId > config.defaultAgent > first
         if (!initialAgentSetRef.current && agents.length > 0 && !selectedAgentIdRef.current) {
           initialAgentSetRef.current = true
           const lastAgent = chat?.lastAgentId
-            ? agents.find((a) => a.id === chat.lastAgentId)
+            ? agents.find((a: AgentSummary) => a.id === chat.lastAgentId)
             : null
-          const primary = ws.agentTeam?.primaryAgentId
-            ? agents.find((a) => a.id === ws.agentTeam.primaryAgentId)
+          const primary = wsAgentTeam?.primaryAgentId
+            ? agents.find((a: AgentSummary) => a.id === wsAgentTeam!.primaryAgentId)
             : null
-          const fallback = agents.find((a) => a.id === DEFAULT_AGENT) ?? agents[0]
+          const fallback = agents.find((a: AgentSummary) => a.id === DEFAULT_AGENT) ?? agents[0]
           const target = lastAgent ?? primary ?? fallback
           if (target) handleSetSelectedAgentId(target.id)
         } else if (!initialAgentSetRef.current) {
@@ -250,28 +272,30 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     let cancelled = false
     const h = wsHandlersRef.current
 
-    const onStructuredMessage = (p: unknown) => wsHandlersRef.current.onExpertStructuredMessage(p as Parameters<typeof h.onExpertStructuredMessage>[0])
+    const onStructuredMessage = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.onExpertStructuredMessage(p as Parameters<typeof h.onExpertStructuredMessage>[0]) }
     const onError = (p: unknown) => wsHandlersRef.current.handleError(p as { message?: string; chatId?: string } | undefined)
-    const onExpertError = (p: unknown) => wsHandlersRef.current.handleExpertError(p as Parameters<typeof h.handleExpertError>[0])
-    const onExpertActivity = (p: unknown) => wsHandlersRef.current.handleExpertActivity(p as Parameters<typeof h.handleExpertActivity>[0])
-    const onExpertExit = (p: unknown) => wsHandlersRef.current.handleExpertExit(p as Parameters<typeof h.handleExpertExit>[0])
-    const onExpertStarted = (p: unknown) => wsHandlersRef.current.handleExpertStarted(p as Parameters<typeof h.handleExpertStarted>[0])
-    const onExpertResumeFailed = (p: unknown) => wsHandlersRef.current.handleExpertResumeFailed(p as Parameters<typeof h.handleExpertResumeFailed>[0])
-    const onVersionBlocked = (p: unknown) => wsHandlersRef.current.handleVersionBlocked(p as Parameters<typeof h.handleVersionBlocked>[0])
-    const onExpertSlashCommands = (p: unknown) => wsHandlersRef.current.handleExpertSlashCommands(p as Parameters<typeof h.handleExpertSlashCommands>[0])
-    const onExpertPartialText = (p: unknown) => wsHandlersRef.current.handleExpertPartialText(p as Parameters<typeof h.handleExpertPartialText>[0])
-    const onExpertPlanUpdate = (p: unknown) => wsHandlersRef.current.handleExpertPlanUpdate(p as Parameters<typeof h.handleExpertPlanUpdate>[0])
-    const onExpertModeChange = (p: unknown) => wsHandlersRef.current.handleExpertModeChange(p as Parameters<typeof h.handleExpertModeChange>[0])
-    const onExpertCommandsUpdate = (p: unknown) => wsHandlersRef.current.handleExpertCommandsUpdate(p as Parameters<typeof h.handleExpertCommandsUpdate>[0])
-    const onExpertSessionInfo = (p: unknown) => wsHandlersRef.current.handleExpertSessionInfo(p as Parameters<typeof h.handleExpertSessionInfo>[0])
-    const onExpertPermissionRequest = (p: unknown) => wsHandlersRef.current.handleExpertPermissionRequest(p as Parameters<typeof h.handleExpertPermissionRequest>[0])
-    const onChatPermissionResolved = (p: unknown) => wsHandlersRef.current.handleChatPermissionResolved(p as Parameters<typeof h.handleChatPermissionResolved>[0])
+    const onExpertError = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertError(p as Parameters<typeof h.handleExpertError>[0]) }
+    const onExpertActivity = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertActivity(p as Parameters<typeof h.handleExpertActivity>[0]) }
+    const onExpertExit = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertExit(p as Parameters<typeof h.handleExpertExit>[0]) }
+    const onExpertStarted = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertStarted(p as Parameters<typeof h.handleExpertStarted>[0]) }
+    const onExpertResumeFailed = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertResumeFailed(p as Parameters<typeof h.handleExpertResumeFailed>[0]) }
+    const onVersionBlocked = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleVersionBlocked(p as Parameters<typeof h.handleVersionBlocked>[0]) }
+    const onExpertSlashCommands = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertSlashCommands(p as Parameters<typeof h.handleExpertSlashCommands>[0]) }
+    const onExpertPartialText = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertPartialText(p as Parameters<typeof h.handleExpertPartialText>[0]) }
+    const onExpertPlanUpdate = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertPlanUpdate(p as Parameters<typeof h.handleExpertPlanUpdate>[0]) }
+    const onExpertModeChange = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertModeChange(p as Parameters<typeof h.handleExpertModeChange>[0]) }
+    const onExpertCommandsUpdate = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertCommandsUpdate(p as Parameters<typeof h.handleExpertCommandsUpdate>[0]) }
+    const onExpertSessionInfo = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertSessionInfo(p as Parameters<typeof h.handleExpertSessionInfo>[0]) }
+    const onExpertPermissionRequest = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertPermissionRequest(p as Parameters<typeof h.handleExpertPermissionRequest>[0]) }
+    const onChatPermissionResolved = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleChatPermissionResolved(p as Parameters<typeof h.handleChatPermissionResolved>[0]) }
     const onChatTitleUpdated = (p: unknown) => {
+      if (!isActiveRef.current) return
       const payload = p as { chatId: string; title: string }
       if (!isCurrentChatEvent(payload)) return
       if (payload.title) setChatTitle(payload.title)
     }
     const onChatAvailableCommands = (p: unknown) => {
+      if (!isActiveRef.current) return
       const payload = p as { chatId: string; commands: string[] }
       if (!isCurrentChatEvent(payload)) return
       if (Array.isArray(payload.commands)) setChatAvailableCommands(payload.commands)
@@ -313,6 +337,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     wsClient.on('reconnect_failed', handleReconnectFailed)
 
     const handleVisibilityChange = () => {
+      if (!isActiveRef.current) return
       if (document.visibilityState === 'visible' && wsClient.isConnected()) {
         wsHandlersRef.current.sendChatContext()
       }

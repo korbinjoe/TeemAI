@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import type { AgentActivity, QueuedMessage } from '../../types/chat'
+import type { AgentSummary } from '../../types/agentConfig'
 import { groupMessages } from './messages/MessageGroup'
 import ChatHeader from './ChatHeader'
 import ChatBody from './ChatBody'
@@ -42,7 +43,6 @@ import { getModelsForProvider } from '@/lib/models'
 
 const ROOT_STYLE: React.CSSProperties = { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }
 const MAIN_CONTENT_STYLE: React.CSSProperties = { flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }
-const LOADING_STYLE: React.CSSProperties = { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgb(var(--text-muted))' }
 const DIVIDER_BAR_STYLE: React.CSSProperties = { width: 4, flexShrink: 0, position: 'relative', zIndex: 20 }
 const RightPanel = lazy(() => import('../ide/RightPanel'))
 
@@ -65,6 +65,13 @@ const DEFAULT_SLASH_COMMANDS = [
   'stats', 'status', 'statusline', 'stickers', 'tasks',
   'terminal-setup', 'theme', 'upgrade', 'usage', 'vim', 'voice',
 ]
+export interface PrefetchedWorkspaceData {
+  name: string
+  repositories: Array<{ id: string; path: string; name: string }>
+  agents: AgentSummary[]
+  agentTeam?: { primaryAgentId?: string }
+}
+
 export interface ChatInstanceProps {
   chatId: string
   workspaceId: string
@@ -85,9 +92,12 @@ export interface ChatInstanceProps {
    *  different agent. `undefined` = inherit from useWorkspace(); `null` = explicit
    *  no-lock; a string locks the conversation to that agent. */
   agentScopeOverride?: string | null
+  /** Pre-fetched workspace+agents data from ChatPane cache. Skips redundant
+   *  /api/workspaces/:id and /api/agents fetches on same-workspace mission switch. */
+  prefetchedWorkspace?: PrefetchedWorkspaceData | null
 }
 
-const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAgentId = null, initialMessage = null, hideRightPanel = false, rightPanelMountNode = null, agentScopeOverride }: ChatInstanceProps) => {
+const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAgentId = null, initialMessage = null, hideRightPanel = false, rightPanelMountNode = null, agentScopeOverride, prefetchedWorkspace }: ChatInstanceProps) => {
   const msgSeqRef = useRef(0)
   const uid = useCallback((prefix: string) => `${prefix}-${Date.now()}-${++msgSeqRef.current}`, [])
 
@@ -185,6 +195,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     selectedAgentId, availableAgents, handleSetSelectedAgentId, setAvailableAgents,
     isActive,
     onInitError,
+    prefetchedWorkspace,
   })
 
   // Single-agent surfaces (Quad tile, ?agent=X route) and the toolbar agent
@@ -510,7 +521,12 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
               trailing={<ChatViewModeToggle mode={viewMode} onChange={setViewMode} />}
           />
           {!cwdReady ? (
-            <div style={LOADING_STYLE}>Loading workspace...</div>
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex-1" />
+              <div className="h-[52px] border-t border-border-subtle flex items-center px-4">
+                <div className="h-2 w-24 rounded bg-bg-tertiary animate-pulse" />
+              </div>
+            </div>
           ) : (<>
           {allWorktreeSessions.length > 0 && <WorktreePanel sessions={allWorktreeSessions} repositories={wsRepositories} />}
           {viewMode === 'message' ? (

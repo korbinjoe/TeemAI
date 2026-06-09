@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.1.0-beta.5] - 2026-06-09
+
+### Features
+
+- **Codex multi-turn sessions**: use `codex exec resume <threadId>` for subsequent turns so Codex agents retain conversation history across turns
+- **New model options**: add Claude Opus 4.8, GPT-5.5, Qwen3.7 Plus, and Qwen3.6 Plus
+- **Codex hooks**: ship default `.codex/hooks.json` for Codex CLI integration
+- **Social Operator agent**: long-term social account operations (Reddit v1, Twitter/X and Xiaohongshu v2) via the Browser Social Agent extension, with draft-then-approve workflow
+- **browser-agent skill**: execution primitive for browser-based social media operations (status, monitor, post, analytics, configure) through the user's Chrome session
+
+### Bug Fixes
+
+- Fix Codex session stability in TeemAI runtime (ConfigCompiler env overrides and StreamJson lifecycle)
+- Fix Codex event handler to parse nested message content blocks and recognize `message` events alongside `agent_message`
+- Fix Codex provider credentials when TeemAI is launched outside a terminal by resolving env keys from `~/.codex/config.toml` and TeemAI/Claude config
+- Fix React hooks ordering violation in workspace rendering by splitting resize state into dedicated `ResizeContext`
+- Fix new-mission chat detail not showing the model chosen in the creation dialog
+- Fix Electron 42 build: patch `better-sqlite3` for V8 API compatibility via pnpm
+
+### Improvements
+
+- **Mission switching performance**: keep up to 4 `ChatInstance` components alive (visibility-hidden) to avoid WS reconnect and JSONL reparse on switch; gate WS handlers with `isActiveRef` to prevent hidden instances from re-rendering
+- **Workspace navigation**: LRU cache workspace+agents data (capacity 5) and add batch all-chats API with lazy workspace list pagination to cut sidebar re-render overhead
+- **Startup**: replace eager external-session directory scan with lazy `ensureInitialScan`; remove reconnect/visibility refetch listeners from external session hooks
+- **Signal handling**: deduplicate SIGINT/SIGTERM handlers and force-exit on second signal; set `TEEMAI_DAEMON` env for daemon mode
+- Drop `--headless` flag from default Playwright MCP args
+- **Builtin agent auto-hire**: on upgrade, automatically hire newly added builtin agents and drop stale ids from hired list
+- Bump default team model to Claude Opus 4.8 in `teemai.json`
+
 ## [0.1.0-beta.3] - 2026-06-07
 
 ### Breaking Changes

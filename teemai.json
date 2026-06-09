@@ -3,7 +3,7 @@
 
   "agents": {
     "defaults": {
-      "model": "claude-opus-4-6",
+      "model": "claude-opus-4-8",
       "provider": "claude",
       "mcpServers": {
         "playwright": {
@@ -33,7 +33,8 @@
           "sensei",
           "image-creator",
           "product-strategist",
-          "growth-marketer"
+          "growth-marketer",
+          "social-operator"
         ]
       },
       {
@@ -131,6 +132,16 @@
         "role": "expert",
         "skills": ["x-promoter", "playwright-cli", "whiteboard", "handoff"],
         "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebFetch", "WebSearch", "AskUserQuestion"]
+      },
+      {
+        "id": "social-operator",
+        "name": "Social Operator",
+        "description": "Long-term social account operations (Reddit v1, Twitter/X and Xiaohongshu v2) via the Browser Social Agent extension. Monitors communities, drafts value-first replies and posts, executes through the browser-agent skill with draft-then-approve.",
+        "workspace": "./ai-assets/agents/social-operator",
+        "role": "expert",
+        "skills": ["browser-agent", "whiteboard", "handoff"],
+        "allowedTools": ["Read", "Write", "Glob", "Grep", "Bash", "AskUserQuestion"],
+        "boot": { "enabled": true }
       }
     ]
   }

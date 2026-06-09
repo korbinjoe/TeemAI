@@ -51,7 +51,8 @@ const migrateLegacyData = async (): Promise<string[] | null> => {
 /**
  * 1.  localStorage
  * 2.  SQLite
- * 3.  builtin agent
+ * 3.  First run: hire all builtin agents
+ * 4.  Later runs: drop stale ids, auto-hire newly added builtins
  *
  */
 export const initDefaultHiredAgents = async (
@@ -71,15 +72,21 @@ export const initDefaultHiredAgents = async (
   }
 
   const allAgentIds = new Set(allAgents.map((a) => a.id))
-  const stale = ids.filter((id) => !allAgentIds.has(id))
+  const builtinIds = allAgents
+    .filter((a) => a.source === 'builtin')
+    .map((a) => a.id)
 
-  if (stale.length > 0) {
-    const updated = ids.filter((id) => !stale.includes(id))
-    await putHiredAgents(updated)
-    return updated
+  let updated = ids.filter((id) => allAgentIds.has(id))
+  const missingBuiltins = builtinIds.filter((id) => !updated.includes(id))
+  if (missingBuiltins.length > 0) {
+    updated = [...updated, ...missingBuiltins]
   }
 
-  return ids
+  if (updated.length !== ids.length) {
+    await putHiredAgents(updated)
+  }
+
+  return updated
 }
 
 export const getHiredAgentIds = async (): Promise<string[]> => {

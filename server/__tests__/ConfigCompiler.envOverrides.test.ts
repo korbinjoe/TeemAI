@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import { readFile } from 'fs/promises'
+import { readFile, writeFile, mkdir, rm } from 'fs/promises'
 import { join } from 'path'
+import { homedir } from 'os'
 import { SkillManager } from '../config/SkillManager'
 import { HooksConfigManager } from '../runtime/HooksConfigManager'
 import { ConfigCompiler } from '../runtime/ConfigCompiler'
@@ -106,6 +107,40 @@ describe('ConfigCompiler envOverrides flow into --settings', () => {
     expect(env.ANTHROPIC_BASE_URL).toBe('https://valid.example.com')
     expect(env.ANTHROPIC_MODEL).toBe('claude-opus-4-7')
     await compiled.cleanup()
+  })
+
+  it('codex compile injects provider env_key from ~/.codex/config.toml', async () => {
+    const codexDir = join(homedir(), '.codex')
+    const codexConfigPath = join(codexDir, 'config.toml')
+    let originalConfig: string | null = null
+    try {
+      originalConfig = await readFile(codexConfigPath, 'utf-8')
+    } catch {
+      await mkdir(codexDir, { recursive: true })
+    }
+
+    await writeFile(codexConfigPath, `
+model_provider = "opencode"
+
+[model_providers.opencode]
+env_key = "OPENCODE_GO_API_KEY"
+`)
+    process.env.OPENCODE_GO_API_KEY = 'codex-test-key'
+
+    const compiled = await compiler.compile(
+      makeAgent({ model: 'gpt-5-codex' }),
+      { repositories: [{ path: ROOT }], serverPort: 3210 },
+      'codex',
+    )
+    expect(compiled.env.OPENCODE_GO_API_KEY).toBe('codex-test-key')
+    await compiled.cleanup()
+
+    if (originalConfig !== null) {
+      await writeFile(codexConfigPath, originalConfig)
+    } else {
+      await rm(codexConfigPath, { force: true })
+    }
+    delete process.env.OPENCODE_GO_API_KEY
   })
 
   it('codex exec resume passes stdin marker for multi-turn', async () => {

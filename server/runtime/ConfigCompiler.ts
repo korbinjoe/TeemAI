@@ -17,6 +17,7 @@ import { ContextBriefing } from '../whiteboard/ContextBriefing'
 import { isWhiteboardOnDemandEnabled } from './featureFlags'
 import { HooksConfigManager } from './HooksConfigManager'
 import { resolveCliCommandAsync } from '../lib/resolveCliCommand'
+import { resolveCodexProviderEnv } from '../lib/codexConfigEnv'
 import { createLogger } from '../lib/logger'
 import { silentlyIgnore } from '../lib/silentlyIgnore'
 
@@ -421,6 +422,9 @@ export class ConfigCompiler {
     if (context.chatId) env.TEEMAI_CHAT_ID = context.chatId
     if (context.instanceId) env.TEEMAI_INSTANCE_ID = context.instanceId
     if (context.connectionId) env.EXPERT_CONNECTION_ID = context.connectionId
+
+    const codexProviderEnv = await resolveCodexProviderEnv(cwd)
+    Object.assign(env, codexProviderEnv)
 
     return {
       command: 'codex',

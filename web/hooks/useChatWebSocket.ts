@@ -186,7 +186,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       try {
         const [wsRes, chatRes, agentsRes] = await Promise.all([
           authFetch(`${API_BASE}/api/workspaces/${workspaceId}`),
-          (chatId && !isNewChat) ? authFetch(`${API_BASE}/api/chats/${chatId}`) : Promise.resolve(null),
+          chatId ? authFetch(`${API_BASE}/api/chats/${chatId}`) : Promise.resolve(null),
           authFetch(`${API_BASE}/api/agents`),
         ])
         if (!wsRes.ok) throw new Error('Workspace not found')

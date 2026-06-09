@@ -4,7 +4,7 @@ import { getWebSocketClient, sendTelemetry } from '../services/WebSocketClient'
 import type { Message, AgentActivity, WorktreeSession } from '../types/chat'
 import type { AgentSummary } from '../types/agentConfig'
 import { API_BASE, authFetch } from '@/config/api'
-import { DEFAULT_AGENT } from '@/lib/models'
+import { DEFAULT_AGENT, DEFAULT_MODEL } from '@/lib/models'
 import { createExpertEventHandlers, type ExpertEventHandlers } from './useExpertEvents'
 import { usePermissionEvents } from './usePermissionEvents'
 import { useAgentMessages, SYSTEM_MESSAGE_AGENT } from './useAgentMessages'
@@ -225,7 +225,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
 
         if (chat) {
           if (chat.title) setChatTitle(chat.title)
-          if (chat.model) setChatModel(chat.model)
+          setChatModel(chat.model || DEFAULT_MODEL)
           setAllWorktreeSessions(chat.worktreeSessions ?? [])
           if (chat.totalTokens || chat.totalCost != null) {
             setChatTokenSnapshot({ totalCost: chat.totalCost, totalTokens: chat.totalTokens })

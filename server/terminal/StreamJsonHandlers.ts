@@ -20,7 +20,7 @@ export interface PartialBlock {
   inputJson?: string
 }
 
-export const stableId = (seq: number) => `stream-${seq}`
+export const stableId = (prefix: string, seq: number) => `${prefix}-${seq}`
 
 // ── system Event ──
 
@@ -73,7 +73,7 @@ export const handleAssistantEvent = (
   for (const block of blocks) {
     if (block.type === 'text' && block.text) {
       newMessages.push({
-        id: stableId(state.messageSeq++),
+        id: stableId(state.idPrefix, state.messageSeq++),
         role: 'agent',
         content: block.text,
         timestamp: ts,
@@ -85,14 +85,14 @@ export const handleAssistantEvent = (
     } else if (block.type === 'tool_use') {
       const inputStr = typeof block.input === 'string' ? block.input : JSON.stringify(block.input)
       newMessages.push({
-        id: stableId(state.messageSeq++),
+        id: stableId(state.idPrefix, state.messageSeq++),
         role: 'agent',
         content: '',
         timestamp: ts,
         type: 'toolUse',
         toolUse: {
           toolName: block.name || 'unknown',
-          toolId: block.id || stableId(state.messageSeq),
+          toolId: block.id || stableId(state.idPrefix, state.messageSeq),
           input: inputStr,
           status: 'completed',
         },
@@ -108,7 +108,7 @@ export const handleAssistantEvent = (
           : JSON.stringify(block.content)
 
       newMessages.push({
-        id: stableId(state.messageSeq++),
+        id: stableId(state.idPrefix, state.messageSeq++),
         role: 'agent',
         content: '',
         timestamp: ts,
@@ -125,7 +125,7 @@ export const handleAssistantEvent = (
     } else if (block.type === 'thinking' && block.thinking) {
       const thinking = block.thinking as string
       newMessages.push({
-        id: stableId(state.messageSeq++),
+        id: stableId(state.idPrefix, state.messageSeq++),
         role: 'agent',
         content: '',
         timestamp: ts,
@@ -226,7 +226,7 @@ export const handleStreamEvent = (
 
       if (partial.type === 'text' && partial.text) {
         newMessages.push({
-          id: stableId(state.messageSeq++),
+          id: stableId(state.idPrefix, state.messageSeq++),
           role: 'agent',
           content: partial.text,
           timestamp: ts,
@@ -237,14 +237,14 @@ export const handleStreamEvent = (
         })
       } else if (partial.type === 'tool_use') {
         newMessages.push({
-          id: stableId(state.messageSeq++),
+          id: stableId(state.idPrefix, state.messageSeq++),
           role: 'agent',
           content: '',
           timestamp: ts,
           type: 'toolUse',
           toolUse: {
             toolName: partial.toolName || 'unknown',
-            toolId: partial.toolId || stableId(state.messageSeq),
+            toolId: partial.toolId || stableId(state.idPrefix, state.messageSeq),
             input: partial.inputJson || '{}',
             status: 'completed',
           },
@@ -254,7 +254,7 @@ export const handleStreamEvent = (
         })
       } else if (partial.type === 'thinking' && partial.text) {
         newMessages.push({
-          id: stableId(state.messageSeq++),
+          id: stableId(state.idPrefix, state.messageSeq++),
           role: 'agent',
           content: '',
           timestamp: ts,
@@ -303,7 +303,7 @@ export const handleUserEvent = (
           : JSON.stringify(block.content)
 
       newMessages.push({
-        id: stableId(state.messageSeq++),
+        id: stableId(state.idPrefix, state.messageSeq++),
         role: 'agent',
         content: '',
         timestamp: ts,
@@ -335,7 +335,7 @@ export const handleResultEvent = (
   const resultText = data.result as string | undefined
   if (resultText && !state.streamedCurrentTurn) {
     const textMsg: ParsedMessage = {
-      id: stableId(state.messageSeq++),
+      id: stableId(state.idPrefix, state.messageSeq++),
       role: 'agent',
       content: resultText,
       timestamp: ts,
@@ -361,7 +361,7 @@ export const handleResultEvent = (
   }
 
   const statsMsg: ParsedMessage = {
-    id: `stats-stream-${currentTurn}`,
+    id: `stats-${state.idPrefix}-${currentTurn}`,
     role: 'agent',
     content: '',
     timestamp: ts,

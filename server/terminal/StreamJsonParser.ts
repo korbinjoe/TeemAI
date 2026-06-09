@@ -43,6 +43,7 @@ export interface StreamParserState {
   /**  stream_event  assistant  */
   streamedCurrentTurn: boolean
   codexUsage: { input: number; output: number } | null
+  idPrefix: string
 }
 
 export interface ParseLineResult {
@@ -61,6 +62,7 @@ export const createStreamParserState = (): StreamParserState => ({
   messageSeq: 0,
   streamedCurrentTurn: false,
   codexUsage: null,
+  idPrefix: `s${Math.random().toString(36).slice(2, 8)}`,
 })
 
 export const parseStreamJsonLine = (

@@ -92,6 +92,11 @@ export const createChatRoutes = ({ chatStore, chatService, tokenUsageStore, sess
     res.json(enriched)
   })
 
+  router.get('/api/all-chats', (req, res) => {
+    const chats = chatStore.listAll()
+    res.json(enrichWithMembers(enrichWithTokenUsage(chats)))
+  })
+
   router.get('/api/workspaces/:id/chats', (req, res) => {
     const chats = chatStore.listByWorkspace(req.params.id)
     res.json(enrichWithMembers(enrichWithTokenUsage(chats)))

@@ -90,6 +90,9 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
     setExtDirExpanded((prev) => ({ ...prev, [cwd]: !prev[cwd] }))
   }, [])
 
+  const INITIAL_WS_VISIBLE = 15
+  const [wsVisibleCount, setWsVisibleCount] = useState(INITIAL_WS_VISIBLE)
+
   if (loading && workspaces.length === 0 && unmatchedDirs.length === 0) {
     return <div className="px-3 py-3 text-[10px] text-text-muted">Loading…</div>
   }
@@ -126,8 +129,10 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
     .filter((x): x is { ws: typeof workspaces[number]; wsChats: Chat[]; wsNameMatches: boolean } => x !== null)
 
   // When searching, show all workspaces (including hidden) so results aren't silently suppressed.
-  const renderedWorkspaces = isSearching ? allRendered : allRendered.filter((x) => !hiddenIds.has(x.ws.id))
+  const visibleWorkspaces = isSearching ? allRendered : allRendered.filter((x) => !hiddenIds.has(x.ws.id))
   const hiddenWorkspaces = isSearching ? [] : allRendered.filter((x) => hiddenIds.has(x.ws.id))
+  const renderedWorkspaces = isSearching ? visibleWorkspaces : visibleWorkspaces.slice(0, wsVisibleCount)
+  const hasMoreWorkspaces = !isSearching && visibleWorkspaces.length > wsVisibleCount
 
   // Pinned chats filtered by search query
   const visiblePinned = isSearching
@@ -179,6 +184,15 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
           />
         )
       })}
+
+      {hasMoreWorkspaces && (
+        <button
+          onClick={() => setWsVisibleCount((v) => v + INITIAL_WS_VISIBLE)}
+          className="ml-3 mt-0.5 text-[10px] text-text-muted hover:text-text-primary underline self-start"
+        >
+          Show {visibleWorkspaces.length - wsVisibleCount} more workspaces
+        </button>
+      )}
 
       {!isSearching && visibleUnmatched.length > 0 && (
         <UnmatchedDirsSection
@@ -291,33 +305,39 @@ const WorkspaceGroup = ({
     const msg = s.firstUserMessage?.toLowerCase() ?? ''
     return msg.includes(query) || s.sessionId.toLowerCase().startsWith(query)
   }, [isSearching, wsNameMatches, query])
+  const needsBody = expanded || isSearching
   // Partition workspace chats into pinned / archived / active. External sessions
   // are always "active" — pin/archive only applies to native chats.
   const pinnedChats = useMemo(
-    () => chats
-      .filter((c) => pinnedIds.has(c.id) && chatMatches(c))
-      .sort((a, b) => (pinnedAt[b.id] ?? 0) - (pinnedAt[a.id] ?? 0)),
-    [chats, pinnedIds, pinnedAt, chatMatches],
+    () => needsBody
+      ? chats.filter((c) => pinnedIds.has(c.id) && chatMatches(c)).sort((a, b) => (pinnedAt[b.id] ?? 0) - (pinnedAt[a.id] ?? 0))
+      : [],
+    [needsBody, chats, pinnedIds, pinnedAt, chatMatches],
   )
   const archivedChats = useMemo(
-    () => chats
-      .filter((c) => archivedIds.has(c.id) && chatMatches(c))
-      .sort((a, b) => chatMtime(b) - chatMtime(a)),
-    [chats, archivedIds, chatMatches],
+    () => needsBody
+      ? chats.filter((c) => archivedIds.has(c.id) && chatMatches(c)).sort((a, b) => chatMtime(b) - chatMtime(a))
+      : [],
+    [needsBody, chats, archivedIds, chatMatches],
   )
   const activeChats = useMemo(
-    () => chats.filter((c) => !pinnedIds.has(c.id) && !archivedIds.has(c.id) && chatMatches(c)),
-    [chats, pinnedIds, archivedIds, chatMatches],
+    () => needsBody
+      ? chats.filter((c) => !pinnedIds.has(c.id) && !archivedIds.has(c.id) && chatMatches(c))
+      : [],
+    [needsBody, chats, pinnedIds, archivedIds, chatMatches],
   )
   const filteredSessions = useMemo(
-    () => sessions.filter(sessionMatches),
-    [sessions, sessionMatches],
+    () => needsBody ? sessions.filter(sessionMatches) : [],
+    [needsBody, sessions, sessionMatches],
   )
-  const runningCount = activeChats.filter((c) => c.status === 'running').length
+  const runningCount = useMemo(
+    () => needsBody ? activeChats.filter((c) => c.status === 'running').length : chats.filter((c) => c.status === 'running').length,
+    [needsBody, activeChats, chats],
+  )
   const totalCount = isSearching
     ? activeChats.length + pinnedChats.length + archivedChats.length + filteredSessions.length
     : chats.length + sessions.length
-  const items = useMemo(() => buildMergedItems(activeChats, filteredSessions), [activeChats, filteredSessions])
+  const items = useMemo(() => needsBody ? buildMergedItems(activeChats, filteredSessions) : [], [needsBody, activeChats, filteredSessions])
   const [visibleCount, setVisibleCount] = useState<number>(INITIAL_VISIBLE)
   // While searching, show all matched items at once — no Load more truncation
   // and no extra fetches (we only filter what's already in memory).

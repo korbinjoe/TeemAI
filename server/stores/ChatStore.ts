@@ -24,6 +24,13 @@ export class ChatStore extends SqliteBaseStore<Chat> {
     return rows.map((row) => this.rowToEntity(row as Record<string, unknown>))
   }
 
+  listAll(): Chat[] {
+    const rows = this.db.prepare(
+      'SELECT * FROM chats ORDER BY last_message_at DESC'
+    ).all()
+    return rows.map((row) => this.rowToEntity(row as Record<string, unknown>))
+  }
+
   countByWorkspace(): Record<string, number> {
     const rows = this.db.prepare(
       'SELECT workspace_id, COUNT(*) as cnt FROM chats GROUP BY workspace_id'

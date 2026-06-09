@@ -35,20 +35,17 @@ export const useAllChats = (): V2AllChatsResult => {
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
-      const wsRes = await authFetch(`${API_BASE}/api/workspaces`)
-      if (!wsRes.ok) return
-      const wsData: Workspace[] = await wsRes.json()
-      const wsLite: WorkspaceLite[] = wsData.map((w) => ({ id: w.id, name: w.name, hiddenAt: w.hiddenAt }))
-      setWorkspaces(wsLite)
-
-      const chatResults = await Promise.all(
-        wsLite.map(async (w) => {
-          const r = await authFetch(`${API_BASE}/api/workspaces/${w.id}/chats`)
-          if (!r.ok) return [] as Chat[]
-          return (await r.json()) as Chat[]
-        }),
-      )
-      setChats(chatResults.flat())
+      const [wsRes, chatsRes] = await Promise.all([
+        authFetch(`${API_BASE}/api/workspaces`),
+        authFetch(`${API_BASE}/api/all-chats`),
+      ])
+      if (wsRes.ok) {
+        const wsData: Workspace[] = await wsRes.json()
+        setWorkspaces(wsData.map((w) => ({ id: w.id, name: w.name, hiddenAt: w.hiddenAt })))
+      }
+      if (chatsRes.ok) {
+        setChats(await chatsRes.json() as Chat[])
+      }
     } finally {
       setLoading(false)
     }

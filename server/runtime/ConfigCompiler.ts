@@ -16,10 +16,9 @@ import type { WhiteboardManager } from '../whiteboard/WhiteboardManager'
 import { ContextBriefing } from '../whiteboard/ContextBriefing'
 import { isWhiteboardOnDemandEnabled } from './featureFlags'
 import { HooksConfigManager } from './HooksConfigManager'
-import { resolveCliCommandAsync, getLoginShellEnvSubsetAsync } from '../lib/resolveCliCommand'
+import { resolveCliCommandAsync } from '../lib/resolveCliCommand'
 import { createLogger } from '../lib/logger'
 import { silentlyIgnore } from '../lib/silentlyIgnore'
-import { getCodexRequiredEnvVarNames } from '../lib/codexConfigManager'
 
 const log = createLogger('ConfigCompiler')
 
@@ -422,26 +421,6 @@ export class ConfigCompiler {
     if (context.chatId) env.TEEMAI_CHAT_ID = context.chatId
     if (context.instanceId) env.TEEMAI_INSTANCE_ID = context.instanceId
     if (context.connectionId) env.EXPERT_CONNECTION_ID = context.connectionId
-
-    try {
-      const requiredVars = await getCodexRequiredEnvVarNames()
-      const missing = requiredVars.filter((k) => !process.env[k])
-      if (missing.length > 0) {
-        const recovered = await getLoginShellEnvSubsetAsync(missing)
-        for (const [k, v] of Object.entries(recovered)) {
-          env[k] = v
-        }
-        const unresolved = missing.filter((k) => !recovered[k])
-        if (recovered && Object.keys(recovered).length > 0) {
-          log.info('Recovered Codex env vars from login shell', {
-            recoveredCount: Object.keys(recovered).length,
-            unresolvedCount: unresolved.length,
-          })
-        }
-      }
-    } catch (err) {
-      log.warn('Failed to auto-inject Codex env vars', { error: err instanceof Error ? err.message : String(err) })
-    }
 
     return {
       command: 'codex',

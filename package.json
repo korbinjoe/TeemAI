@@ -104,6 +104,7 @@
     "@types/qrcode": "^1.5.6",
     "better-sqlite3": "^12.8.0",
     "diff": "^5.2.2",
+    "electron": "^42.3.3",
     "monaco-editor": "^0.53.0",
     "node-pty": "^1.1.0",
     "qrcode": "^1.5.4",

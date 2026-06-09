@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useWorkspace, IDE_WIDTH_DEFAULT } from '../../contexts/WorkspaceContext'
+import { useWorkspace, useWorkspaceResize, IDE_WIDTH_DEFAULT } from '../../contexts/WorkspaceContext'
 import { useDialog } from '../../contexts/DialogContext'
 import { useWorkspaceChats } from '../../hooks/useWorkspaceChats'
 import ChatPane from './ChatPane'
@@ -117,7 +117,7 @@ const SplitChatContainer = ({
   fallbackWidthClass: string
   children: React.ReactNode
 }) => {
-  const { chatSplitWidth, setChatSplitWidth } = useWorkspace()
+  const { chatSplitWidth, setChatSplitWidth } = useWorkspaceResize()
   const containerRef = useRef<HTMLDivElement>(null)
 
   if (ideCollapsed) {
@@ -152,7 +152,7 @@ const SplitChatContainer = ({
 }
 
 const IdeRegion = ({ mode, collapsed }: { mode: 'single' | 'split' | 'quad'; collapsed: boolean }) => {
-  const { idePanelWidth, setIdePanelWidth } = useWorkspace()
+  const { idePanelWidth, setIdePanelWidth } = useWorkspaceResize()
 
   // Collapsed: 36px strip in all modes
   // Expanded: split mode uses flex-1 (large IDE — chat<->ide ratio governed by chat width),

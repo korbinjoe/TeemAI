@@ -315,7 +315,7 @@ export class ConfigCompiler {
     const cleanupFns: Array<() => Promise<void>> = []
 
     if (context.resumeSessionId) {
-      args.push('exec', 'resume', context.resumeSessionId)
+      args.push('exec', 'resume', context.resumeSessionId, '-')
     } else {
       args.push('exec')
     }

@@ -108,7 +108,7 @@ describe('ConfigCompiler envOverrides flow into --settings', () => {
     await compiled.cleanup()
   })
 
-  it('codex exec path ignores resumeSessionId', async () => {
+  it('codex exec resume passes stdin marker for multi-turn', async () => {
     const compiled = await compiler.compile(
       makeAgent({ model: 'gpt-5-codex' }),
       { repositories: [{ path: ROOT }], serverPort: 3210, resumeSessionId: 'codex-thread-1' },
@@ -116,6 +116,9 @@ describe('ConfigCompiler envOverrides flow into --settings', () => {
     )
     expect(compiled.command).toBe('codex')
     expect(compiled.args).toContain('exec')
+    expect(compiled.args).toContain('resume')
+    expect(compiled.args).toContain('codex-thread-1')
+    expect(compiled.args).toContain('-')
     expect(compiled.args).not.toContain('--resume')
     await compiled.cleanup()
   })

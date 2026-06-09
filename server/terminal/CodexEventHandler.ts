@@ -4,7 +4,7 @@ import { createLogger } from '../lib/logger'
 
 const log = createLogger('CodexEventHandler')
 
-const stableId = (seq: number) => `stream-${seq}`
+const stableId = (prefix: string, seq: number) => `${prefix}-${seq}`
 
 const extractTextFromItem = (item: any): string => {
   if (!item || typeof item !== 'object') return ''
@@ -61,13 +61,13 @@ export const handleCodexExecEvent = (
 
       const newMessages: ParsedMessage[] = []
       const itemType = item.type as string
-      const itemId = (item.id as string | undefined) || stableId(state.messageSeq)
+      const itemId = (item.id as string | undefined) || stableId(state.idPrefix, state.messageSeq)
 
       if (itemType === 'agent_message' || itemType === 'message') {
         const text = extractTextFromItem(item)
         if (text) {
           newMessages.push({
-            id: stableId(state.messageSeq++), role: 'agent', content: text,
+            id: stableId(state.idPrefix, state.messageSeq++), role: 'agent', content: text,
             timestamp: ts, type: 'text', turnIndex: currentTurn,
           })
         }
@@ -75,7 +75,7 @@ export const handleCodexExecEvent = (
         const summary = item.text || item.summary || ''
         if (summary) {
           newMessages.push({
-            id: stableId(state.messageSeq++), role: 'agent', content: '',
+            id: stableId(state.idPrefix, state.messageSeq++), role: 'agent', content: '',
             timestamp: ts, type: 'thinking',
             thinkingSummary: summary.length > 500 ? summary.slice(0, 500) + '…' : summary,
             turnIndex: currentTurn,
@@ -87,13 +87,13 @@ export const handleCodexExecEvent = (
         const exitCode = item.exit_code as number | null | undefined
         const toolId = itemId
         newMessages.push({
-          id: stableId(state.messageSeq++), role: 'agent', content: '',
+          id: stableId(state.idPrefix, state.messageSeq++), role: 'agent', content: '',
           timestamp: ts, type: 'toolUse',
           toolUse: { toolName: 'Bash', toolId, input: JSON.stringify({ command }), status: 'completed' },
           turnIndex: currentTurn,
         })
         newMessages.push({
-          id: stableId(state.messageSeq++), role: 'agent', content: '',
+          id: stableId(state.idPrefix, state.messageSeq++), role: 'agent', content: '',
           timestamp: ts, type: 'toolResult',
           toolResult: {
             toolUseId: toolId,
@@ -108,7 +108,7 @@ export const handleCodexExecEvent = (
         const kinds = new Set(changes.map((c: any) => c?.kind))
         const toolName = kinds.has('add') && !kinds.has('update') && !kinds.has('delete') ? 'Write' : 'Edit'
         newMessages.push({
-          id: stableId(state.messageSeq++), role: 'agent', content: '',
+          id: stableId(state.idPrefix, state.messageSeq++), role: 'agent', content: '',
           timestamp: ts, type: 'toolUse',
           toolUse: { toolName, toolId, input: JSON.stringify({ changes }), status: 'completed' },
           turnIndex: currentTurn,
@@ -117,7 +117,7 @@ export const handleCodexExecEvent = (
           .map((c: any) => `${c?.kind || 'change'} ${c?.path || ''}`.trim())
           .filter(Boolean).join('\n')
         newMessages.push({
-          id: stableId(state.messageSeq++), role: 'agent', content: '',
+          id: stableId(state.idPrefix, state.messageSeq++), role: 'agent', content: '',
           timestamp: ts, type: 'toolResult',
           toolResult: { toolUseId: toolId, content: summary || 'file change completed', isError: item.status === 'failed' },
           turnIndex: currentTurn,
@@ -127,7 +127,7 @@ export const handleCodexExecEvent = (
         const toolId = itemId
         const args = item.arguments ?? item.input ?? {}
         newMessages.push({
-          id: stableId(state.messageSeq++), role: 'agent', content: '',
+          id: stableId(state.idPrefix, state.messageSeq++), role: 'agent', content: '',
           timestamp: ts, type: 'toolUse',
           toolUse: { toolName, toolId, input: typeof args === 'string' ? args : JSON.stringify(args), status: 'completed' },
           turnIndex: currentTurn,
@@ -135,7 +135,7 @@ export const handleCodexExecEvent = (
         const result = item.result ?? item.output ?? ''
         const resultStr = typeof result === 'string' ? result : JSON.stringify(result)
         newMessages.push({
-          id: stableId(state.messageSeq++), role: 'agent', content: '',
+          id: stableId(state.idPrefix, state.messageSeq++), role: 'agent', content: '',
           timestamp: ts, type: 'toolResult',
           toolResult: {
             toolUseId: toolId,
@@ -147,7 +147,7 @@ export const handleCodexExecEvent = (
       } else if (itemType === 'todo_list') {
         const todos = Array.isArray(item.items) ? item.items : []
         newMessages.push({
-          id: stableId(state.messageSeq++), role: 'agent', content: '',
+          id: stableId(state.idPrefix, state.messageSeq++), role: 'agent', content: '',
           timestamp: ts, type: 'toolUse',
           toolUse: { toolName: 'TodoWrite', toolId: itemId, input: JSON.stringify({ todos }), status: 'completed' },
           turnIndex: currentTurn,
@@ -155,7 +155,7 @@ export const handleCodexExecEvent = (
       } else if (itemType === 'web_search') {
         const query = item.query as string | undefined || ''
         newMessages.push({
-          id: stableId(state.messageSeq++), role: 'agent', content: '',
+          id: stableId(state.idPrefix, state.messageSeq++), role: 'agent', content: '',
           timestamp: ts, type: 'toolUse',
           toolUse: { toolName: 'WebSearch', toolId: itemId, input: JSON.stringify({ query }), status: 'completed' },
           turnIndex: currentTurn,
@@ -164,7 +164,7 @@ export const handleCodexExecEvent = (
         const fallbackText = (item.text || item.message || '') as string
         if (fallbackText) {
           newMessages.push({
-            id: stableId(state.messageSeq++), role: 'agent', content: fallbackText,
+            id: stableId(state.idPrefix, state.messageSeq++), role: 'agent', content: fallbackText,
             timestamp: ts, type: 'text', turnIndex: currentTurn,
           })
         } else {
@@ -184,7 +184,7 @@ export const handleCodexExecEvent = (
         stats.outputTokens = usage.output_tokens || usage.output || 0
       }
       const statsMsg: ParsedMessage = {
-        id: `stats-codex-${currentTurn}`, role: 'agent', content: '',
+        id: `stats-${state.idPrefix}-${currentTurn}`, role: 'agent', content: '',
         timestamp: ts, type: 'stats', stats, turnIndex: currentTurn, isTurnEnd: true,
       }
       state.messages.push(statsMsg)
@@ -194,7 +194,7 @@ export const handleCodexExecEvent = (
     case 'error': {
       const errorText = data.message || 'Unknown error'
       const errorMsg: ParsedMessage = {
-        id: stableId(state.messageSeq++), role: 'agent', content: `Error: ${errorText}`,
+        id: stableId(state.idPrefix, state.messageSeq++), role: 'agent', content: `Error: ${errorText}`,
         timestamp: ts, type: 'text', turnIndex: currentTurn,
       }
       state.messages.push(errorMsg)
@@ -204,11 +204,11 @@ export const handleCodexExecEvent = (
     case 'turn.failed': {
       const errorText = data.error?.message || 'Turn failed'
       const errorMsg: ParsedMessage = {
-        id: stableId(state.messageSeq++), role: 'agent', content: `Error: ${errorText}`,
+        id: stableId(state.idPrefix, state.messageSeq++), role: 'agent', content: `Error: ${errorText}`,
         timestamp: ts, type: 'text', turnIndex: currentTurn,
       }
       const statsMsg: ParsedMessage = {
-        id: `stats-codex-${currentTurn}`, role: 'agent', content: '',
+        id: `stats-${state.idPrefix}-${currentTurn}`, role: 'agent', content: '',
         timestamp: ts, type: 'stats', turnIndex: currentTurn, isTurnEnd: true,
       }
       state.messages.push(errorMsg, statsMsg)

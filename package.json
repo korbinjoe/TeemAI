@@ -1,6 +1,6 @@
 {
   "name": "teemai",
-  "version": "0.1.0-beta.4",
+  "version": "0.1.0-beta.5",
   "description": "Build your AI agent team in minutes — powered by Claude Code, Codex, and any CLI you plug in.",
   "type": "module",
   "main": "dist/electron/main.js",
@@ -102,9 +102,8 @@
     "@anthropic-ai/sdk": "^0.98.0",
     "@fontsource/inter": "^5.2.8",
     "@types/qrcode": "^1.5.6",
-    "better-sqlite3": "^12.8.0",
+    "better-sqlite3": "^12.10.0",
     "diff": "^5.2.2",
-    "electron": "^42.3.3",
     "monaco-editor": "^0.53.0",
     "node-pty": "^1.1.0",
     "qrcode": "^1.5.4",
@@ -156,7 +155,7 @@
     "commander": "^14.0.3",
     "concurrently": "^9.2.1",
     "cron-parser": "^5.5.0",
-    "electron": "^41.7.1",
+    "electron": "^42.3.3",
     "electron-builder": "^26.8.1",
     "express": "^4.21.2",
     "i18next": "^25.10.9",
@@ -190,5 +189,10 @@
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "better-sqlite3@12.10.0": "patches/better-sqlite3@12.10.0.patch"
+    }
   }
 }

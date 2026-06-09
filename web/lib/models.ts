@@ -12,6 +12,7 @@ const FALLBACK_MODELS: ModelOption[] = [
   { value: 'claude-opus-4-6', label: 'Claude Opus 4.6', provider: 'claude' },
   { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', provider: 'claude' },
   { value: 'gemini-3.1-flash-image-preview', label: 'Gemini 3.1 Flash', provider: 'claude' },
+  { value: 'gpt-5.5', label: 'GPT-5.5', provider: 'codex' },
   { value: 'gpt-5.3-codex-0224-global', label: 'GPT-5.3 Codex', provider: 'codex' },
   { value: 'qwen3-coder-plus', label: 'Qwen3 Coder Plus' },
   { value: 'qwen3.7-plus', label: 'Qwen3.7 Plus' },

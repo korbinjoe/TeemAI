@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useReducer, useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { buildMissionUrl, buildWorkspaceUrl } from '../components/workspace/urls'
 
@@ -36,12 +36,15 @@ interface WorkspaceState {
   activeIdeTab: IdeTab
   expandedMissions: Record<string, boolean>
   ideCollapsed: boolean
+}
+
+interface ResizeState {
   sidebarWidth: number
   idePanelWidth: number
   chatSplitWidth: number | null
 }
 
-interface WorkspaceContextValue extends WorkspaceState {
+interface WorkspaceContextValue extends WorkspaceState, ResizeState {
   // URL-derived navigation state (NOT in reducer, comes from layout props)
   workspaceId: string | null
   activeChatId: string | null
@@ -83,7 +86,7 @@ interface WorkspaceContextValue extends WorkspaceState {
 const STORAGE_KEY = 'teemai:workspace-layout'
 const LAYOUT_CYCLE: LayoutMode[] = ['single', 'split', 'quad']
 
-// ── Reducer ──
+// ── Reducer (layout state only — no resize widths) ──
 
 type Action =
   | { type: 'SET_LAYOUT_MODE'; mode: LayoutMode }
@@ -95,9 +98,6 @@ type Action =
   | { type: 'SET_IDE_TAB'; tab: IdeTab }
   | { type: 'TOGGLE_MISSION'; missionId: string }
   | { type: 'TOGGLE_IDE' }
-  | { type: 'SET_SIDEBAR_WIDTH'; width: number }
-  | { type: 'SET_IDE_PANEL_WIDTH'; width: number }
-  | { type: 'SET_CHAT_SPLIT_WIDTH'; width: number | null }
   | { type: 'RESTORE'; state: Partial<WorkspaceState> }
 
 const reducer = (state: WorkspaceState, action: Action): WorkspaceState => {
@@ -132,20 +132,6 @@ const reducer = (state: WorkspaceState, action: Action): WorkspaceState => {
     case 'TOGGLE_IDE':
       return { ...state, ideCollapsed: !state.ideCollapsed }
 
-    case 'SET_SIDEBAR_WIDTH':
-      return { ...state, sidebarWidth: clamp(action.width, SIDEBAR_WIDTH_MIN, sidebarMaxWidth()) }
-
-    case 'SET_IDE_PANEL_WIDTH':
-      return { ...state, idePanelWidth: clamp(action.width, IDE_WIDTH_MIN, IDE_WIDTH_MAX) }
-
-    case 'SET_CHAT_SPLIT_WIDTH':
-      return {
-        ...state,
-        chatSplitWidth: action.width === null
-          ? null
-          : clamp(action.width, CHAT_SPLIT_WIDTH_MIN, CHAT_SPLIT_WIDTH_MAX),
-      }
-
     case 'RESTORE': {
       const restored = { ...state, ...action.state }
       // Drop legacy 'War Room' tab from old persisted state
@@ -169,12 +155,9 @@ const defaultState: WorkspaceState = {
   activeIdeTab: 'IDE',
   expandedMissions: {},
   ideCollapsed: false,
-  sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
-  idePanelWidth: IDE_WIDTH_DEFAULT,
-  chatSplitWidth: null,
 }
 
-const loadPersistedState = (): Partial<WorkspaceState> => {
+const loadPersistedState = (): Partial<WorkspaceState & ResizeState> => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return {}
@@ -186,13 +169,23 @@ const loadPersistedState = (): Partial<WorkspaceState> => {
     delete parsed.missionChatTargetIndex
     delete parsed.workspaceId
     delete parsed.activeChatId
-    return parsed as Partial<WorkspaceState>
+    return parsed as Partial<WorkspaceState & ResizeState>
   } catch {
     return {}
   }
 }
 
-// ── Context ──
+// ── Resize Context (high-frequency, isolated from main context) ──
+
+interface ResizeContextValue extends ResizeState {
+  setSidebarWidth: (w: number) => void
+  setIdePanelWidth: (w: number) => void
+  setChatSplitWidth: (w: number | null) => void
+}
+
+const ResizeContext = createContext<ResizeContextValue | null>(null)
+
+// ── Main Context ──
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null)
 
@@ -209,15 +202,39 @@ export const WorkspaceProvider = ({
   activeChatId = null,
   selectedAgentId = null,
 }: WorkspaceProviderProps) => {
+  const persisted = useMemo(() => loadPersistedState(), [])
+
   const [state, dispatch] = useReducer(reducer, defaultState, (initial) => {
-    const merged: WorkspaceState = { ...initial, ...loadPersistedState() }
+    const merged: WorkspaceState = { ...initial, ...persisted }
     if (!VALID_IDE_TABS.includes(merged.activeIdeTab)) {
       merged.activeIdeTab = 'IDE'
     }
-    merged.sidebarWidth = clamp(merged.sidebarWidth ?? SIDEBAR_WIDTH_DEFAULT, SIDEBAR_WIDTH_MIN, sidebarMaxWidth())
-    merged.idePanelWidth = clamp(merged.idePanelWidth ?? IDE_WIDTH_DEFAULT, IDE_WIDTH_MIN, IDE_WIDTH_MAX)
     return merged
   })
+
+  // Resize widths live in separate useState — updates here do NOT trigger
+  // the main context's useMemo, so only resize consumers re-render during drag.
+  const [sidebarWidth, setSidebarWidthRaw] = useState(() =>
+    clamp((persisted.sidebarWidth as number) ?? SIDEBAR_WIDTH_DEFAULT, SIDEBAR_WIDTH_MIN, sidebarMaxWidth()),
+  )
+  const [idePanelWidth, setIdePanelWidthRaw] = useState(() =>
+    clamp((persisted.idePanelWidth as number) ?? IDE_WIDTH_DEFAULT, IDE_WIDTH_MIN, IDE_WIDTH_MAX),
+  )
+  const [chatSplitWidth, setChatSplitWidthRaw] = useState<number | null>(() => {
+    const v = persisted.chatSplitWidth
+    if (v === null || v === undefined) return null
+    return clamp(v as number, CHAT_SPLIT_WIDTH_MIN, CHAT_SPLIT_WIDTH_MAX)
+  })
+
+  const setSidebarWidth = useCallback((w: number) => {
+    setSidebarWidthRaw(clamp(w, SIDEBAR_WIDTH_MIN, sidebarMaxWidth()))
+  }, [])
+  const setIdePanelWidth = useCallback((w: number) => {
+    setIdePanelWidthRaw(clamp(w, IDE_WIDTH_MIN, IDE_WIDTH_MAX))
+  }, [])
+  const setChatSplitWidth = useCallback((w: number | null) => {
+    setChatSplitWidthRaw(w === null ? null : clamp(w, CHAT_SPLIT_WIDTH_MIN, CHAT_SPLIT_WIDTH_MAX))
+  }, [])
 
   const navigate = useNavigate()
 
@@ -232,20 +249,46 @@ export const WorkspaceProvider = ({
     setTaskChatTargetIndex((i) => (i + 1) % agentCount)
   }, [])
 
+  // Persist layout + resize state to localStorage. Resize values use refs to
+  // avoid re-triggering the effect on every drag frame — we debounce via a
+  // trailing write on the next layout state change or unmount.
+  const resizeRef = useRef({ sidebarWidth, idePanelWidth, chatSplitWidth })
+  resizeRef.current = { sidebarWidth, idePanelWidth, chatSplitWidth }
+
   useEffect(() => {
-    const persisted: Partial<WorkspaceState> = {
+    const persisted = {
       layoutMode: state.layoutMode,
       panelCollapsed: state.panelCollapsed,
       terminalOpen: state.terminalOpen,
       activeIdeTab: state.activeIdeTab,
       expandedMissions: state.expandedMissions,
       ideCollapsed: state.ideCollapsed,
-      sidebarWidth: state.sidebarWidth,
-      idePanelWidth: state.idePanelWidth,
-      chatSplitWidth: state.chatSplitWidth,
+      ...resizeRef.current,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted))
-  }, [state.layoutMode, state.panelCollapsed, state.terminalOpen, state.activeIdeTab, state.expandedMissions, state.ideCollapsed, state.sidebarWidth, state.idePanelWidth, state.chatSplitWidth])
+  }, [state.layoutMode, state.panelCollapsed, state.terminalOpen, state.activeIdeTab, state.expandedMissions, state.ideCollapsed])
+
+  // Also persist on resize changes, but debounced to avoid thrashing storage
+  // on every mousemove frame.
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
+    persistTimerRef.current = setTimeout(() => {
+      const current = {
+        layoutMode: state.layoutMode,
+        panelCollapsed: state.panelCollapsed,
+        terminalOpen: state.terminalOpen,
+        activeIdeTab: state.activeIdeTab,
+        expandedMissions: state.expandedMissions,
+        ideCollapsed: state.ideCollapsed,
+        sidebarWidth,
+        idePanelWidth,
+        chatSplitWidth,
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(current))
+    }, 300)
+    return () => { if (persistTimerRef.current) clearTimeout(persistTimerRef.current) }
+  }, [sidebarWidth, idePanelWidth, chatSplitWidth])
 
   // Navigation helpers — these are the public API. They drive the URL, which
   // is then read back as props by the layout and threaded into this provider.
@@ -273,16 +316,22 @@ export const WorkspaceProvider = ({
   const setIdeTab = useCallback((tab: IdeTab) => dispatch({ type: 'SET_IDE_TAB', tab }), [])
   const toggleMission = useCallback((missionId: string) => dispatch({ type: 'TOGGLE_MISSION', missionId }), [])
   const toggleIde = useCallback(() => dispatch({ type: 'TOGGLE_IDE' }), [])
-  const setSidebarWidth = useCallback((width: number) => dispatch({ type: 'SET_SIDEBAR_WIDTH', width }), [])
-  const setIdePanelWidth = useCallback((width: number) => dispatch({ type: 'SET_IDE_PANEL_WIDTH', width }), [])
-  const setChatSplitWidth = useCallback((width: number | null) => dispatch({ type: 'SET_CHAT_SPLIT_WIDTH', width }), [])
 
   // IDE portal target: V2 IDEPanel registers a DOM node when its IDE tab is active;
   // ChatInstance reads this and createPortal()s RightPanel into it.
   const [ideMountNode, setIdeMountNode] = useState<HTMLElement | null>(null)
 
+  // Main context value — does NOT depend on resize widths. Changes to
+  // sidebarWidth/idePanelWidth/chatSplitWidth during drag do not trigger
+  // re-render of components that only read from this context.
   const value: WorkspaceContextValue = useMemo(() => ({
     ...state,
+    // Resize values are included for backward compat of useWorkspace() shape
+    // but the memo does NOT list them as deps. Consumers that need live resize
+    // values should use useWorkspaceResize() for reactivity during drag.
+    sidebarWidth: resizeRef.current.sidebarWidth,
+    idePanelWidth: resizeRef.current.idePanelWidth,
+    chatSplitWidth: resizeRef.current.chatSplitWidth,
     workspaceId,
     activeChatId,
     selectedAgentId,
@@ -316,12 +365,37 @@ export const WorkspaceProvider = ({
     setSidebarWidth, setIdePanelWidth, setChatSplitWidth,
   ])
 
-  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>
+  // Resize context — only the 3 container components subscribe to this.
+  const resizeValue: ResizeContextValue = useMemo(() => ({
+    sidebarWidth,
+    idePanelWidth,
+    chatSplitWidth,
+    setSidebarWidth,
+    setIdePanelWidth,
+    setChatSplitWidth,
+  }), [sidebarWidth, idePanelWidth, chatSplitWidth, setSidebarWidth, setIdePanelWidth, setChatSplitWidth])
+
+  return (
+    <WorkspaceContext.Provider value={value}>
+      <ResizeContext.Provider value={resizeValue}>
+        {children}
+      </ResizeContext.Provider>
+    </WorkspaceContext.Provider>
+  )
 }
 
 export const useWorkspace = (): WorkspaceContextValue => {
   const ctx = useContext(WorkspaceContext)
   if (!ctx) throw new Error('useWorkspace must be used within WorkspaceProvider')
+  return ctx
+}
+
+/** Subscribe to resize widths reactively. Use this in components that render
+ *  container dimensions (MissionSidebar, SplitChatContainer, IdeRegion) so
+ *  they re-render on drag without cascading to the entire workspace tree. */
+export const useWorkspaceResize = (): ResizeContextValue => {
+  const ctx = useContext(ResizeContext)
+  if (!ctx) throw new Error('useWorkspaceResize must be used within WorkspaceProvider')
   return ctx
 }
 

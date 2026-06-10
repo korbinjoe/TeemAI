@@ -24,6 +24,16 @@ allowed-tools: Bash
 | `--sort-by` | `top` (default), `latest` / `live` |
 | `--limit` | Max tweets (default 10) |
 
+## Browse pacing (social-operator — mandatory)
+
+Enforced by agent `SOUL.md`. Summary:
+
+- ≤3 browse commands per invocation (`list-feeds`, `search-feeds`, `get-feed-detail`, `user-profile`)
+- ≤2 `get-feed-detail` per run; prefer search/list summaries over opening every tweet
+- `sleep $((45 + RANDOM % 45))` between browse commands
+- ≤8 Twitter browse commands per day (tracked in `memory/browse-<date>.md`)
+- Stop after 2 consecutive CLI exit 2 or 4
+
 ## Constraints
 
 - Run `ping-server` first; exit 1 → extension not connected
@@ -61,4 +71,4 @@ python cli.py user-profile --platform twitter --username elonmusk
 
 - Compare engagement (likes, replies, retweets) across top search results
 - Use profile data for account research before engagement
-- For batch detail reads, keep intervals between commands to avoid rate limits
+- Workflow: `agents/social-operator/workflows/twitter-browse.md`

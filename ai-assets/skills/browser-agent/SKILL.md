@@ -38,6 +38,10 @@ python cli.py ping-server
 # extension_connected: true required before social actions
 ```
 
+## Browse pacing (social-operator)
+
+When routing browse/search/detail tasks, enforce delays and daily caps from `agents/social-operator/SOUL.md` → **Browse Pacing**. Never chain browse CLI calls without `sleep` between them.
+
 ## Forbidden
 
 - `send.sh`, `monitor.sh`, `daemon.mjs`, Native Messaging HTTP API

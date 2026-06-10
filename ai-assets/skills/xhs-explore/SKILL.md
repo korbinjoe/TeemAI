@@ -52,7 +52,8 @@ metadata:
 
 ## 必做约束
 
-- **控制查询频率**：避免频繁、连续地搜索或加载大量内容，操作之间保持适当间隔。
+- **Browse pacing（social-operator 强制）**：见 agent `SOUL.md`。摘要：每批 `get-feed-detail` ≤3，批间 `sleep $((10 + RANDOM % 10))`；每日详情 ≤6；浏览前 `risk-report`，medium/high 则停；workflow：`agents/social-operator/workflows/xiaohongshu-browse.md`
+- **控制查询频率**：browse 命令之间 `sleep $((60 + RANDOM % 60))`；禁止无间隔连续搜索或加载详情。
 - 所有操作需要已登录的 Chrome 浏览器。
 - `feed_id` 和 `xsec_token` 必须配对使用，从搜索结果或首页 Feed 中获取。
 - 结果应结构化呈现，突出关键字段。

@@ -23,13 +23,62 @@ Default to invoking these before improvising. Project rule: do not re-implement 
 
 Do NOT use `x-promoter` or `playwright-cli` for Reddit/Twitter/小红书 — the extension owns those platforms.
 
+## Browse Pacing (MUST follow — anti-detection)
+
+Browse commands (`list-feeds`, `search-feeds`, `get-feed-detail`, `user-profile`) trigger platform rate limits when fired rapidly. **Insert real wall-clock delays between every browse CLI call** — sequential commands alone are not enough.
+
+### Per-invocation browse budget
+
+| Platform | `list-feeds` / `search-feeds` | `get-feed-detail` / `user-profile` | Min gap between browse commands |
+|----------|------------------------------|-------------------------------------|--------------------------------|
+| Reddit | ≤3 total | ≤2 total | `sleep $((60 + RANDOM % 60))` (60–120s) |
+| Twitter/X | ≤3 total | ≤2 total | `sleep $((45 + RANDOM % 45))` (45–90s) |
+| 小红书 | ≤1 search + ≤1 list-feeds | ≤3 per batch; max 1 batch/invocation | 10–20s within batch; `sleep $((60 + RANDOM % 60))` between batches |
+
+### 小红书 batch detail pattern (mandatory)
+
+```bash
+python3 <cli> get-feed-detail --feed-id ID1 --xsec-token T1 && \
+python3 <cli> get-feed-detail --feed-id ID2 --xsec-token T2 && \
+python3 <cli> get-feed-detail --feed-id ID3 --xsec-token T3 && \
+sleep $((10 + RANDOM % 10))
+```
+
+Never chain >3 `get-feed-detail` without the sleep above. Before any XHS browse session: `python3 <cli> risk-report` when NetLog is available; **stop browsing** if `risk_level` is `medium` or `high`.
+
+### Browse vs engage separation
+
+- **Never** post/like/upvote in the same invocation immediately after a browse burst.
+- If both are needed: finish browse → `sleep 300` (5 min) → then draft/engage, or split across two agent invocations.
+- Heartbeat runs are **browse-only** — no `post-comment`, `upvote`, `like-tweet`, or `post-comment` (XHS).
+
+### Daily caps (track in `memory/browse-<YYYY-MM-DD>.md`)
+
+| Platform | Daily browse-command cap |
+|----------|-------------------------|
+| Reddit `list-feeds` | ≤4 |
+| Twitter browse commands | ≤8 |
+| XHS `get-feed-detail` | ≤6 |
+
+When a cap is reached, write `constraint` on whiteboard and stop browse commands for the day.
+
+### Stop conditions (abort browse, report to user)
+
+- Two consecutive CLI failures (exit 2) or timeouts (exit 4) on browse commands
+- Empty results after 2 retries on the same query
+- XHS: `risk_level` ≥ medium, or output mentions 扫码 / 404 / 不可访问
+- User did not explicitly ask for high-volume research
+
 ## Standard Loop (perceive → decide → draft → confirm → execute → review)
 
 1. **Preflight** — `python3 <cli> ping-server`
    - `extension_connected: false` → write `constraint`: extension/bridge not running; stop
+   - Check `memory/browse-<today>.md` for daily caps before any browse command
 
 2. **Perceive** — Reddit: `list-feeds --platform reddit --subreddit <name>` or `search-feeds`; XHS: `xhs-explore` skill commands
    - Reddit v1 default subreddits: SaaS, SideProject, indiehackers, webdev, programming
+   - Apply **Browse Pacing** budgets and sleeps between each command
+   - Prefer `list-feeds --limit 10` over deep `get-feed-detail` unless drafting a reply
    - Filter: relevance score / valueScore >= 6 where available
 
 3. **Decide** — pick ≤3 actions per run (comment > upvote > post)
@@ -54,8 +103,9 @@ Do NOT use `x-promoter` or `playwright-cli` for Reddit/Twitter/小红书 — the
 ## Posting Standards
 - Default: draft-then-approve. No `--confirm` without explicit user approval.
 - One platform focus per invocation (v1 single-tab). Finish Reddit before switching.
-- Respect extension frequency limits; do not bypass via rapid skill calls.
-- If skill exit 20 (risk block): stop, explain, suggest pause or manual review.
+- Min 5 minutes between last browse command and first engage command in the same session (see Browse Pacing).
+- Engage caps: ≤3 actions per run; ≥15 min wall-clock between `post-comment` / `upvote` / `like-tweet` when executing multiple (use `sleep $((900 + RANDOM % 300))`).
+- CLI exit codes: 0=ok, 1=not connected, 2=business error, 4=timeout — on 2/4 twice, stop and write `constraint`.
 
 ## Hard Limits (MUST NOT)
 - No product/engineering code changes → fullstack-engineer

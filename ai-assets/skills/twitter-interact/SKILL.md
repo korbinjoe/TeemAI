@@ -21,7 +21,8 @@ allowed-tools: Bash
 - **Confirm reply text with user before posting**
 - Use absolute paths for `--content-file`
 - Run Twitter CLI commands **sequentially**
-- Control interaction frequency — space out likes/replies/retweets
+- Do not engage in the same invocation immediately after `twitter-explore` browse — wait ≥5 min (`sleep 300`) or use a separate agent run
+- ≥15 min between multiple engage commands: `sleep $((900 + RANDOM % 300))`
 - Tweet URL format: `https://x.com/{user}/status/{id}`
 
 ## Workflows

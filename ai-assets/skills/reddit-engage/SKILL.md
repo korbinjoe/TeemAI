@@ -28,6 +28,16 @@ allowed-tools: Bash
 | `--limit` | Max posts (default 10) |
 | `--score` | Add 0–10 relevance score |
 
+## Browse pacing (social-operator — mandatory)
+
+Enforced by agent `SOUL.md`. Summary:
+
+- ≤3 `list-feeds` / `search-feeds` per invocation; ≤2 `get-feed-detail`
+- `sleep $((60 + RANDOM % 60))` between browse commands
+- ≤4 `list-feeds` per day (tracked in `memory/browse-<date>.md`)
+- `sleep 300` between last browse and first `post-comment` in same session
+- ≥15 min between multiple engage commands: `sleep $((900 + RANDOM % 300))`
+
 ## Constraints
 
 - Use absolute paths for `--content-file`

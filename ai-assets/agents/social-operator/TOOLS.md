@@ -20,4 +20,6 @@
 - CLI path: resolve via browser-agent SKILL.md; default `~/.teemai/browser-agent/config.json` → `cliPath`
 - Requires: Chrome + Browser Social Agent extension + bridge server (`ws://localhost:9333`)
 - Drafts dir: `~/.teemai/agents/social-operator/drafts/` (created on first run if missing)
+- Browse log: `~/.teemai/agents/social-operator/memory/browse-<YYYY-MM-DD>.md` (template: `memory/browse-template.md`)
 - Run platform CLI commands sequentially (shared bridge tab)
+- **Browse pacing**: mandatory `sleep` between browse CLI calls — see `SOUL.md` → Browse Pacing

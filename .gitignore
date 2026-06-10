@@ -51,6 +51,7 @@ npm-debug.log*
 .cursor/
 .qoder/
 .claude/
+.codex/
 
 # Playwright CLI recordings (contain absolute paths and local task content)
 .playwright-cli/
@@ -61,3 +62,5 @@ research/
 .design/
 
 .r2c/
+
+.playwright-mcp/

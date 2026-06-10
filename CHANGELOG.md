@@ -9,6 +9,7 @@
 - **Codex hooks**: ship default `.codex/hooks.json` for Codex CLI integration
 - **Social Operator agent**: long-term social account operations (Reddit v1, Twitter/X and Xiaohongshu v2) via the Browser Social Agent extension, with draft-then-approve workflow
 - **browser-agent skill**: execution primitive for browser-based social media operations (status, monitor, post, analytics, configure) through the user's Chrome session
+- **Social Operator + browser-agent assets**: canonical source in `ai-assets/`; WorkspaceSeeder replaces stale symlinks to external repos when seeding `~/.teemai`
 
 ### Bug Fixes
 

@@ -66,9 +66,18 @@ export class SkillManager {
           const stat = await lstat(targetLink)
           if (stat.isSymbolicLink()) {
             const current = await readlink(targetLink)
-            if (current !== sourceDir) continue
+            const resolvedCurrent = current.startsWith('/')
+              ? current
+              : join(dirname(targetLink), current)
+            if (resolvedCurrent === sourceDir) continue
+            await rm(targetLink)
+            await symlink(sourceDir, targetLink)
+            count++
+            continue
           }
-        } catch { /* ignore */ }
+        } catch (err) {
+          log.warn('Failed to reconcile skill symlink', { name, error: String(err) })
+        }
         continue
       }
 

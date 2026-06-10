@@ -8,7 +8,7 @@
  * Node 18  withFileTypes: true  entry.parentPath
  */
 
-import { mkdir, readFile, writeFile, readdir } from 'fs/promises'
+import { mkdir, readFile, writeFile, readdir, rm, lstat, stat } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import { createLogger } from '../lib/logger'
@@ -39,9 +39,8 @@ export class WorkspaceSeeder {
     try {
       const entries = await readdir(agentsDir, { withFileTypes: true })
       for (const entry of entries) {
-        if (entry.isDirectory()) {
-          await mkdir(join(agentsDir, entry.name, 'memory'), { recursive: true })
-        }
+        if (!entry.isDirectory() && !entry.isSymbolicLink()) continue
+        await mkdir(join(agentsDir, entry.name, 'memory'), { recursive: true })
       }
       log.debug('Ensured memory/ dirs for all agents')
     } catch (err) {
@@ -110,6 +109,22 @@ export class WorkspaceSeeder {
     log.info('WorkspaceSeeder: done', { sub })
   }
 
+  /**
+   * Remove symlink entries so bundled ai-assets copy into ~/.teemai instead of
+   * writing through a symlink to an external repo (e.g. browser-plugin).
+   */
+  private async removeSymlinkIfPresent(path: string): Promise<void> {
+    if (!existsSync(path)) return
+    try {
+      const stat = await lstat(path)
+      if (!stat.isSymbolicLink()) return
+      await rm(path)
+      log.info('Removed symlink before seed', { path })
+    } catch (err) {
+      log.warn('Failed to remove symlink before seed', { path, error: String(err) })
+    }
+  }
+
   private async copyRecursive(src: string, dst: string, overwrite: boolean): Promise<void> {
     await mkdir(dst, { recursive: true })
 
@@ -118,10 +133,13 @@ export class WorkspaceSeeder {
     for (const entry of entries) {
       const srcPath = join(src, entry.name)
       const dstPath = join(dst, entry.name)
+      const srcStat = await stat(srcPath)
 
-      if (entry.isDirectory()) {
+      if (srcStat.isDirectory()) {
+        if (overwrite) await this.removeSymlinkIfPresent(dstPath)
         await this.copyRecursive(srcPath, dstPath, overwrite)
       } else if (overwrite || !existsSync(dstPath)) {
+        if (overwrite) await this.removeSymlinkIfPresent(dstPath)
         await writeFile(dstPath, await readFile(srcPath))
         log.debug('Seeded', { file: dstPath })
       }

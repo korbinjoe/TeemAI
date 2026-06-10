@@ -6,36 +6,35 @@ Reusable workflow for the social-operator agent. See also `agents/social-operato
 - `subreddits`: string[] — default: SaaS, SideProject, indiehackers, webdev, programming
 - `minValueScore`: number — default 6
 - `maxActions`: number — default 3
-- `autonomous`: boolean — default false; when true, enable `autoConfirm` and skip user approval
+- `autonomous`: boolean — default false; when true, post without user approval (use with care)
 
 ## Steps
 
 1. **Preflight**
    ```bash
-   skill/scripts/browser.sh ensure
-   skill/scripts/browser.sh wait-ready --timeout 60
-   skill/scripts/status.sh
+   python3 <cli> ping-server
    ```
-   - Stop on exit 10 or `riskLevel: critical`
+   - Stop if `extension_connected` is false
 
-2. **Autonomous setup** (when `autonomous=true`)
+2. **Monitor** — for each subreddit (run sequentially):
    ```bash
-   skill/scripts/configure.sh --set autoConfirm=true
+   python3 <cli> list-feeds --platform reddit --subreddit <name> --limit 10 --score
    ```
 
-3. **Monitor** — for each subreddit (auto-navigates via Layer 1 + extracts via Layer 2):
+3. **Merge & rank** — combine results, sort by score / relevance, take top `maxActions`
+
+4. **Draft & execute**
+   - Write reply in agent turn using Bootstrapped Dev persona
+   - Manual review (default): present draft, wait for approval
+   - Execute after approval:
+     ```bash
+     python3 <cli> post-comment --platform reddit --url "<url>" --content-file /abs/path/reply.txt
+     ```
+
+5. **Optional detail pass**
    ```bash
-   skill/scripts/monitor.sh --platform reddit --subreddit <name> --limit 10
+   python3 <cli> get-feed-detail --platform reddit --url "<url>"
    ```
-
-4. **Merge & rank** — combine results, sort by `valueScore` desc, take top `maxActions`
-
-5. **Draft & execute**
-   - Write reply in agent turn (Quality mode) using Bootstrapped Dev persona
-   - Autonomous: `skill/scripts/send.sh reply --targetId "<id>" --content "..."`
-   - Manual review: dry-run first (no `--confirm`, `autoConfirm=false`), then `--confirm` after approval
-
-6. **Review** — `skill/scripts/analytics.sh --period daily`
 
 ## Outputs
 - Draft file: `~/.teemai/agents/social-operator/drafts/reddit-engage-<date>.md`

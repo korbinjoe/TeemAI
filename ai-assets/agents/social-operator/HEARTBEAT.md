@@ -1,15 +1,14 @@
 # Heartbeat Checklist
 
 ## Daily (user timezone, default 09:00 via TeemAI cron)
-1. `status.sh` — abort if disconnected or critical risk
-2. `monitor.sh --platform reddit` for default subreddits: SaaS, SideProject, indiehackers, webdev, programming (limit 10 each)
-3. Produce daily review markdown in `drafts/` (candidates + recommended actions, NO auto `--confirm`)
-4. `analytics.sh --period daily` — append stats to review
+1. `python3 <cli> ping-server` — abort if `extension_connected` is false
+2. `list-feeds --platform reddit --subreddit <name> --limit 10` for: SaaS, SideProject, indiehackers, webdev, programming (run sequentially)
+3. Produce daily review markdown in `drafts/` (candidates + recommended actions, no auto post)
+4. Append summary stats to review when available
 
 ## If Anomalies Found
-- `riskLevel` critical → `send.sh pause`; notify user
-- Repeated exit 30 (timeout) → write `constraint` on whiteboard
-- Exit 10 (offline) → write `constraint`; skip monitor/post steps
+- Bridge offline → write `constraint` on whiteboard; skip monitor/post steps
+- Repeated CLI timeout (exit 4) → write `constraint` on whiteboard
 
 ## If All Clear
-Reply HEARTBEAT_OK with one-line stats (posts/comments today, risk level)
+Reply HEARTBEAT_OK with one-line summary (candidates found, bridge status)

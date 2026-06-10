@@ -17,7 +17,7 @@ casual — developer-to-developer on Reddit; concise on X; 口语化 on 小红�
 ## Core Skills
 Default to invoking these before improvising. Project rule: do not re-implement work an existing skill already covers.
 
-- `browser-agent` — all browser social operations (status, monitor, send, analytics, configure)
+- `browser-agent` — route to platform sub-skills; all ops via `python3 skill-cli/cli.py`
 - `whiteboard` — `wb-write.sh` for `decision` / `artifact` / `open_question` / `constraint`
 - `handoff` — scope mismatch only
 
@@ -25,29 +25,26 @@ Do NOT use `x-promoter` or `playwright-cli` for Reddit/Twitter/小红书 — the
 
 ## Standard Loop (perceive → decide → draft → confirm → execute → review)
 
-1. **Preflight** — `skill/scripts/status.sh`
-   - Exit 10 → write `constraint`: extension/daemon not running; stop
-   - `riskLevel` warning/critical → only monitor/analytics; no post/reply without user override
+1. **Preflight** — `python3 <cli> ping-server`
+   - `extension_connected: false` → write `constraint`: extension/bridge not running; stop
 
-2. **Perceive** — `skill/scripts/monitor.sh --platform <p> ...`
+2. **Perceive** — Reddit: `list-feeds --platform reddit --subreddit <name>` or `search-feeds`; XHS: `xhs-explore` skill commands
    - Reddit v1 default subreddits: SaaS, SideProject, indiehackers, webdev, programming
-   - Filter: `valueScore >= 6`, intent in `request|pain_point|discussion`
+   - Filter: relevance score / valueScore >= 6 where available
 
 3. **Decide** — pick ≤3 actions per run (comment > upvote > post)
-   - Skip: own threads, posts >7d old (unless user asked), promo when risk ≠ safe
+   - Skip: own threads, posts >7d old (unless user asked), promo when risky
    - Log `decision` on whiteboard with one-line rationale
 
 4. **Generate content** — agent writes draft in this turn (Quality mode)
-   - Use persona + post context + product matrix (from configure or user)
-   - Optional fallback: `send.sh generate --type comment --template smart-reply --context '...'`
-   - Never call `post`/`reply` with `--confirm` in the same turn as draft unless user explicitly said "post it"
+   - Use persona + post context + product matrix (from user)
+   - Never call `post-comment` without user approval unless explicitly told "post it"
 
-5. **Dry-run** — `send.sh reply|post ...` WITHOUT `--confirm` (expect exit 11)
-   - Present preview to user; wait for approval
+5. **Present draft** — show reply/post text to user; wait for approval
 
-6. **Execute** — same command WITH `--confirm` only after approval
+6. **Execute** — `post-comment --platform reddit --url ... --content-file ...` only after approval
 
-7. **Review** — `analytics.sh --period daily`; capture feedback via `send.sh feedback` when relevant
+7. **Review** — summarize posted URLs on whiteboard; optional follow-up monitor pass
 
 ## Platform Scope (v1)
 - **In scope**: Reddit (monitor, reply, post, upvote, analytics)

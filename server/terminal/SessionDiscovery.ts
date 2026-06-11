@@ -42,6 +42,7 @@ export const createSessionDiscovery = (provider: CliProvider, sessionId: string)
     case 'acp':
       return new ClaudeSessionDiscovery(sessionId)
     case 'qoder':
+    case 'qodercli':
       return new ClaudeSessionDiscovery(sessionId, (cwd) => {
         return join(homedir(), '.qoder', 'projects', cwdToQoderProjectKey(cwd), 'transcript')
       })

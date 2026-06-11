@@ -32,7 +32,8 @@
     "all": "전체",
     "claude": "Claude Code",
     "codex": "Codex",
-    "qoder": "Qoder"
+    "qoder": "Qoder",
+    "qodercli": "Qoder CLI"
   },
   "noSearchResults": "일치하는 에이전트 없음",
   "noAvailableAgents": "사용 가능한 에이전트 없음",

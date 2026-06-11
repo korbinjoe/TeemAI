@@ -375,7 +375,7 @@ export class DevInspector {
     if (provider === 'codex') {
       return locateCodexRollout(cliSessionId)
     }
-    if (provider === 'qoder') {
+    if (provider === 'qoder' || provider === 'qodercli') {
       const projectKey = cwd.replace(/[/.]/g, '-')
       return join(homedir(), '.qoder', 'projects', projectKey, 'transcript', `${cliSessionId}.jsonl`)
     }

@@ -1,6 +1,6 @@
 // ── CLI Provider ──
 
-export type CliProvider = 'claude' | 'codex' | 'acp' | 'qoder'
+export type CliProvider = 'claude' | 'codex' | 'acp' | 'qoder' | 'qodercli'
 
 export interface AgentPersonality {
   nickname: string

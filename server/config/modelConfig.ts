@@ -5,7 +5,7 @@ import { TEEMAI_HOME } from './paths'
 export interface ModelOption {
   value: string
   label: string
-  provider?: 'claude' | 'codex' | 'qoder'
+  provider?: 'claude' | 'codex' | 'qoder' | 'qodercli'
 }
 
 const HARDCODED_MODELS: ModelOption[] = [

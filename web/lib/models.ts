@@ -3,7 +3,7 @@ import { authFetch } from '@/config/api'
 export interface ModelOption {
   value: string
   label: string
-  provider?: 'claude' | 'codex' | 'qoder'
+  provider?: 'claude' | 'codex' | 'qoder' | 'qodercli'
 }
 
 const FALLBACK_MODELS: ModelOption[] = [
@@ -58,5 +58,6 @@ export const getModelsForProvider = (provider?: string): ModelOption[] => {
   if (!provider) return DEFAULT_MODELS
   if (provider === 'codex') return DEFAULT_MODELS.filter((m) => m.provider === 'codex')
   if (provider === 'qoder') return DEFAULT_MODELS.filter((m) => m.provider === 'qoder')
+  if (provider === 'qodercli') return DEFAULT_MODELS.filter((m) => m.provider === 'qoder' || m.provider === 'qodercli')
   return DEFAULT_MODELS.filter((m) => !m.provider || m.provider === provider)
 }

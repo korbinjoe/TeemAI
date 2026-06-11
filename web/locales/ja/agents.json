@@ -32,7 +32,8 @@
     "all": "すべて",
     "claude": "Claude Code",
     "codex": "Codex",
-    "qoder": "Qoder"
+    "qoder": "Qoder",
+    "qodercli": "Qoder CLI"
   },
   "noSearchResults": "一致するエージェントが見つかりません",
   "noAvailableAgents": "利用可能なエージェントがありません",

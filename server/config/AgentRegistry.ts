@@ -115,7 +115,7 @@ async function loadAgentDir(
     heartbeat: config.heartbeat,
     boot: config.boot,
     workspaceDir,
-    provider: (['claude', 'codex', 'qoder', 'acp'].includes(config.provider ?? '') ? config.provider : undefined) as CliProvider | undefined,
+    provider: (['claude', 'codex', 'qoder', 'qodercli', 'acp'].includes(config.provider ?? '') ? config.provider : undefined) as CliProvider | undefined,
   }
 }
 
@@ -159,7 +159,7 @@ function parseMdAgent(filename: string, raw: string, agentsDir: string): AgentDe
         ? meta.expertAgentIds.map(String)
         : undefined,
     personality,
-    provider: (['claude', 'codex', 'qoder', 'acp'].includes(String(meta.provider ?? '')) ? String(meta.provider) : undefined) as CliProvider | undefined,
+    provider: (['claude', 'codex', 'qoder', 'qodercli', 'acp'].includes(String(meta.provider ?? '')) ? String(meta.provider) : undefined) as CliProvider | undefined,
     systemPrompt: { mode: 'append', content: body },
     skills: Array.isArray(meta.skills) ? meta.skills.map(String) : [],
     mcpServers: (meta.mcpServers as Record<string, McpServerConfig>) ?? {},

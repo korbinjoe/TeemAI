@@ -32,7 +32,8 @@
     "all": "Tous",
     "claude": "Claude Code",
     "codex": "Codex",
-    "qoder": "Qoder"
+    "qoder": "Qoder",
+    "qodercli": "Qoder CLI"
   },
   "noSearchResults": "Aucun agent trouvé",
   "noAvailableAgents": "Aucun agent disponible",

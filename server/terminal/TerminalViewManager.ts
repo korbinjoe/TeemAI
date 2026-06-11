@@ -114,8 +114,8 @@ export class TerminalViewManager {
 
     let command: string
     let args: string[]
-    if (provider === 'claude' || provider === 'qoder') {
-      command = provider === 'qoder' ? 'qodercli' : 'claude'
+    if (provider === 'claude' || provider === 'qoder' || provider === 'qodercli') {
+      command = (provider === 'qoder' || provider === 'qodercli') ? 'qodercli' : 'claude'
       args = ['--resume', cliSessionId]
     } else {
       this.send(ws, 'expert:error', {

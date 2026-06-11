@@ -63,7 +63,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
     if (provider === 'codex') {
       return readCodexRollout(cliSessionId)
     }
-    if (provider === 'qoder') {
+    if (provider === 'qoder' || provider === 'qodercli') {
       const projectKey = cwdToQoderProjectKey(cwd)
       const jsonlPath = join(homedir(), '.qoder', 'projects', projectKey, 'transcript', `${cliSessionId}.jsonl`)
       if (!existsSync(jsonlPath)) return null
@@ -584,7 +584,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
                 chatId,
                 agentName: agentId,
                 reason: 'command_not_found',
-                message: failedProvider === 'qoder'
+                message: (failedProvider === 'qoder' || failedProvider === 'qodercli')
                   ? 'Qoder CLI not found. Install it with: curl -fsSL https://qoder.com/install | bash'
                   : 'CLI tool not installed, please install Claude Code or Codex CLI first',
               },

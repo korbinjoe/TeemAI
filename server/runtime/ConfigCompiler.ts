@@ -103,6 +103,7 @@ export class ConfigCompiler {
       case 'claude':
       case 'acp':
       case 'qoder':
+      case 'qodercli':
         break
       default: {
         const _exhaustive: never = effectiveProvider
@@ -155,7 +156,7 @@ export class ConfigCompiler {
       await this.writeEnvFile(context, resumeEnv)
 
       return {
-        command: effectiveProvider === 'qoder' ? 'qodercli' : 'claude',
+        command: (effectiveProvider === 'qoder' || effectiveProvider === 'qodercli') ? 'qodercli' : 'claude',
         args,
         env: resumeEnv,
         cwd,
@@ -297,7 +298,7 @@ export class ConfigCompiler {
     await this.writeEnvFile(context, env)
 
     return {
-      command: effectiveProvider === 'qoder' ? 'qodercli' : 'claude',
+      command: (effectiveProvider === 'qoder' || effectiveProvider === 'qodercli') ? 'qodercli' : 'claude',
       args,
       env,
       cwd,

@@ -28,7 +28,7 @@ const IdentityFormPanel = ({ value, onChange, disabled }: IdentityFormPanelProps
   )
 
   const parsed = parseIdentityProviderField(value.provider)
-  const providerChoice = parsed === 'codex' ? 'codex' : parsed === 'qoder' ? 'qoder' : 'claude'
+  const providerChoice = parsed === 'codex' ? 'codex' : parsed === 'qodercli' ? 'qodercli' : parsed === 'qoder' ? 'qoder' : 'claude'
 
   return (
     <div className="h-full min-h-0 overflow-y-auto px-5 py-4 space-y-[12px]">
@@ -125,6 +125,18 @@ const IdentityFormPanel = ({ value, onChange, disabled }: IdentityFormPanelProps
               )}
             >
               Qoder
+            </label>
+          </div>
+          <div className="flex shrink-0 items-center gap-2.5">
+            <RadioGroupItem value="qodercli" id="identity-form-provider-qodercli" />
+            <label
+              htmlFor="identity-form-provider-qodercli"
+              className={cn(
+                'cursor-pointer whitespace-nowrap text-xs text-text-primary',
+                disabled && 'cursor-not-allowed opacity-60',
+              )}
+            >
+              Qoder CLI
             </label>
           </div>
         </RadioGroup>

@@ -11,7 +11,7 @@ import { useAvatarStyle } from '@/contexts/AvatarStyleContext'
 import { AVATAR_STYLES } from '@/config/avatarAssets'
 import useTeamStats from '@/hooks/useTeamStats'
 
-type TeamFilter = 'all' | 'builtin' | 'user' | 'claude' | 'codex' | 'qoder'
+type TeamFilter = 'all' | 'builtin' | 'user' | 'claude' | 'codex' | 'qoder' | 'qodercli'
 
 const TEAM_FILTERS: Array<{ value: TeamFilter; labelKey: string }> = [
   { value: 'all', labelKey: 'agents:filter.all' },
@@ -20,6 +20,7 @@ const TEAM_FILTERS: Array<{ value: TeamFilter; labelKey: string }> = [
   { value: 'claude', labelKey: 'agents:filter.claude' },
   { value: 'codex', labelKey: 'agents:filter.codex' },
   { value: 'qoder', labelKey: 'agents:filter.qoder' },
+  { value: 'qodercli', labelKey: 'agents:filter.qodercli' },
 ]
 
 export const TeamTab = ({ members, onFire, onEdit, onGoMarket, onClickAgent }: {

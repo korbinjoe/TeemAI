@@ -441,7 +441,7 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
       log.error('Start error', { agentId: payload.agentId, error: errorMsg, isCommandNotFound })
       trackEvent('agent', 'agent.start_failed', { agentId: payload.agentId, error: errorMsg, isCommandNotFound, connectionId })
       let displayMsg = errorMsg
-      if (isCommandNotFound && provider === 'qoder') {
+      if (isCommandNotFound && (provider === 'qoder' || provider === 'qodercli')) {
         displayMsg = 'Qoder CLI not found. Install it with: curl -fsSL https://qoder.com/install | bash'
       }
       ws.send(JSON.stringify({

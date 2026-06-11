@@ -32,7 +32,8 @@
     "all": "全部",
     "claude": "Claude Code",
     "codex": "Codex",
-    "qoder": "Qoder"
+    "qoder": "Qoder",
+    "qodercli": "Qoder CLI"
   },
   "noSearchResults": "没有找到匹配的数字员工",
   "noAvailableAgents": "暂无可用数字员工",

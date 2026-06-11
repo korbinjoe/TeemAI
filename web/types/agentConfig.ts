@@ -71,7 +71,7 @@ export interface Agent {
   hooks?: HooksConfig
   subAgentNames?: string[]
   personality?: AgentPersonality
-  provider?: 'claude' | 'codex' | 'qoder'
+  provider?: 'claude' | 'codex' | 'qoder' | 'qodercli'
   tags: string[]
   source: 'builtin' | 'user'
   createdAt: string
@@ -86,5 +86,5 @@ export interface AgentSummary {
   icon: string
   subAgentNames?: string[]
   personality?: AgentPersonality
-  provider?: 'claude' | 'codex' | 'qoder'
+  provider?: 'claude' | 'codex' | 'qoder' | 'qodercli'
 }

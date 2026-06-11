@@ -25,6 +25,7 @@ export const createACPAdapter = (
   switch (provider) {
     case 'claude':
     case 'qoder':
+    case 'qodercli':
     case 'codex':
       return new CliACPAdapter(streamManager, { ...options, provider })
     case 'acp':

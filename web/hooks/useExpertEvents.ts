@@ -257,9 +257,19 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
     if (!payload?.agentId) return
     if (payload.status === 'completed') return
 
+    let shouldClearMessages = false
+
     setExpertActivities((prev) => {
       const existing = prev[payload.agentId]
       if (existing && existing.phase !== 'completed' && existing.phase !== 'error' && existing.phase !== 'waiting_input') return prev
+
+      // New session for a previously-completed/errored agent — must clear
+      // stale messages so their line-based IDs don't collide with the new
+      // session's IDs in mergeAgentBatch's instance-key dedup.
+      if (existing && (existing.phase === 'completed' || existing.phase === 'error')) {
+        shouldClearMessages = true
+      }
+
       const next: AgentActivity = {
         phase: 'initializing',
         background: false,
@@ -272,6 +282,14 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
       if (existing && isSameActivity(existing, next)) return prev
       return { ...prev, [payload.agentId]: next }
     })
+
+    if (shouldClearMessages) {
+      setAgentMessages((prev) => {
+        if (!prev[payload.agentId]?.length) return prev
+        const { [payload.agentId]: _, ...rest } = prev
+        return rest
+      })
+    }
   }
 
   const onExpertStructuredMessage = (payload: {

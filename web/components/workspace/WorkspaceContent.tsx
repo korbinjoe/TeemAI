@@ -95,43 +95,42 @@ const ChatColumn = ({
   splitChatWidth: string
   children: React.ReactNode
 }) => {
-  if (layoutMode === 'single') {
-    return <div className="flex-1 flex flex-col overflow-hidden min-w-0">{children}</div>
-  }
+  // Always render SplitChatContainer so the element type is stable across
+  // layout mode changes — switching between <div> and <SplitChatContainer>
+  // would unmount the entire ChatPane subtree, losing all message state.
+  const splitActive = layoutMode === 'split' && !ideCollapsed
   return (
-    <SplitChatContainer ideCollapsed={ideCollapsed} fallbackWidthClass={splitChatWidth}>
+    <SplitChatContainer splitActive={splitActive} fallbackWidthClass={splitChatWidth}>
       {children}
     </SplitChatContainer>
   )
 }
 
-// Chat container in split mode — supports drag-to-resize via right-edge handle.
-// chatSplitWidth (px) overrides the percentage-based fallback. When ide is collapsed,
-// chat fills remaining space (flex-1) so resize handle is suppressed (nothing to resize against).
+// Chat column container — renders a stable element tree so children never
+// remount when switching between single/split layouts. When splitActive is
+// true, the container constrains its width and shows a drag-to-resize handle;
+// otherwise it fills available space with flex-1.
 const SplitChatContainer = ({
-  ideCollapsed,
+  splitActive,
   fallbackWidthClass,
   children,
 }: {
-  ideCollapsed: boolean
+  splitActive: boolean
   fallbackWidthClass: string
   children: React.ReactNode
 }) => {
   const { chatSplitWidth, setChatSplitWidth } = useWorkspaceResize()
   const containerRef = useRef<HTMLDivElement>(null)
 
-  if (ideCollapsed) {
-    return <div className="flex-1 flex flex-col overflow-hidden min-w-0">{children}</div>
+  const hasCustomWidth = chatSplitWidth !== null
+  const getMeasuredWidth = () => containerRef.current?.offsetWidth ?? 600
+
+  if (!splitActive) {
+    return <div ref={containerRef} className="flex-1 flex flex-col overflow-hidden min-w-0">{children}</div>
   }
 
-  const hasCustomWidth = chatSplitWidth !== null
   const widthClass = hasCustomWidth ? '' : fallbackWidthClass
   const widthStyle = hasCustomWidth ? { width: chatSplitWidth } : undefined
-
-  // Measure current rendered width for the resize start point. When chatSplitWidth is null
-  // we read offsetWidth from the DOM so the first drag delta lands on top of the actual
-  // rendered percentage width — no jump.
-  const getMeasuredWidth = () => containerRef.current?.offsetWidth ?? 600
 
   return (
     <div

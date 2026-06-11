@@ -370,9 +370,11 @@ const SortableAgentChip = ({ agent, isSelected, onSelect, selectLabel }: {
             'text-xs px-1.5 py-px rounded-sm font-mono',
             agent.provider === 'codex'
               ? 'bg-accent-brand/10 text-accent-brand'
-              : 'bg-accent-orange/10 text-accent-orange',
+              : agent.provider === 'qoder'
+                ? 'bg-emerald-500/10 text-emerald-400'
+                : 'bg-accent-orange/10 text-accent-orange',
           )}>
-            {agent.provider === 'codex' ? 'Codex' : 'Claude Code'}
+            {agent.provider === 'codex' ? 'Codex' : agent.provider === 'qoder' ? 'Qoder' : 'Claude Code'}
           </span>
         </button>
       </TooltipTrigger>

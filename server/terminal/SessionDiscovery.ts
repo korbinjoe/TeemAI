@@ -16,7 +16,7 @@ import type { OutputParser } from './OutputParser'
 import { codexOutputParser } from './CodexParser'
 import type { CliProvider } from '../config/types'
 import { createLogger } from '../lib/logger'
-import { cwdToClaudeProjectKey } from '../../shared/projectKey'
+import { cwdToClaudeProjectKey, cwdToQoderProjectKey } from '../../shared/projectKey'
 
 const log = createLogger('SessionDiscovery')
 
@@ -43,8 +43,7 @@ export const createSessionDiscovery = (provider: CliProvider, sessionId: string)
       return new ClaudeSessionDiscovery(sessionId)
     case 'qoder':
       return new ClaudeSessionDiscovery(sessionId, (cwd) => {
-        const projectKey = cwd.replace(/[/.]/g, '-')
-        return join(homedir(), '.qoder', 'projects', projectKey, 'transcript')
+        return join(homedir(), '.qoder', 'projects', cwdToQoderProjectKey(cwd), 'transcript')
       })
     default: {
       const _exhaustive: never = provider

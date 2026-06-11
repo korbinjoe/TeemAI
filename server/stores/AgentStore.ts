@@ -1,5 +1,5 @@
 import { SqliteBaseStore } from './SqliteBaseStore'
-import type { Agent } from '../config/types'
+import type { Agent, CliProvider } from '../config/types'
 import { randomUUID } from 'crypto'
 import { createLogger } from '../lib/logger'
 
@@ -110,7 +110,7 @@ export class AgentStore extends SqliteBaseStore<Agent> {
       hooks: row.hooks ? JSON.parse(row.hooks as string) : undefined,
       subAgentNames: row.sub_agent_names ? JSON.parse(row.sub_agent_names as string) : undefined,
       personality: row.personality ? JSON.parse(row.personality as string) : undefined,
-      provider: row.provider as 'claude' | 'codex' | undefined,
+      provider: row.provider as CliProvider | undefined,
       tags: JSON.parse(row.tags as string),
       source: row.source as 'builtin' | 'user',
       createdAt: row.created_at as string,

@@ -459,9 +459,11 @@ const NewChatForm = ({ currentWorkspaceId, currentAgentId, onCreated }: NewChatF
                               'text-[10px] px-1 py-px rounded-sm font-mono shrink-0',
                               agent.provider === 'codex'
                                 ? 'bg-accent-brand/10 text-accent-brand'
-                                : 'bg-accent-orange/10 text-accent-orange',
+                                : agent.provider === 'qoder'
+                                  ? 'bg-emerald-500/10 text-emerald-400'
+                                  : 'bg-accent-orange/10 text-accent-orange',
                             )}>
-                              {agent.provider === 'codex' ? 'Codex' : 'CC'}
+                              {agent.provider === 'codex' ? 'Codex' : agent.provider === 'qoder' ? 'Qoder' : 'CC'}
                             </span>
                             {isSelected && <Check size={12} className="shrink-0 text-accent-green" />}
                           </button>

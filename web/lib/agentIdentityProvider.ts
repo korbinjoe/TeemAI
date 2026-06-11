@@ -11,9 +11,10 @@ const providerCompactKey = (raw: string) => raw.trim().toLowerCase().replace(/\s
  *
  * @returns  Claude / Codex  `null`
  */
-export const parseIdentityProviderField = (raw: string): 'claude' | 'codex' | null => {
+export const parseIdentityProviderField = (raw: string): 'claude' | 'codex' | 'qoder' | null => {
   const k = providerCompactKey(raw)
   if (k === 'codex') return 'codex'
+  if (k === 'qoder' || k === 'qodercli') return 'qoder'
   if (k === 'claude' || k === 'claudecode') return 'claude'
   return null
 }
@@ -26,6 +27,7 @@ export const formatIdentityProviderYamlValue = (parsedProviderField: string): st
   if (!trimmed) return 'Claude Code'
   const p = parseIdentityProviderField(trimmed)
   if (p === 'codex') return 'Codex'
+  if (p === 'qoder') return 'Qoder'
   if (p === 'claude') return 'Claude Code'
   return trimmed
 }
@@ -33,5 +35,9 @@ export const formatIdentityProviderYamlValue = (parsedProviderField: string): st
 /**
  *  Agent JSON  `provider`  Codex  `'codex'` `undefined` Claude
  */
-export const agentProviderFromIdentityField = (parsedProviderField: string): 'codex' | undefined =>
-  parseIdentityProviderField(parsedProviderField) === 'codex' ? 'codex' : undefined
+export const agentProviderFromIdentityField = (parsedProviderField: string): 'codex' | 'qoder' | undefined => {
+  const p = parseIdentityProviderField(parsedProviderField)
+  if (p === 'codex') return 'codex'
+  if (p === 'qoder') return 'qoder'
+  return undefined
+}

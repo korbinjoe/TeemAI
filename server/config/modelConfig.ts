@@ -16,6 +16,8 @@ const HARDCODED_MODELS: ModelOption[] = [
   { value: 'gemini-3.1-flash-image-preview', label: 'Gemini 3.1 Flash', provider: 'claude' },
   { value: 'gpt-5.5', label: 'GPT-5.5', provider: 'codex' },
   { value: 'gpt-5.3-codex-0224-global', label: 'GPT-5.3 Codex', provider: 'codex' },
+  { value: 'qoder-pro', label: 'Qoder Pro', provider: 'qoder' },
+  { value: 'qoder-fast', label: 'Qoder Fast', provider: 'qoder' },
   { value: 'qwen3-coder-plus', label: 'Qwen3 Coder Plus' },
   { value: 'qwen3.7-plus', label: 'Qwen3.7 Plus' },
   { value: 'qwen3.6-plus', label: 'Qwen3.6 Plus' },

@@ -11,7 +11,7 @@ import { useAvatarStyle } from '@/contexts/AvatarStyleContext'
 import { AVATAR_STYLES } from '@/config/avatarAssets'
 import useTeamStats from '@/hooks/useTeamStats'
 
-type TeamFilter = 'all' | 'builtin' | 'user' | 'claude' | 'codex'
+type TeamFilter = 'all' | 'builtin' | 'user' | 'claude' | 'codex' | 'qoder'
 
 const TEAM_FILTERS: Array<{ value: TeamFilter; labelKey: string }> = [
   { value: 'all', labelKey: 'agents:filter.all' },
@@ -19,6 +19,7 @@ const TEAM_FILTERS: Array<{ value: TeamFilter; labelKey: string }> = [
   { value: 'user', labelKey: 'common:source.custom' },
   { value: 'claude', labelKey: 'agents:filter.claude' },
   { value: 'codex', labelKey: 'agents:filter.codex' },
+  { value: 'qoder', labelKey: 'agents:filter.qoder' },
 ]
 
 export const TeamTab = ({ members, onFire, onEdit, onGoMarket, onClickAgent }: {
@@ -37,8 +38,9 @@ export const TeamTab = ({ members, onFire, onEdit, onGoMarket, onClickAgent }: {
     let list = members
     if (filter === 'builtin') list = list.filter((a) => a.source === 'builtin')
     else if (filter === 'user') list = list.filter((a) => a.source === 'user')
-    else if (filter === 'claude') list = list.filter((a) => a.provider !== 'codex')
+    else if (filter === 'claude') list = list.filter((a) => !a.provider || a.provider === 'claude')
     else if (filter === 'codex') list = list.filter((a) => a.provider === 'codex')
+    else if (filter === 'qoder') list = list.filter((a) => a.provider === 'qoder')
 
     if (search.trim()) {
       const q = search.toLowerCase()
@@ -209,15 +211,13 @@ const SourceBadge = ({ source }: { source: 'builtin' | 'user' }) => {
 }
 
 const ProviderBadge = ({ provider }: { provider?: string }) => {
-  const isCodex = provider === 'codex'
-  return (
-    <span className={cn(
-      'text-xs px-[5px] py-px rounded-[3px] font-mono',
-      isCodex ? 'bg-sky-500/10 text-sky-400' : 'bg-orange-500/10 text-orange-400',
-    )}>
-      {isCodex ? 'Codex' : 'Claude Code'}
-    </span>
-  )
+  if (provider === 'codex') {
+    return <span className="text-xs px-[5px] py-px rounded-[3px] font-mono bg-sky-500/10 text-sky-400">Codex</span>
+  }
+  if (provider === 'qoder') {
+    return <span className="text-xs px-[5px] py-px rounded-[3px] font-mono bg-emerald-500/10 text-emerald-400">Qoder</span>
+  }
+  return <span className="text-xs px-[5px] py-px rounded-[3px] font-mono bg-orange-500/10 text-orange-400">Claude Code</span>
 }
 
 const TeamMemberCard = ({ agent, stats, onFire, onEdit, onClick }: {

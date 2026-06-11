@@ -27,8 +27,8 @@ const IdentityFormPanel = ({ value, onChange, disabled }: IdentityFormPanelProps
     'disabled:opacity-60 disabled:cursor-not-allowed',
   )
 
-  const providerChoice =
-    parseIdentityProviderField(value.provider) === 'codex' ? 'codex' : 'claude'
+  const parsed = parseIdentityProviderField(value.provider)
+  const providerChoice = parsed === 'codex' ? 'codex' : parsed === 'qoder' ? 'qoder' : 'claude'
 
   return (
     <div className="h-full min-h-0 overflow-y-auto px-5 py-4 space-y-[12px]">
@@ -113,6 +113,18 @@ const IdentityFormPanel = ({ value, onChange, disabled }: IdentityFormPanelProps
               )}
             >
               Codex
+            </label>
+          </div>
+          <div className="flex shrink-0 items-center gap-2.5">
+            <RadioGroupItem value="qoder" id="identity-form-provider-qoder" />
+            <label
+              htmlFor="identity-form-provider-qoder"
+              className={cn(
+                'cursor-pointer whitespace-nowrap text-xs text-text-primary',
+                disabled && 'cursor-not-allowed opacity-60',
+              )}
+            >
+              Qoder
             </label>
           </div>
         </RadioGroup>

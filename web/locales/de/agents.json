@@ -31,7 +31,8 @@
   "filter": {
     "all": "Alle",
     "claude": "Claude Code",
-    "codex": "Codex"
+    "codex": "Codex",
+    "qoder": "Qoder"
   },
   "noSearchResults": "Keine Agenten gefunden",
   "noAvailableAgents": "Keine Agenten verfügbar",

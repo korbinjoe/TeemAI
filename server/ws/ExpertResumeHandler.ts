@@ -23,7 +23,7 @@ import { acpUpdateToWSMessage } from '../acp/ACPToFrontendBridge'
 import type { CliProvider, ExpertSessionInfo } from '../config/types'
 import { createLogger } from '../lib/logger'
 import { trackEvent } from '../lib/eventTracker'
-import { cwdToClaudeProjectKey } from '../../shared/projectKey'
+import { cwdToClaudeProjectKey, cwdToQoderProjectKey } from '../../shared/projectKey'
 import { scanPluginSlashCommands, scanProjectSlashCommands, scanUserSkills } from '../runtime/PluginCommandsScanner'
 
 const log = createLogger('ExpertResume')
@@ -62,6 +62,13 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
   ): ParsedMessage[] | null => {
     if (provider === 'codex') {
       return readCodexRollout(cliSessionId)
+    }
+    if (provider === 'qoder') {
+      const projectKey = cwdToQoderProjectKey(cwd)
+      const jsonlPath = join(homedir(), '.qoder', 'projects', projectKey, 'transcript', `${cliSessionId}.jsonl`)
+      if (!existsSync(jsonlPath)) return null
+      const msgs = parseConversationFile(jsonlPath)
+      return msgs.length > 0 ? msgs : null
     }
     const projectKey = cwdToClaudeProjectKey(cwd)
     const jsonlPath = join(homedir(), '.claude', 'projects', projectKey, `${cliSessionId}.jsonl`)
@@ -577,7 +584,9 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
                 chatId,
                 agentName: agentId,
                 reason: 'command_not_found',
-                message: 'CLI tool not installed, please install Claude Code or Codex CLI first',
+                message: failedProvider === 'qoder'
+                  ? 'Qoder CLI not found. Install it with: curl -fsSL https://qoder.com/install | bash'
+                  : 'CLI tool not installed, please install Claude Code or Codex CLI first',
               },
             })
             continue

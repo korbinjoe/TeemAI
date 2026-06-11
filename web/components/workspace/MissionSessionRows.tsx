@@ -57,17 +57,22 @@ const ROLLUP_PRIORITY: ChatMemberStatus[] = ['error', 'running', 'waiting', 'wai
 export const chatStatusDot = (chat: Chat): string => {
   const members = chat.members ?? []
   if (members.length === 0) {
-    // Legacy payload without enriched members[]: fall back to the chat-level
-    // running flag. Anything else stays neutral.
     return chat.status === 'running' ? memberStatusDot('running') : 'bg-text-muted'
   }
+  const terminal = chat.status === 'stopped' || chat.status === 'merged'
   for (const status of ROLLUP_PRIORITY) {
-    if (members.some((m) => m.status === status)) return memberStatusDot(status)
+    if (members.some((m) => m.status === status)) {
+      if (terminal && (status === 'running' || status === 'waiting' || status === 'waiting_input')) {
+        return memberStatusDot('done')
+      }
+      return memberStatusDot(status)
+    }
   }
   return 'bg-text-muted'
 }
 
 const isWaitingStatus = (chat: Chat): boolean => {
+  if (chat.status === 'stopped' || chat.status === 'merged') return false
   const members = chat.members ?? []
   return members.some((m) => m.status === 'waiting' || m.status === 'waiting_input')
 }

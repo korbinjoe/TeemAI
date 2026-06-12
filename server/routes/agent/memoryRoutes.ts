@@ -1,24 +1,20 @@
 /**
- * Memory & Growth REST API
+ * Memory REST API
  *
- * Agent  CRUD
+ * Agent memory CRUD
  */
 
 import { Router } from 'express'
 import type { MemoryStore } from '../../stores/MemoryStore'
-import type { GrowthStore } from '../../stores/GrowthStore'
-import type { MemoryCategory, GrowthMetric } from '../../config/types'
+import type { MemoryCategory } from '../../config/types'
 
 interface MemoryRouteDeps {
   memoryStore: MemoryStore
-  growthStore: GrowthStore
 }
 
 export const createMemoryRoutes = (deps: MemoryRouteDeps): Router => {
   const router = Router()
-  const { memoryStore, growthStore } = deps
-
-  // ── Memory APIs ──
+  const { memoryStore } = deps
 
   router.get('/api/agents/:id/memories', (req, res) => {
     const { category } = req.query
@@ -63,22 +59,6 @@ export const createMemoryRoutes = (deps: MemoryRouteDeps): Router => {
   router.delete('/api/agents/:id/memories', async (req, res) => {
     const count = await memoryStore.clearByAgent(req.params.id)
     res.json({ cleared: count })
-  })
-
-  // ── Growth APIs ──
-
-  router.get('/api/agents/:id/growth', (req, res) => {
-    const metrics = growthStore.listByAgent(req.params.id)
-    const totalXP = growthStore.getTotalXP(req.params.id)
-    const overallLevel = growthStore.getOverallLevel(req.params.id)
-    res.json({ metrics, totalXP, overallLevel })
-  })
-
-  router.post('/api/agents/:id/growth/:metric', async (req, res) => {
-    const { amount } = req.body
-    const metric = req.params.metric as GrowthMetric
-    const result = await growthStore.increment(req.params.id, metric, amount ?? 1)
-    res.json(result)
   })
 
   return router

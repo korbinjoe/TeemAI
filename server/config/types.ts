@@ -368,13 +368,3 @@ export interface AgentMemory {
   updatedAt: string
 }
 
-export type GrowthMetric = 'tasks_completed' | 'bugs_fixed' | 'reviews_done' | 'deploys' | 'xp'
-
-export interface AgentGrowth {
-  id: string
-  agentId: string
-  metric: GrowthMetric
-  value: number
-  level: number
-  updatedAt: string
-}

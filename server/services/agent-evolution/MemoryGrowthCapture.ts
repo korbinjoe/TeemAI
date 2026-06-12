@@ -1,5 +1,4 @@
 import type { MemoryStore } from '../../stores/MemoryStore'
-import type { GrowthStore } from '../../stores/GrowthStore'
 import type { WhiteboardManager } from '../../whiteboard/WhiteboardManager'
 import type { AgentRegistry } from '../../config/AgentRegistry'
 import type { WhiteboardEntry } from '../../../shared/whiteboard-types'
@@ -21,7 +20,6 @@ export class MemoryGrowthCapture {
 
   constructor(
     private memoryStore: MemoryStore,
-    private growthStore: GrowthStore,
     private whiteboardManager: WhiteboardManager,
     private agentRegistry: AgentRegistry,
   ) {
@@ -41,21 +39,11 @@ export class MemoryGrowthCapture {
   }
 
   onTaskCompleted(agentId: string, _chatId: string): void {
-    if (!this.agentRegistry.get(agentId)) {
-      log.debug('Skipping task-completed for unknown agent', { agentId })
-      return
-    }
-
-    try {
-      this.growthStore.increment(agentId, 'tasks_completed', 1)
-      log.info('Incremented tasks_completed', { agentId })
-    } catch (err) {
-      log.error('Failed to increment growth', { agentId, error: err instanceof Error ? err.message : String(err) })
-    }
+    log.debug('Task completed (growth tracking deprecated)', { agentId })
   }
 
   onTaskFailed(_agentId: string, _chatId: string): void {
-    // Phase 1: no-op — avoids gaming and bad signal until recovery-credit design
+    // no-op
   }
 
   onWhiteboardEntry(chatId: string, entry: WhiteboardEntry): void {

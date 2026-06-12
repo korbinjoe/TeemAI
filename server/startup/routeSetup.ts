@@ -59,7 +59,6 @@ interface RouteDeps {
   nlCronParser: Parameters<typeof createCronJobRoutes>[0]['nlCronParser']
   notificationStore: Parameters<typeof createNotificationRoutes>[0]['notificationStore']
   memoryStore: Parameters<typeof createMemoryRoutes>[0]['memoryStore']
-  growthStore: Parameters<typeof createMemoryRoutes>[0]['growthStore']
   eventStore: Parameters<typeof createEventRoutes>[0]
   sessionRegistry: Parameters<typeof createChatRoutes>[0]['sessionRegistry']
   whiteboardManager: Parameters<typeof createWhiteboardRoutes>[0]['whiteboardManager']
@@ -151,8 +150,8 @@ export const setupRoutes = (app: Express, d: RouteDeps) => {
   app.use(createExecutionLogRoutes(d.executionLogStore))
   app.use(createCronJobRoutes({ cronJobStore: d.cronJobStore, cronScheduler: d.cronScheduler, nlCronParser: d.nlCronParser, workspaceStore: d.workspaceStore, agentStore: d.agentStore }))
   app.use(createNotificationRoutes({ notificationStore: d.notificationStore, broadcast: d.broadcast }))
-  app.use(createMemoryRoutes({ memoryStore: d.memoryStore, growthStore: d.growthStore }))
-  app.use(createEvolutionRoutes({ memoryStore: d.memoryStore, growthStore: d.growthStore }))
+  app.use(createMemoryRoutes({ memoryStore: d.memoryStore }))
+  app.use(createEvolutionRoutes({ memoryStore: d.memoryStore }))
   app.use(createTokenUsageRoutes({ tokenUsageStore: d.tokenUsageStore }))
   app.use(createPreferencesRoutes({ db: getDatabase() }))
   app.use(createAdminRoutes({ db: getDatabase() }))

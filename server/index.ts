@@ -29,7 +29,7 @@ import { SemanticLogBroadcaster } from './ws/SemanticLogBroadcaster'
 import {
   AgentStore, WorkspaceStore, ChatStore,
   ExecutionLogStore,
-  CronJobStore, NotificationStore, MemoryStore, GrowthStore,
+  CronJobStore, NotificationStore, MemoryStore,
   TokenUsageStore,
   EventStore,
 } from './stores'
@@ -51,6 +51,7 @@ import { TerminalViewManager } from './terminal/TerminalViewManager'
 
 import { WhiteboardManager } from './whiteboard/WhiteboardManager'
 import { MemoryGrowthCapture } from './services/agent-evolution/MemoryGrowthCapture'
+import { startPeriodicCheck as startEvolutionTrigger } from './services/agent-evolution/EvolutionTrigger'
 import { ExecutionPlanManager } from './mailbox/ExecutionPlanManager'
 import { WorkflowRegistry } from './orchestration/WorkflowRegistry'
 import { WorkflowScheduler } from './orchestration/WorkflowScheduler'
@@ -118,7 +119,6 @@ const executionLogStore = new ExecutionLogStore()
 const cronJobStore = new CronJobStore()
 const notificationStore = new NotificationStore()
 const memoryStore = new MemoryStore()
-const growthStore = new GrowthStore()
 const tokenUsageStore = new TokenUsageStore()
 const eventStore = new EventStore()
 initEventTracker(eventStore)
@@ -192,7 +192,7 @@ const broadcastToChat = (chatId: string, msg: Record<string, unknown>) => {
 }
 const expertHandler = new ExpertHandler(configCompiler, agentRegistry, agentStore, chatStore, workspaceStore, tokenUsageStore, executionLogStore, undefined, sessionRegistry, versionGate, broadcastToChat, whiteboardManager, broadcast)
 const workflowScheduler = new WorkflowScheduler({ workflowRegistry, expertHandler, chatStore, workspaceStore, sessionRegistry, broadcastToChat })
-const memoryGrowthCapture = new MemoryGrowthCapture(memoryStore, growthStore, whiteboardManager, agentRegistry)
+const memoryGrowthCapture = new MemoryGrowthCapture(memoryStore, whiteboardManager, agentRegistry)
 whiteboardManager.onEntryAppended((chatId, entry) => {
   memoryGrowthCapture.onWhiteboardEntry(chatId, entry)
 })
@@ -250,7 +250,7 @@ setupRoutes(app, {
   workspaceStore, chatStore, chatService,
   tokenUsageStore, executionLogStore,
   cronJobStore, cronScheduler, nlCronParser,
-  notificationStore, memoryStore, growthStore, eventStore,
+  notificationStore, memoryStore, eventStore,
   sessionRegistry, whiteboardManager, workflowRegistry, workflowScheduler,
   updateManager, bundleStorage, updateMonitor, lanAccess,
   broadcastToChat, broadcast,
@@ -328,6 +328,8 @@ export async function startServer(port?: number): Promise<number> {
         workflowRegistry.reconcileOnStartup(sessionRegistry).catch(err =>
           log.warn('Workflow reconciliation failed', { error: err instanceof Error ? err.message : String(err) }),
         )
+
+        startEvolutionTrigger()
 
         resolve(actualPort)
       })

@@ -41,17 +41,25 @@ USER_TEXTS=$(jq -r '
 
 [ -z "$USER_TEXTS" ] && exit 0
 
-TOTAL_TURNS=$(echo "$USER_TEXTS" | grep -c '.' 2>/dev/null || echo "0")
+# Count regex matches safely — grep -c returns exit 1 on zero matches,
+# so we use || true to prevent the fallback from appending a duplicate "0"
+count_matches() {
+  local count
+  count=$(echo "$1" | grep -cE "$2" 2>/dev/null) || true
+  printf "%d" "${count:-0}"
+}
+
+TOTAL_TURNS=$(count_matches "$USER_TEXTS" '.')
 [ "$TOTAL_TURNS" -eq 0 ] && exit 0
 
 # Signal classification via regex
-ESCALATIONS=$(echo "$USER_TEXTS" | grep -cE '为啥还|怎么还|一通.*后|恶心|反复修.*修不好' 2>/dev/null || echo "0")
-CORRECTIONS=$(echo "$USER_TEXTS" | grep -cE '不对|错了|重新|没有实现|还是没|没得到解决|你这也没' 2>/dev/null || echo "0")
-AESTHETIC_REJ=$(echo "$USER_TEXTS" | grep -cE '太丑|不好看|AI味|不合理|不太直观|浪费空间' 2>/dev/null || echo "0")
-ITERATIONS=$(echo "$USER_TEXTS" | grep -cE '改大|改小|改为|太大了|太小了|[0-9]+px' 2>/dev/null || echo "0")
-CONTINUES=$(echo "$USER_TEXTS" | grep -cE '继续|开干|实现$|落地$|直接' 2>/dev/null || echo "0")
-ACCEPTANCES=$(echo "$USER_TEXTS" | grep -cE '好的|可以|没问题|不错|perfect|great' 2>/dev/null || echo "0")
-COMMITS=$(echo "$USER_TEXTS" | grep -ciE '^commit|^提交' 2>/dev/null || echo "0")
+ESCALATIONS=$(count_matches "$USER_TEXTS" '为啥还|怎么还|一通.*后|恶心|反复修.*修不好')
+CORRECTIONS=$(count_matches "$USER_TEXTS" '不对|错了|重新|没有实现|还是没|没得到解决|你这也没')
+AESTHETIC_REJ=$(count_matches "$USER_TEXTS" '太丑|不好看|AI味|不合理|不太直观|浪费空间')
+ITERATIONS=$(count_matches "$USER_TEXTS" '改大|改小|改为|太大了|太小了|[0-9]+px')
+CONTINUES=$(count_matches "$USER_TEXTS" '继续|开干|实现$|落地$|直接')
+ACCEPTANCES=$(count_matches "$USER_TEXTS" '好的|可以|没问题|不错|perfect|great')
+COMMITS=$(count_matches "$USER_TEXTS" '(?i)^commit|^提交')
 
 # Compute MSS: Σ(signal_weight × count) / user_text_turns × 100
 # Role-adjusted: ui-designer gets -0.2 for iterations instead of -0.5

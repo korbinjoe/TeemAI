@@ -73,7 +73,6 @@ export function groupMessages(messages: Message[]): MessageGroup[] {
         let target: MessageGroup | null = null
         for (let i = groups.length - 1; i >= 0; i--) {
           if (groups[i].agentId === msg.agentId) { target = groups[i]; break }
-          if (groups[i].userMessage) break
         }
         if (target) {
           target.agentMessages.push(msg)

@@ -47,9 +47,15 @@ const mergeAgentBatch = (
 
   const existingInstanceKeys = new Set(filteredBase.map((m) => buildMessageInstanceKey(m)))
   const existingContentKeys = new Set<string>()
+  // Optimistic user messages (typed in the input box) carry a client id and no
+  // jsonlUuid; the parser later echoes the same turn with a stable id. Dedup
+  // user turns by content so we drop that echo while keeping genuinely new
+  // turns — e.g. a re-dispatch/handoff prompt that has no optimistic copy.
+  const existingUserContents = new Set<string>()
   for (const m of filteredBase) {
     const ck = buildContentKey(m)
     if (ck) existingContentKeys.add(ck)
+    if (m.role === 'user') existingUserContents.add(m.content)
   }
 
   const seenInBatch = new Set<string>()
@@ -57,6 +63,12 @@ const mergeAgentBatch = (
   const deduped = batch.filter((m) => {
     const ik = buildMessageInstanceKey(m)
     if (existingInstanceKeys.has(ik) || seenInBatch.has(ik)) return false
+    if (m.role === 'user') {
+      if (existingUserContents.has(m.content) || seenContentInBatch.has(`u:${m.content}`)) return false
+      seenContentInBatch.add(`u:${m.content}`)
+      seenInBatch.add(ik)
+      return true
+    }
     const ck = buildContentKey(m)
     if (ck && (existingContentKeys.has(ck) || seenContentInBatch.has(ck))) return false
     if (ck) seenContentInBatch.add(ck)
@@ -126,6 +138,50 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
   let deltaFlushTimer: ReturnType<typeof setTimeout> | null = null
   const DELTA_FLUSH_MS = 16
 
+  // Partial-text coalescing. Streaming chunks arrive faster than one frame;
+  // accumulating concatenated text per agent and flushing on the same 16ms
+  // cadence collapses N per-chunk setStates into one, while preserving the
+  // append-to-last-streaming-bubble shape the UI renders.
+  const partialTextBuffers = new Map<string, string>()
+  let partialFlushTimer: ReturnType<typeof setTimeout> | null = null
+
+  const flushPartialText = () => {
+    partialFlushTimer = null
+    if (partialTextBuffers.size === 0) return
+    const snapshot = new Map(partialTextBuffers)
+    partialTextBuffers.clear()
+
+    setAgentMessages((prev) => {
+      const next = { ...prev }
+      let changed = false
+      for (const [agentId, text] of snapshot.entries()) {
+        if (!text) continue
+        const list = next[agentId] ?? []
+        const last = list[list.length - 1]
+        if (last?.role === 'agent' && last.agentId === agentId && last.streaming) {
+          const nextList = list.slice()
+          nextList[nextList.length - 1] = { ...last, content: last.content + text }
+          next[agentId] = nextList
+        } else {
+          next[agentId] = [
+            ...list,
+            {
+              id: uid('stream'),
+              role: 'agent',
+              agentId,
+              content: text,
+              timestamp: Date.now(),
+              type: 'text',
+              streaming: true,
+            },
+          ]
+        }
+        changed = true
+      }
+      return changed ? next : prev
+    })
+  }
+
   const flushDeltaBuffer = () => {
     deltaFlushTimer = null
     if (deltaBuffers.size === 0) return
@@ -154,9 +210,18 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
       deltaFlushTimer = null
     }
     flushDeltaBuffer()
+    if (partialFlushTimer) {
+      clearTimeout(partialFlushTimer)
+      partialFlushTimer = null
+    }
+    flushPartialText()
   }
 
   const pushDelta = (agentId: string, messages: Message[], replacedStatsId?: string | null) => {
+    // A structured delta supersedes the streaming bubble (mergeAgentBatch drops
+    // streaming entries), so drop any buffered partial text for this agent to
+    // avoid re-adding a stale streaming bubble after the delta lands.
+    partialTextBuffers.delete(agentId)
     let bucket = deltaBuffers.get(agentId)
     if (!bucket) {
       bucket = { messages: [], replacedIds: new Set() }
@@ -332,9 +397,12 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
     if (!payload.chatId || !isCurrentChatEvent(payload)) return
 
     if (payload.type === 'delta') {
-      const agentOnly = payload.messages.filter((m) => m.role !== 'user')
-      if (agentOnly.length === 0) return
-      const tagged = agentOnly.map((m) => ({ ...m, agentId: payload.agentId }))
+      // Keep user messages: a re-dispatch/handoff injects a new user turn on the
+      // server with no optimistic client copy, so dropping it here would erase
+      // the turn boundary and merge the new turn into the previous group.
+      // mergeAgentBatch dedups the optimistic echo of typed messages by content.
+      const tagged = payload.messages.map((m) => ({ ...m, agentId: payload.agentId }))
+      if (tagged.length === 0) return
       pushDelta(payload.agentId, tagged, payload.replacedStatsId ?? null)
       return
     }
@@ -347,6 +415,11 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
         clearTimeout(deltaFlushTimer)
         deltaFlushTimer = null
       }
+    }
+    // ...and drop pending partial text — the replay supersedes the stream.
+    if (partialTextBuffers.delete(payload.agentId) && partialTextBuffers.size === 0 && partialFlushTimer) {
+      clearTimeout(partialFlushTimer)
+      partialFlushTimer = null
     }
 
     const tagged = payload.messages.map((m) => ({ ...m, agentId: payload.agentId }))
@@ -367,30 +440,13 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
     // race with the structured update; let the delta win.
     if (deltaBuffers.get(payload.agentId)?.messages.length) return
 
-    setAgentMessages((prev) => {
-      const list = prev[payload.agentId] ?? []
-      const last = list[list.length - 1]
-      if (last?.role === 'agent' && last.agentId === payload.agentId && last.streaming) {
-        const nextList = list.slice()
-        nextList[nextList.length - 1] = { ...last, content: last.content + payload.text }
-        return { ...prev, [payload.agentId]: nextList }
-      }
-      return {
-        ...prev,
-        [payload.agentId]: [
-          ...list,
-          {
-            id: uid('stream'),
-            role: 'agent',
-            agentId: payload.agentId,
-            content: payload.text,
-            timestamp: Date.now(),
-            type: 'text',
-            streaming: true,
-          },
-        ],
-      }
-    })
+    // Coalesce chunks within a frame; flushPartialText applies the same
+    // append-to-last-streaming-bubble shape in one setState.
+    const existing = partialTextBuffers.get(payload.agentId) ?? ''
+    partialTextBuffers.set(payload.agentId, existing + payload.text)
+    if (!partialFlushTimer) {
+      partialFlushTimer = setTimeout(flushPartialText, DELTA_FLUSH_MS)
+    }
   }
 
   const handleExpertSlashCommands = (payload: { agentId: string; chatId?: string; commands: string[] }) => {

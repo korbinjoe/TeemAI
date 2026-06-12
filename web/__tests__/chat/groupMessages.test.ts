@@ -93,6 +93,20 @@ describe('groupMessages', () => {
     expect(groupB.agentMessages.map(m => m.id)).toEqual(['a2'])
   })
 
+  it('same agent re-dispatched twice → two separate turn groups, no merge', () => {
+    const groups = groupMessages([
+      msg({ id: 'u1', role: 'user', agentId: 'A', timestamp: 1, content: 'first handoff' }),
+      msg({ id: 'a1', role: 'agent', agentId: 'A', timestamp: 2, content: 'reply 1' }),
+      msg({ id: 'u2', role: 'user', agentId: 'A', timestamp: 3, content: 'second handoff' }),
+      msg({ id: 'a2', role: 'agent', agentId: 'A', timestamp: 4, content: 'reply 2' }),
+    ])
+    expect(groups).toHaveLength(2)
+    expect(groups[0].userMessage?.id).toBe('u1')
+    expect(groups[0].agentMessages.map(m => m.id)).toEqual(['a1'])
+    expect(groups[1].userMessage?.id).toBe('u2')
+    expect(groups[1].agentMessages.map(m => m.id)).toEqual(['a2'])
+  })
+
   it('agent message with no matching prior group → opens orphan group instead of being dropped', () => {
     const groups = groupMessages([
       msg({ id: 'u1', role: 'user', agentId: 'A' }),

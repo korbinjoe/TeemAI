@@ -301,6 +301,59 @@ describe('ExpertEventHandlers', () => {
 
       expect((ctx.setAgentMessages as unknown as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled()
     })
+
+    it('keeps a re-dispatch user turn in delta so it forms a new boundary', () => {
+      const ctx = createMockCtx()
+      const { onExpertStructuredMessage, flushDeltaBuffer } = createExpertEventHandlers(ctx)
+
+      // First handoff turn: user prompt + agent reply
+      onExpertStructuredMessage({
+        agentId: 'eng-1', sessionId: 's1', chatId: 'chat-1', type: 'delta',
+        messages: [
+          { id: 'u1', role: 'user', content: 'first handoff', timestamp: 100, jsonlUuid: 'j-u1' },
+          { id: 'a1', role: 'agent', content: 'reply 1', timestamp: 110, agentId: 'eng-1' },
+        ],
+      })
+      flushDeltaBuffer()
+
+      // Second handoff to the SAME agent: server-injected user turn (no optimistic copy)
+      onExpertStructuredMessage({
+        agentId: 'eng-1', sessionId: 's1', chatId: 'chat-1', type: 'delta',
+        messages: [
+          { id: 'u2', role: 'user', content: 'second handoff', timestamp: 200, jsonlUuid: 'j-u2' },
+          { id: 'a2', role: 'agent', content: 'reply 2', timestamp: 210, agentId: 'eng-1' },
+        ],
+      })
+      flushDeltaBuffer()
+
+      const list = ctx._agentMessages['eng-1']
+      const userTurns = list.filter((m) => m.role === 'user')
+      expect(userTurns.map((m) => m.content)).toEqual(['first handoff', 'second handoff'])
+    })
+
+    it('dedups the parsed echo of an optimistic typed user message by content', () => {
+      const ctx = createMockCtx()
+      const { onExpertStructuredMessage, flushDeltaBuffer } = createExpertEventHandlers(ctx)
+
+      // Optimistic user message added client-side when the user types
+      ctx.setAgentMessages(() => ({
+        'eng-1': [{ id: 'usr-1', role: 'user', content: 'hello', timestamp: 100, type: 'text' }],
+      }))
+
+      // Parser later echoes the same turn (stable id + jsonlUuid) via delta
+      onExpertStructuredMessage({
+        agentId: 'eng-1', sessionId: 's1', chatId: 'chat-1', type: 'delta',
+        messages: [
+          { id: 'msg-3-0', role: 'user', content: 'hello', timestamp: 100, jsonlUuid: 'j-1' },
+          { id: 'a1', role: 'agent', content: 'reply', timestamp: 110, agentId: 'eng-1' },
+        ],
+      })
+      flushDeltaBuffer()
+
+      const userTurns = ctx._agentMessages['eng-1'].filter((m) => m.role === 'user')
+      expect(userTurns).toHaveLength(1)
+      expect(userTurns[0].id).toBe('usr-1')
+    })
   })
 
   // ── handleExpertPartialText ──

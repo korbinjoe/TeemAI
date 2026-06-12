@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
 import { getWebSocketClient, sendTelemetry } from '../services/WebSocketClient'
-import type { Message, AgentActivity, WorktreeSession } from '../types/chat'
+import type { Message, AgentActivity, WorktreeSession, ChatActivityPayload } from '../types/chat'
+import { ACTIVE_PHASES } from '@/lib/memberStatus'
 import type { AgentSummary } from '../types/agentConfig'
 import { API_BASE, authFetch } from '@/config/api'
 import { DEFAULT_AGENT, DEFAULT_MODEL } from '@/lib/models'
@@ -72,6 +73,12 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
   const [agentSlashCommands, setAgentSlashCommands] = useState<Record<string, string[]>>({})
   const [chatAvailableCommands, setChatAvailableCommands] = useState<string[]>([])
   const [chatModel, setChatModel] = useState<string | null>(null)
+  // Authoritative chat-level run state, kept live via chat:status-changed /
+  // chat:activity (same signal the sidebar uses). The conversation's stop
+  // button must reconcile against this: per-agent expert:activity can get stuck
+  // at a working phase when a turn-end event is missed, but the chat-level
+  // signal is broadcast workspace-wide and reliably reaches this view.
+  const [chatStatus, setChatStatus] = useState<string | null>(null)
 
   const [agentPlans, setAgentPlans] = useState<Record<string, { entries: Array<{ content: string; status: 'pending' | 'in_progress' | 'completed'; priority?: 'low' | 'medium' | 'high' }> }>>({})
   const [agentModes, setAgentModes] = useState<Record<string, string>>({})
@@ -247,6 +254,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
 
         if (chat) {
           if (chat.title) setChatTitle(chat.title)
+          if (chat.status) setChatStatus(chat.status)
           setChatModel(chat.model || DEFAULT_MODEL)
           setAllWorktreeSessions(chat.worktreeSessions ?? [])
           if (chat.totalTokens || chat.totalCost != null) {
@@ -300,6 +308,21 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       if (!isCurrentChatEvent(payload)) return
       if (Array.isArray(payload.commands)) setChatAvailableCommands(payload.commands)
     }
+    // Track chat-level run state. Not gated on isActiveRef so background-cached
+    // ChatInstance tabs stay in sync; filtered to this chat by chatId.
+    const onChatStatusChanged = (p: unknown) => {
+      const payload = p as { chatId: string; status: string }
+      if (!isCurrentChatEvent(payload)) return
+      if (payload.status) setChatStatus(payload.status)
+    }
+    const onChatActivity = (p: unknown) => {
+      const payload = p as ChatActivityPayload
+      if (!isCurrentChatEvent(payload)) return
+      const phase = payload.phase
+      if (phase === 'completed' || phase === 'error') setChatStatus('stopped')
+      else if (phase === 'waiting_input' || phase === 'waiting_confirmation') setChatStatus('idle')
+      else if (ACTIVE_PHASES.has(phase)) setChatStatus('running')
+    }
 
     wsClient.on('expert:structured-message', onStructuredMessage)
     wsClient.on('error', onError)
@@ -320,6 +343,8 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     wsClient.on('chat:permission-resolved', onChatPermissionResolved)
     wsClient.on('chat:title-updated', onChatTitleUpdated)
     wsClient.on('chat:available-commands', onChatAvailableCommands)
+    wsClient.on('chat:status-changed', onChatStatusChanged)
+    wsClient.on('chat:activity', onChatActivity)
 
     const handleReconnected = () => {
       setConnected(true)
@@ -383,6 +408,8 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       wsClient.off('chat:permission-resolved', onChatPermissionResolved)
       wsClient.off('chat:title-updated', onChatTitleUpdated)
       wsClient.off('chat:available-commands', onChatAvailableCommands)
+      wsClient.off('chat:status-changed', onChatStatusChanged)
+      wsClient.off('chat:activity', onChatActivity)
       wsClient.off('reconnected', handleReconnected)
       wsClient.off('disconnected', handleDisconnected)
       wsClient.off('reconnect_failed', handleReconnectFailed)
@@ -453,6 +480,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     agentSlashCommands,
     chatAvailableCommands,
     chatModel, setChatModel,
+    chatStatus,
     agentPlans,
     agentModes,
     agentAvailableCommands,

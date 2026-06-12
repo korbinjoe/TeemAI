@@ -67,6 +67,10 @@ interface Props {
   singleAgentMode?: boolean
   lockedAgentName?: string
   isActive?: boolean
+  /** Authoritative chat-level run state. When the chat is known to be not
+   *  running (idle/stopped/merged), the stale per-agent merged activity must
+   *  not keep the stop button alive — the send button is shown instead. */
+  chatNotRunning?: boolean
 }
 
 const parseMentions = (text: string, agents: AgentSummary[]): MentionInfo[] => {
@@ -102,9 +106,10 @@ const InputArea = forwardRef<InputAreaHandle, Props>(({
   singleAgentMode = false,
   lockedAgentName,
   isActive = true,
+  chatNotRunning = false,
 }, ref) => {
   const { t } = useTranslation('chat')
-  const isWorking = !!activity && WORKING_PHASES.has(activity.phase)
+  const isWorking = !chatNotRunning && !!activity && WORKING_PHASES.has(activity.phase)
   const isActiveRef = useRef(isActive)
   isActiveRef.current = isActive
   const [focused, setFocused] = useState(false)

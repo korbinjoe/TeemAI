@@ -32,6 +32,42 @@ export interface AgentMessagesAPI {
 
 export const SYSTEM_MESSAGE_AGENT = SYSTEM_AGENT_KEY
 
+/**
+ * Merge k already-sorted (ascending timestamp) lists into one sorted list.
+ * Each per-agent slot is kept in timestamp order by the delta/replay merge, so
+ * a linear k-way merge (O(n)) reproduces the same result a full sort would —
+ * with a stable tie-break (lower slot index first) matching the previous
+ * `a.timestamp - b.timestamp` sort's behavior for equal timestamps.
+ */
+const kWayMergeByTimestamp = (slots: Message[][]): Message[] => {
+  const nonEmpty = slots.filter((s) => s.length > 0)
+  if (nonEmpty.length === 0) return []
+  if (nonEmpty.length === 1) return nonEmpty[0]
+
+  let total = 0
+  for (const s of nonEmpty) total += s.length
+  const out: Message[] = new Array(total)
+  const cursors = new Array(nonEmpty.length).fill(0)
+  let written = 0
+
+  while (written < total) {
+    let bestSlot = -1
+    let bestTs = 0
+    for (let i = 0; i < nonEmpty.length; i++) {
+      const c = cursors[i]
+      if (c >= nonEmpty[i].length) continue
+      const ts = nonEmpty[i][c].timestamp
+      // Strictly-less keeps the earliest slot on ties → stable order.
+      if (bestSlot === -1 || ts < bestTs) {
+        bestSlot = i
+        bestTs = ts
+      }
+    }
+    out[written++] = nonEmpty[bestSlot][cursors[bestSlot]++]
+  }
+  return out
+}
+
 export const useAgentMessages = (): AgentMessagesAPI => {
   const [agentMessages, setAgentMessages] = useState<AgentMessagesMap>({})
   const agentMessagesRef = useRef(agentMessages)
@@ -59,10 +95,17 @@ export const useAgentMessages = (): AgentMessagesAPI => {
   }, [])
 
   const mergedMessages = useMemo(() => {
-    const all: Message[] = []
-    for (const list of Object.values(agentMessages)) all.push(...list)
-    all.sort((a, b) => a.timestamp - b.timestamp)
-    return all
+    const slots = Object.values(agentMessages)
+    if (slots.length <= 1) return slots[0] ?? []
+    const merged = kWayMergeByTimestamp(slots)
+    if (import.meta.env.DEV) {
+      const reference = ([] as Message[]).concat(...slots).sort((a, b) => a.timestamp - b.timestamp)
+      if (reference.length !== merged.length || reference.some((m, i) => m.id !== merged[i].id)) {
+        // TODO(perf-rollout): remove after incremental-merge soak passes.
+        console.warn('[useAgentMessages] incremental merge diverged from full sort')
+      }
+    }
+    return merged
   }, [agentMessages])
 
   return {

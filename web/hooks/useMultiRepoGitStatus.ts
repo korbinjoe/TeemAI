@@ -22,6 +22,12 @@ export interface UseMultiRepoGitStatusOptions {
   agentActivity: AgentActivity | null
   repositories?: Array<{ path: string; name?: string }>
   chatId?: string
+  /**
+   * When false, the hook suspends all git/worktree subscriptions and fetches
+   * (background, non-active mission instances do no live git work). On the
+   * transition back to true it re-subscribes and fires one immediate refresh.
+   */
+  enabled?: boolean
 }
 
 export interface MultiRepoGitStatusAggregate {
@@ -66,6 +72,7 @@ const useMultiRepoGitStatus = ({
   worktreeSessions,
   repositories = [],
   chatId,
+  enabled = true,
 }: UseMultiRepoGitStatusOptions): MultiRepoGitStatus => {
   const [statusMap, setStatusMap] = useState<Map<string, GitStatusData>>(new Map())
   const lastSignatures = useRef<Map<string, string>>(new Map())
@@ -150,6 +157,12 @@ const useMultiRepoGitStatus = ({
       return
     }
 
+    // Backgrounded instance: the prior run's cleanup already unsubscribed every
+    // path and cleared subscribedPaths, so we simply do no live git work here.
+    // statusMap is intentionally retained so the change-count badge keeps its
+    // last-known value until this instance becomes active again.
+    if (!enabled) return
+
     const wsClient = getWebSocketClient()
     const cid = chatId
     const currentSet = new Set(targetPaths)
@@ -198,7 +211,7 @@ const useMultiRepoGitStatus = ({
       }
       subscribedPaths.current.clear()
     }
-  }, [chatId, targetPaths, fetchInitialSnapshots, applySnapshot])
+  }, [chatId, enabled, targetPaths, fetchInitialSnapshots, applySnapshot])
 
   const aggregate = useMemo<MultiRepoGitStatusAggregate>(() => {
     let totalChangedFiles = 0

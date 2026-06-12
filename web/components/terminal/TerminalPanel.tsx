@@ -422,9 +422,10 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
           >
             {/* Toolbar row suppressed in terminal-view mode: ChatHeader already
                 hosts the view-mode toggle, and Mission terminal mode is a clean
-                Claude TUI surface — losing the tab strip / layout toggle /
-                Changes tab is intentional. Keep the row in non-terminal-view
-                hosts (Agent view / Quad tiles) so they retain those controls. */}
+                Claude TUI surface — losing the layout toggle / Changes tab /
+                close controls is intentional. Multi-agent switching is restored
+                separately via the minimal switcher bar below. Keep the full row
+                in non-terminal-view hosts (Agent view / Quad tiles). */}
             <div className={cn(
               'flex items-center h-9 bg-bg-secondary border-b border-border shrink-0',
               inTerminalView && 'hidden',
@@ -572,6 +573,43 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
                 )}
               </div>
             </div>
+
+            {/* Minimal multi-agent switcher for terminal-view mode. The full
+                toolbar is hidden here, but with layoutMode='tabs' the inactive
+                agents are mounted yet invisible — without this bar the user has
+                no way to switch between them. Single-agent stays fully clean. */}
+            {inTerminalView && visibleExperts.length > 1 && (
+              <div className="flex items-center gap-1 h-9 px-2 bg-bg-secondary border-b border-border shrink-0 overflow-x-auto">
+                {visibleExperts.map((expert) => {
+                  const isActive = activeKey === expert.agentId
+                  const isRunning = expert.status === 'running'
+                  const isSuccess = expert.exitCode === 0
+                  return (
+                    <button
+                      key={expert.agentId}
+                      onClick={() => setActiveKey(expert.agentId)}
+                      aria-label={expert.agentName}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs whitespace-nowrap transition-colors',
+                        isActive
+                          ? 'bg-bg-hover text-text-primary'
+                          : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover/50',
+                      )}
+                    >
+                      <AgentAvatar name={expert.agentName} agentId={expert.agentId} size="xs" />
+                      <span className={cn(isRunning ? 'opacity-100' : 'opacity-70')}>{expert.agentName}</span>
+                      {isRunning ? (
+                        <span className="inline-block size-1.5 rounded-full bg-accent-brand animate-[pulse_1.5s_ease-in-out_infinite]" />
+                      ) : isSuccess ? (
+                        <CheckCircle size={12} className="text-accent-green" />
+                      ) : (
+                        <XCircle size={12} className="text-accent-red" />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </Tabs>
 
           <div

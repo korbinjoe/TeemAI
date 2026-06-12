@@ -183,7 +183,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     allWorktreeSessions, wsRepositories,
     agentSlashCommands,
     chatAvailableCommands,
-    chatModel, setChatModel,
+    chatModel, setChatModel, chatStatus,
     agentPlans, agentModes, agentAvailableCommands, agentSessionInfo,
     permissionRequests, dismissPermissionRequest,
     agentMessages, mergedMessages,
@@ -264,6 +264,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     agentActivity: activeMergedActivity,
     repositories: wsRepositories,
     chatId,
+    enabled: isActive,
   })
   const primaryGitStatus = (wsRepositories.length > 0
     ? multiGitStatus.get(wsRepositories[0].path)
@@ -326,21 +327,23 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
 
   useEffect(() => {
     if (groups.length === 0) return
-    const lastGroupIds = new Map<string, string>()
+    // Activity only ever changes for the currently-running group(s): the last
+    // group per agent, plus the last group with no agentId. Older groups are
+    // closed out by the prev-group effect above, so we never re-scan them.
+    const lastGroupByAgent = new Map<string, (typeof groups)[number]>()
+    let lastNoAgentGroup: (typeof groups)[number] | null = null
     for (const g of groups) {
-      if (g.agentId) lastGroupIds.set(g.agentId, g.id)
+      if (g.agentId) lastGroupByAgent.set(g.agentId, g)
+      else lastNoAgentGroup = g
     }
+    const targets = [...lastGroupByAgent.values()]
+    if (lastNoAgentGroup) targets.push(lastNoAgentGroup)
     setGroupActivities((prev) => {
       const next = { ...prev }
       let changed = false
-      for (const group of groups) {
+      for (const group of targets) {
         const activity = group.agentId ? expertActivities[group.agentId] : activeMergedActivity
         if (!activity) continue
-        const isLastForAgent = group.agentId ? lastGroupIds.get(group.agentId) === group.id : false
-        if (!isLastForAgent) {
-          const existing = next[group.id]
-          if (existing && ['completed', 'waiting_input', 'error'].includes(existing.phase)) continue
-        }
         const existing = next[group.id]
         if (
           existing &&
@@ -591,6 +594,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
               <InputArea ref={inputAreaRef} onSend={handleSend}
                 onInterrupt={handleInterrupt}
                 disabled={!canSend} activity={activeMergedActivity} slashCommands={currentSlashCommands}
+                chatNotRunning={chatStatus != null && chatStatus !== 'running'}
                 model={chatModel} onModelChange={handleModelChange} availableModels={availableModels}
                 agents={inputAgents} expertActivities={expertActivities} targetAgentId={targetAgentId}
                 onTargetChange={(agent) => setTargetAgentId(agent.id ?? agent.name)}

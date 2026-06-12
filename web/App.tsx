@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { ElectronNavigator } from './components/ElectronNavigator'
 import WorkspaceRedirect from './components/workspace/WorkspaceRedirect'
+import { WorkspaceChatsProvider } from './hooks/useWorkspaceChats'
 
 const WorkspaceLayout = lazy(() => import('./layouts/WorkspaceLayout'))
 const ResourceLayout = lazy(() => import('./layouts/ResourceLayout'))
@@ -43,6 +44,7 @@ const RouteFallback = () => (
 const App = () => (
   <Suspense fallback={<RouteFallback />}>
     <ElectronNavigator />
+    <WorkspaceChatsProvider>
     <Routes>
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       {import.meta.env.DEV && (
@@ -95,6 +97,7 @@ const App = () => (
       {/* Legacy per-task URL → preserve id under the new mission URL. */}
       <Route path="/workspace/:workspaceId/task/:taskId" element={<LegacyMissionRedirect />} />
     </Routes>
+    </WorkspaceChatsProvider>
   </Suspense>
 )
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, FileText } from 'lucide-react'
+import { Copy, FileText, FileCode } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DevSnapshot, DevSessionSnapshot, DevJsonlMessage, DevRawJsonlContent } from '@/hooks/useDevPanel'
 import { DevJsonlViewer } from '../DevJsonlViewer'
@@ -50,12 +50,56 @@ const JsonlPathRow = ({ filePath, fileExists, fileSizeBytes }: {
   )
 }
 
-const AgentCard = ({ session, messages }: {
+const RawJsonlViewer = ({ raw }: { raw: DevRawJsonlContent | undefined }) => {
+  const [copied, setCopied] = useState(false)
+
+  if (!raw) {
+    return <div className="mt-1 text-[10px] text-zinc-600 italic py-2 text-center border border-zinc-800 rounded">Loading raw file…</div>
+  }
+  if (!raw.fileExists) {
+    return <div className="mt-1 text-[10px] text-red-400/70 italic py-2 text-center border border-zinc-800 rounded">File not found</div>
+  }
+
+  const lineCount = raw.content === '' ? 0 : raw.content.split('\n').filter((l) => l !== '').length
+  const truncated = raw.content.length < raw.sizeBytes
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(raw.content).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  return (
+    <div className="mt-1 border border-zinc-700 rounded bg-zinc-900/50">
+      <div className="flex items-center justify-between px-2 py-1 border-b border-zinc-800">
+        <span className="text-[10px] text-zinc-400">{lineCount} lines · {fmtSize(raw.sizeBytes)}{truncated && ' (tail)'}</span>
+        <button onClick={handleCopy} className="text-zinc-600 hover:text-zinc-300 shrink-0 p-0.5" title="Copy raw content">
+          {copied ? <span className="text-green-400 text-[9px]">copied</span> : <Copy size={10} />}
+        </button>
+      </div>
+      <pre className="text-[9px] font-mono text-zinc-400 p-2 overflow-auto max-h-[400px] whitespace-pre-wrap break-all">
+        {raw.content || '(empty)'}
+      </pre>
+    </div>
+  )
+}
+
+const AgentCard = ({ session, messages, raw, onRequestRaw }: {
   session: DevSessionSnapshot
   messages: DevJsonlMessage[]
+  raw: DevRawJsonlContent | undefined
+  onRequestRaw: (sessionId: string) => void
 }) => {
   const [expanded, setExpanded] = useState(false)
   const [showJsonl, setShowJsonl] = useState(false)
+  const [showRaw, setShowRaw] = useState(false)
+
+  const handleToggleRaw = () => {
+    const next = !showRaw
+    setShowRaw(next)
+    if (next && !raw) onRequestRaw(session.sessionId)
+  }
   const totalCost = Object.values(session.activity.modelUsage).reduce((sum, u) => sum + (u.cost ?? 0), 0)
   const totalInput = Object.values(session.activity.modelUsage).reduce((sum, u) => sum + u.input, 0)
   const totalOutput = Object.values(session.activity.modelUsage).reduce((sum, u) => sum + u.output, 0)
@@ -191,13 +235,28 @@ const AgentCard = ({ session, messages }: {
               {showJsonl && <DevJsonlViewer messages={messages} />}
             </div>
           )}
+
+          {/* Raw JSONL File Viewer */}
+          {session.jsonl?.fileExists && (
+            <div>
+              <button
+                onClick={handleToggleRaw}
+                className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider hover:text-zinc-300 flex items-center gap-1"
+              >
+                <FileCode size={10} />
+                Raw File ({fmtSize(session.jsonl.fileSizeBytes)})
+                <span className="text-zinc-600">{showRaw ? '▼' : '▶'}</span>
+              </button>
+              {showRaw && <RawJsonlViewer raw={raw} />}
+            </div>
+          )}
         </div>
       )}
     </div>
   )
 }
 
-export const DevAgentsTab = ({ snapshot, jsonlStreams }: DevAgentsTabProps) => {
+export const DevAgentsTab = ({ snapshot, jsonlStreams, rawJsonlCache, onRequestRaw }: DevAgentsTabProps) => {
   if (snapshot.sessions.length === 0) {
     return (
       <div className="flex items-center justify-center h-32 text-xs text-zinc-600">
@@ -215,6 +274,8 @@ export const DevAgentsTab = ({ snapshot, jsonlStreams }: DevAgentsTabProps) => {
               key={s.sessionId}
               session={s}
               messages={jsonlStreams[s.sessionId] ?? []}
+              raw={rawJsonlCache[s.sessionId]}
+              onRequestRaw={onRequestRaw}
             />
           ))}
         </div>

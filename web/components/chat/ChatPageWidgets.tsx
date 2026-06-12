@@ -3,10 +3,25 @@
  * BreadcrumbLink / TopBtn / EmptyState / ThinkingIndicator
  */
 
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Clock } from 'lucide-react'
 import AgentAvatar from '@/components/ui/agent-avatar'
 import TeemAILogo from '@/components/icons/TeemAILogo'
 import type { AgentActivity } from '@/types/chat'
+
+/** Seconds-granular elapsed label, e.g. 45s, 2m 10s — used for the live
+ *  "time since last message" indicator so a stalled task is visible. */
+const formatGap = (ms: number): string => {
+  const s = Math.floor(ms / 1000)
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  const rs = s % 60
+  return rs > 0 ? `${m}m ${rs}s` : `${m}m`
+}
+
+/** Gap (ms) after which a running task is flagged as possibly stuck. */
+const STALE_GAP_MS = 60_000
 
 export const noDrag = { WebkitAppRegion: 'no-drag' } as React.CSSProperties
 
@@ -104,9 +119,21 @@ const getActivityLabel = (activity: AgentActivity | null | undefined, t: (key: s
   return PHASE_LABEL_KEYS[activity.phase] ? t(PHASE_LABEL_KEYS[activity.phase]) : null
 }
 
-export const ThinkingIndicator = ({ agentName, agentId, activity }: { agentName?: string; agentId?: string; activity?: AgentActivity | null }) => {
+export const ThinkingIndicator = ({ agentName, agentId, activity, lastMessageTs }: { agentName?: string; agentId?: string; activity?: AgentActivity | null; lastMessageTs?: number }) => {
   const { t } = useTranslation('chat')
   const label = getActivityLabel(activity, t)
+
+  // Tick once per second so the "time since last message" stays live. This
+  // indicator only mounts while a task is running, so the interval is bounded.
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!lastMessageTs) return
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [lastMessageTs])
+
+  const gap = lastMessageTs ? now - lastMessageTs : 0
+  const isStale = gap >= STALE_GAP_MS
 
   return (
     <div style={{ padding: '8px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -136,6 +163,25 @@ export const ThinkingIndicator = ({ agentName, agentId, activity }: { agentName?
               animation: `pulse-dot 1.4s ease-in-out ${i * 0.16}s infinite`,
             }} />
           ))}
+        </span>
+      )}
+      {gap > 0 && (
+        <span
+          title={t('message.sinceLastActivity')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 3,
+            marginLeft: 'auto',
+            fontSize: 11,
+            fontFamily: 'monospace',
+            color: isStale ? 'rgb(var(--accent-yellow, 234 179 8))' : 'rgb(var(--text-muted))',
+            fontWeight: isStale ? 600 : 400,
+            flexShrink: 0,
+          }}
+        >
+          <Clock size={10} style={{ opacity: 0.8, flexShrink: 0 }} />
+          {formatGap(gap)}
         </span>
       )}
     </div>

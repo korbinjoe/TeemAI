@@ -116,7 +116,8 @@
     "initializing": "Starting",
     "clickToExpand": "Click to expand",
     "clickToPreview": "Click to preview",
-    "local": "Local"
+    "local": "Local",
+    "sinceLastActivity": "Time since the last message — a long gap may mean the task is stuck"
   },
   "gitStatus": {
     "files": "files",

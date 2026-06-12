@@ -49,6 +49,14 @@ const ChatBody = ({
   const { t } = useTranslation('chat')
   const totalGroups = groups.length
 
+  // Timestamp of the most recent message — drives the running indicator's
+  // "time since last message" so users can tell if a task has stalled.
+  const lastMessageTs = useMemo(() => {
+    let max = 0
+    for (const m of messages) if (m.timestamp > max) max = m.timestamp
+    return max
+  }, [messages])
+
   const renderItem = useCallback((index: number, group: MessageGroup) => {
     const isLast = index === totalGroups - 1
     const displayActivity = isLast ? currentMergedActivity ?? groupActivities[group.id] : groupActivities[group.id]
@@ -77,12 +85,12 @@ const ChatBody = ({
 
   const Footer = useCallback(() => (
     <div style={{ paddingBottom: 8 }}>
-      {thinking && <ThinkingIndicator agentName={currentAgentName} activity={currentMergedActivity} />}
+      {thinking && <ThinkingIndicator agentName={currentAgentName} activity={currentMergedActivity} lastMessageTs={lastMessageTs} />}
       {currentMergedActivity?.phase === 'completed' && !currentMergedActivity.exitReason && Object.keys(expertActivities).length > 0 && (
         <CompletionCeremony expertActivities={expertActivities} agentNames={agentNames} agentPersonalities={agentPersonalities} />
       )}
     </div>
-  ), [thinking, currentAgentName, currentMergedActivity, expertActivities, agentNames, agentPersonalities])
+  ), [thinking, currentAgentName, currentMergedActivity, expertActivities, agentNames, agentPersonalities, lastMessageTs])
 
   const components = useMemo(() => ({ Header, Footer }), [Header, Footer])
 

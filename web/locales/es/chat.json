@@ -115,7 +115,8 @@
     "waitingConfirmation": "Esperando confirmación",
     "initializing": "Iniciando",
     "clickToExpand": "Clic para expandir",
-    "local": "Local"
+    "local": "Local",
+    "sinceLastActivity": "Tiempo desde el último mensaje — un intervalo largo puede indicar que la tarea está bloqueada"
   },
   "gitStatus": {
     "files": "archivos",

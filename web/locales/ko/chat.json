@@ -115,7 +115,8 @@
     "waitingConfirmation": "확인 대기 중",
     "initializing": "시작 중",
     "clickToExpand": "클릭하여 펼치기",
-    "local": "로컬"
+    "local": "로컬",
+    "sinceLastActivity": "마지막 메시지 이후 경과 시간 — 간격이 길면 작업이 멈췄을 수 있습니다"
   },
   "gitStatus": {
     "files": "파일",

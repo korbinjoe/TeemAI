@@ -115,7 +115,8 @@
     "waitingConfirmation": "確認待ち",
     "initializing": "起動中",
     "clickToExpand": "クリックして展開",
-    "local": "ローカル"
+    "local": "ローカル",
+    "sinceLastActivity": "最後のメッセージからの経過時間 — 間隔が長い場合はタスクが停止している可能性があります"
   },
   "gitStatus": {
     "files": "ファイル",

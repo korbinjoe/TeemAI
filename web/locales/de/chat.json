@@ -115,7 +115,8 @@
     "waitingConfirmation": "Warte auf Bestätigung",
     "initializing": "Wird gestartet",
     "clickToExpand": "Klicken zum Erweitern",
-    "local": "Lokal"
+    "local": "Lokal",
+    "sinceLastActivity": "Zeit seit der letzten Nachricht — eine lange Pause kann bedeuten, dass die Aufgabe hängt"
   },
   "gitStatus": {
     "files": "Dateien",

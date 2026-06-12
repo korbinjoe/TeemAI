@@ -500,4 +500,162 @@ describe('WorkflowEngine', () => {
       engine.destroy()
     })
   })
+
+  // ── New methods: skipTask, completeWithResult, baseline/worktree ──
+
+  describe('skipTask', () => {
+    it('sets status to skipped with reason', async () => {
+      const dag = makeDag({
+        tasks: [
+          { taskId: 't1', agentId: 'eng', description: 'T1', dependsOn: [], onFailure: 'stop' },
+          { taskId: 't2', agentId: 'eng', description: 'T2', dependsOn: ['t1'], onFailure: 'stop' },
+        ],
+      })
+
+      const engine = new WorkflowEngine(dag, tmpDir)
+      await engine.initialize()
+
+      engine.skipTask('t1', 'merged into fallback')
+
+      const ts = engine.getState().tasks['t1']
+      expect(ts.status).toBe('skipped')
+      expect(ts.failureReason).toBe('merged into fallback')
+      expect(ts.completedAt).toBeDefined()
+
+      engine.destroy()
+    })
+
+    it('emits task-skipped event', async () => {
+      const dag = makeDag({
+        tasks: [
+          { taskId: 't1', agentId: 'eng', description: 'T1', dependsOn: [], onFailure: 'stop' },
+        ],
+      })
+
+      const engine = new WorkflowEngine(dag, tmpDir)
+      await engine.initialize()
+
+      const skipped = vi.fn()
+      engine.on('task-skipped', skipped)
+
+      engine.skipTask('t1', 'test reason')
+      expect(skipped).toHaveBeenCalledWith('t1', 'test reason')
+
+      engine.destroy()
+    })
+  })
+
+  describe('completeWithResult', () => {
+    it('sets workflow to completed with specified result status', async () => {
+      const dag = makeDag({
+        tasks: [
+          { taskId: 't1', agentId: 'eng', description: 'T1', dependsOn: [], onFailure: 'stop' },
+        ],
+      })
+
+      const engine = new WorkflowEngine(dag, tmpDir)
+      await engine.initialize()
+
+      engine.skipTask('t1', 'fallback')
+
+      const completed = vi.fn()
+      engine.on('workflow-completed', completed)
+
+      engine.completeWithResult('partial', 'Fallback triggered')
+
+      expect(engine.status).toBe('completed')
+      expect(completed).toHaveBeenCalledTimes(1)
+      const result = completed.mock.calls[0][0]
+      expect(result.status).toBe('partial')
+
+      engine.destroy()
+    })
+  })
+
+  describe('baseline and worktree state', () => {
+    it('setTaskBaseline records SHA', async () => {
+      const dag = makeDag({
+        tasks: [
+          { taskId: 't1', agentId: 'eng', description: 'T1', dependsOn: [], onFailure: 'stop' },
+        ],
+      })
+
+      const engine = new WorkflowEngine(dag, tmpDir)
+      await engine.initialize()
+
+      engine.setTaskBaseline('t1', 'abc123')
+      expect(engine.getTaskState('t1')?.baselineSha).toBe('abc123')
+
+      engine.destroy()
+    })
+
+    it('setTaskWorktree records and clears path', async () => {
+      const dag = makeDag({
+        tasks: [
+          { taskId: 't1', agentId: 'eng', description: 'T1', dependsOn: [], onFailure: 'stop' },
+        ],
+      })
+
+      const engine = new WorkflowEngine(dag, tmpDir)
+      await engine.initialize()
+
+      engine.setTaskWorktree('t1', '/tmp/wt-test')
+      expect(engine.getTaskState('t1')?.worktreePath).toBe('/tmp/wt-test')
+
+      engine.setTaskWorktree('t1', undefined)
+      expect(engine.getTaskState('t1')?.worktreePath).toBeUndefined()
+
+      engine.destroy()
+    })
+
+    it('reconcile clears stale worktreePath', async () => {
+      const dag = makeDag({
+        tasks: [
+          { taskId: 't1', agentId: 'agent-1', description: 'T1', dependsOn: [], onFailure: 'stop' },
+        ],
+      })
+
+      const engine = new WorkflowEngine(dag, tmpDir)
+      await engine.initialize()
+
+      engine.markTaskRunning('t1', 'agent-1')
+      engine.getState().tasks['t1'].worktreePath = '/nonexistent/worktree/path'
+
+      engine.reconcileWithRunningProcesses(new Set(['agent-1']))
+
+      expect(engine.getState().tasks['t1'].worktreePath).toBeUndefined()
+      expect(engine.getState().tasks['t1'].status).toBe('running')
+
+      engine.destroy()
+    })
+
+    it('fromCheckpoint restores baselineSha and worktreePath', () => {
+      const state = {
+        workflowId: 'wf-test',
+        chatId: 'chat-1',
+        status: 'running' as const,
+        dag: makeDag(),
+        tasks: {
+          't1': {
+            taskId: 't1',
+            agentId: 'eng',
+            status: 'running' as const,
+            retryCount: 0,
+            rejectCount: 0,
+            baselineSha: 'def456',
+            worktreePath: '/some/path',
+          },
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      const engine = WorkflowEngine.fromCheckpoint(tmpDir, state)
+
+      expect(engine.getTaskState('t1')?.baselineSha).toBe('def456')
+      expect(engine.getTaskState('t1')?.worktreePath).toBe('/some/path')
+
+      engine.destroy()
+    })
+  })
 })

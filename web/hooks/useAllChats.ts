@@ -57,14 +57,14 @@ export const useAllChats = (): V2AllChatsResult => {
     const wsClient = getWebSocketClient()
     wsClient.connect().catch(() => {})
 
-    const handleStatusChanged = ({ chatId, status, missionStatus }: { chatId: string; status: string; missionStatus?: string }) => {
+    const handleStatusChanged = ({ chatId, status, taskStatus }: { chatId: string; status: string; taskStatus?: string }) => {
       setChats((prev) => {
         let changed = false
         const next = prev.map((c) => {
           if (c.id !== chatId) return c
-          if (c.status === status && (!missionStatus || (c as any).missionStatus === missionStatus)) return c
+          if (c.status === status && (!taskStatus || (c as any).missionStatus === taskStatus)) return c
           changed = true
-          return { ...c, status: status as Chat['status'], ...(missionStatus ? { missionStatus } : {}) } as Chat
+          return { ...c, status: status as Chat['status'], ...(taskStatus ? { missionStatus: taskStatus } : {}) } as Chat
         })
         return changed ? next : prev
       })

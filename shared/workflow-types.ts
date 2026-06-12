@@ -1,9 +1,21 @@
 import type { TaskResult } from './agent-message-types'
 
+export interface FileManifest {
+  create: string[]
+  modify?: string[]
+  forbid?: string[]
+}
+
+export interface DagFallback {
+  agentId: string
+  description?: string
+}
+
 export interface WorkflowDAG {
   id: string
   chatId: string
   tasks: WorkflowTask[]
+  fallback?: DagFallback
   createdAt: string
   createdBy: string
 }
@@ -20,6 +32,8 @@ export interface WorkflowTask {
   maxRejects?: number
   timeoutMinutes?: number
   autoAdvance?: boolean
+  fileManifest?: FileManifest
+  isolation?: 'worktree' | 'shared'
 }
 
 export interface TaskCondition {
@@ -44,6 +58,8 @@ export interface WorkflowTaskState {
   rejectionFeedback?: string
   startedAt?: string
   completedAt?: string
+  baselineSha?: string
+  worktreePath?: string
 }
 
 export interface WorkflowState {

@@ -189,11 +189,17 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
     if (!isCurrentChatEvent(payload)) return
     if (!payload?.agentId) return
     setExpertActivities((prev) => {
-      if (!prev[payload.agentId]) return prev
+      const existing = prev[payload.agentId]
+      const base = payload.finalActivity || existing || {
+        background: false,
+        toolCount: 0,
+        toolCompleted: 0,
+        hasText: false,
+      }
       return {
         ...prev,
         [payload.agentId]: {
-          ...(payload.finalActivity || prev[payload.agentId]),
+          ...base,
           phase: 'completed' as const,
           ...(payload.exitReason ? { exitReason: payload.exitReason } : {}),
           updatedAt: Date.now(),
@@ -255,7 +261,29 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
   const handleExpertStarted = (payload: { agentId: string; chatId?: string; agentName: string; sessionId: string; status?: string }) => {
     if (!isCurrentChatEvent(payload)) return
     if (!payload?.agentId) return
-    if (payload.status === 'completed') return
+
+    if (payload.status === 'completed') {
+      setExpertActivities((prev) => {
+        if (prev[payload.agentId]?.phase === 'completed') return prev
+        return {
+          ...prev,
+          [payload.agentId]: {
+            phase: 'completed' as const,
+            background: false,
+            toolCount: 0,
+            toolCompleted: 0,
+            hasText: false,
+            updatedAt: Date.now(),
+          },
+        }
+      })
+      setAgentMessages((prev) => {
+        if (!prev[payload.agentId]?.length) return prev
+        const { [payload.agentId]: _, ...rest } = prev
+        return rest
+      })
+      return
+    }
 
     let shouldClearMessages = false
 

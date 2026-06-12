@@ -7,6 +7,12 @@ import type { WorkspaceStore } from '../stores/WorkspaceStore'
 import type { SessionRegistry } from '../terminal/SessionRegistry'
 import type { TaskResult } from '../../shared/agent-message-types'
 import type { ChatActivityPayload } from '../terminal/ActivityAggregator'
+import {
+  buildFileManifestBlock, validateFileManifest,
+  shouldUseWorktree, createWorktreeManager,
+  mergeTaskWorktree, discardWorktree,
+} from './WorkflowTaskUtils'
+import { type EnrichedTaskContext, buildLeadPrompt } from './WorkflowLeadPrompt'
 import { createLogger } from '../lib/logger'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
@@ -14,14 +20,6 @@ import { readFile } from 'fs/promises'
 import { resolve } from 'path'
 
 const execFileAsync = promisify(execFile)
-
-interface EnrichedTaskContext {
-  summary: string
-  artifacts: TaskResult['artifacts']
-  modifiedFiles: TaskResult['modifiedFiles']
-  gitDiffStat?: string
-  artifactSnippets?: Array<{ path: string; content: string }>
-}
 
 const log = createLogger('WorkflowScheduler')
 
@@ -196,7 +194,7 @@ export class WorkflowScheduler {
       this.advanceEngine(engine)
     }
 
-    this.collectEnrichedContext(engine.chatId, result).then(enriched => {
+    this.collectEnrichedContext(engine, taskId, result).then(enriched => {
       const readyTasks = engine.getReadyTasks()
       const state = engine.getState()
 
@@ -265,7 +263,8 @@ export class WorkflowScheduler {
   }
 
   private wakeLeadAgent(chatId: string, workflowId: string, progress: Record<string, unknown>): void {
-    const prompt = this.buildLeadPrompt(workflowId, progress)
+    const engine = this.deps.workflowRegistry.get(workflowId)
+    const prompt = buildLeadPrompt(workflowId, progress, engine)
 
     const leadSession = this.deps.sessionRegistry.findByChat(chatId, LEAD_AGENT_ID)
     if (leadSession && leadSession.acpClient?.isAlive()) {
@@ -287,18 +286,20 @@ export class WorkflowScheduler {
     this.startLeadAgent(chatId, prompt)
   }
 
-  private async collectEnrichedContext(chatId: string, result: TaskResult): Promise<EnrichedTaskContext> {
+  private async collectEnrichedContext(engine: WorkflowEngine, taskId: string, result: TaskResult): Promise<EnrichedTaskContext> {
     const context: EnrichedTaskContext = {
       summary: result.summary,
       artifacts: result.artifacts,
       modifiedFiles: result.modifiedFiles,
     }
 
-    const cwd = this.resolveCwd(chatId)
+    const taskState = engine.getTaskState(taskId)
+    const cwd = taskState?.worktreePath ?? this.resolveCwd(engine.chatId)
     if (!cwd) return context
 
     try {
-      const { stdout } = await execFileAsync('git', ['diff', '--stat', 'HEAD~1'], { cwd, timeout: 5000 })
+      const diffRef = taskState?.baselineSha ?? 'HEAD~1'
+      const { stdout } = await execFileAsync('git', ['diff', '--stat', `${diffRef}..HEAD`], { cwd, timeout: 5000 })
       context.gitDiffStat = stdout.slice(0, 2000)
     } catch { /* no git changes is fine */ }
 
@@ -312,81 +313,18 @@ export class WorkflowScheduler {
       } catch { /* file may not exist */ }
     }
 
+    const taskDef = engine.getTask(taskId)
+    if (taskDef?.fileManifest) {
+      try {
+        context.fileManifestValidation = await validateFileManifest(
+          cwd, taskDef.fileManifest, taskState?.baselineSha,
+        )
+      } catch (err) {
+        log.debug('File manifest validation failed', { taskId, error: err instanceof Error ? err.message : String(err) })
+      }
+    }
+
     return context
-  }
-
-  private buildLeadPrompt(workflowId: string, progress: Record<string, unknown>): string {
-    const p = progress as {
-      event: string
-      completedTaskId: string
-      completedBy: string
-      workflowStatus: string
-      autoAdvanced?: boolean
-      tasks: Array<{ taskId: string; agentId: string; status: string; summary?: string; rejectCount?: number }>
-      readyTasks: Array<{ taskId: string; agentId: string; description: string }>
-      enriched?: EnrichedTaskContext
-    }
-
-    const taskLines = p.tasks.map(t => {
-      const icon = t.status === 'completed' ? '[done]' :
-                   t.status === 'running' ? '[running]' :
-                   t.status === 'failed' ? '[FAILED]' :
-                   t.status === 'pending' ? '[pending]' : `[${t.status}]`
-      const rejected = t.rejectCount ? ` (rejected ${t.rejectCount}x)` : ''
-      return `  ${icon} ${t.taskId} (${t.agentId})${rejected}${t.summary ? ': ' + t.summary : ''}`
-    }).join('\n')
-
-    const readyLines = p.readyTasks.length > 0
-      ? p.readyTasks.map(t => `  - ${t.taskId} → ${t.agentId}: ${t.description.slice(0, 100)}`).join('\n')
-      : '  (none)'
-
-    let enrichedSection = ''
-    const enriched = p.enriched
-
-    if (enriched?.gitDiffStat) {
-      enrichedSection += `\nGit changes:\n\`\`\`\n${enriched.gitDiffStat}\`\`\`\n`
-    }
-
-    if (enriched?.modifiedFiles?.length) {
-      enrichedSection += `\nModified files:\n`
-      for (const f of enriched.modifiedFiles) {
-        enrichedSection += `  ${f.changeType} ${f.path} (+${f.linesAdded} -${f.linesRemoved})\n`
-      }
-    }
-
-    if (enriched?.artifactSnippets?.length) {
-      enrichedSection += `\nArtifact previews:\n`
-      for (const s of enriched.artifactSnippets) {
-        enrichedSection += `--- ${s.path} ---\n${s.content}\n---\n\n`
-      }
-    }
-
-    const autoAdvanceNote = p.autoAdvanced
-      ? '\n\nNote: downstream tasks were auto-advanced per workflow config. No action needed for advancement.\n'
-      : ''
-
-    return `[Workflow progress: ${workflowId}]
-
-Event: ${p.event === 'task_completed' ? 'Task completed' : 'Task failed'}
-Task: ${p.completedTaskId} by ${p.completedBy}
-Workflow status: ${p.workflowStatus}
-${autoAdvanceNote}
-All tasks:
-${taskLines}
-${enrichedSection}
-Ready to start:
-${readyLines}
-
-Review the completed work and choose one action:
-1. \`advance-workflow.sh '${workflowId}'\` — deliverables are satisfactory, proceed to next tasks
-2. \`reject-task.sh '${workflowId}' '${p.completedTaskId}' "<feedback>"\` — deliverables are missing or wrong, send back with specific feedback for the agent to address
-3. Write an \`open_question\` to the war-room — you need user input to decide
-
-Judgment guidance:
-- Did the agent actually modify files? (check git diff stat above)
-- Does the summary match the task's Deliverables clause?
-- Are declared artifacts present and non-empty?
-- When in doubt, advance — downstream reviewer agents provide another quality gate`
   }
 
   private startLeadAgent(chatId: string, prompt: string): void {
@@ -463,6 +401,143 @@ Judgment guidance:
     this.pendingNotifications.delete(chatId)
   }
 
+  async handleFallback(engine: WorkflowEngine): Promise<{ dispatched: boolean; agentId?: string; taskCount?: number }> {
+    const dag = engine.getState().dag
+    if (!dag.fallback) {
+      return { dispatched: false }
+    }
+
+    const state = engine.getState()
+    const remainingTasks = Object.values(state.tasks)
+      .filter(t => t.status === 'pending' || t.status === 'failed')
+
+    if (remainingTasks.length === 0) return { dispatched: false }
+
+    for (const t of remainingTasks) {
+      if (t.worktreePath) {
+        await this.discardTaskWorktree(engine, t.taskId).catch(err => {
+          log.warn('Failed to cleanup worktree during fallback', { taskId: t.taskId, error: err instanceof Error ? err.message : String(err) })
+        })
+      }
+    }
+
+    const maxPerTask = Math.floor(8000 / remainingTasks.length)
+    const mergedDescription = remainingTasks
+      .map(t => {
+        const task = dag.tasks.find(dt => dt.taskId === t.taskId)
+        const desc = task?.description ?? '(no description)'
+        const truncated = desc.length > maxPerTask ? desc.slice(0, maxPerTask) + '\n...(truncated)' : desc
+        return `### ${t.taskId}\n${truncated}`
+      })
+      .join('\n\n')
+
+    const targetAgent = dag.fallback.agentId
+      ?? dag.tasks.find(t => t.taskId === remainingTasks[0].taskId)?.agentId
+      ?? 'fullstack-engineer'
+
+    for (const t of remainingTasks) {
+      engine.skipTask(t.taskId, 'merged into fallback handoff')
+    }
+
+    engine.completeWithResult('partial', 'Fallback: remaining tasks merged into single handoff')
+
+    const chatId = engine.chatId
+    const connections = this.deps.expertHandler.getConnectionsViewingChat(chatId)
+    const connectionId = connections[0] || API_CONNECTION_ID
+    const realWs = this.deps.expertHandler.getConnectionWs(connectionId)
+    const ws: WebSocket = realWs ?? { send: () => {}, readyState: 1 } as any
+    const cwd = this.resolveCwd(chatId)
+
+    const prompt = `[Workflow fallback — merged remaining tasks]\n\n` +
+      `The following tasks from workflow ${engine.workflowId} could not be ` +
+      `completed individually. Complete them all in a single pass.\n\n` +
+      mergedDescription
+
+    try {
+      await this.deps.expertHandler.handleStart(ws, {
+        agentId: targetAgent,
+        task: prompt,
+        chatId,
+        cwd,
+      }, connectionId)
+
+      log.info('Fallback handoff dispatched', {
+        workflowId: engine.workflowId,
+        targetAgent,
+        taskCount: remainingTasks.length,
+      })
+      return { dispatched: true, agentId: targetAgent, taskCount: remainingTasks.length }
+    } catch (err) {
+      log.error('Fallback handoff failed', {
+        workflowId: engine.workflowId,
+        error: err instanceof Error ? err.message : String(err),
+      })
+      return { dispatched: false }
+    }
+  }
+
+  async cleanupTaskChanges(engine: WorkflowEngine, taskId: string): Promise<void> {
+    const taskState = engine.getTaskState(taskId)
+    const baselineSha = taskState?.baselineSha
+    if (!baselineSha) {
+      log.debug('No baseline SHA, skipping cleanup', { taskId })
+      return
+    }
+
+    if (taskState.worktreePath) {
+      await this.discardTaskWorktree(engine, taskId)
+      return
+    }
+
+    const cwd = this.resolveCwd(engine.chatId)
+    if (!cwd) return
+
+    const otherRunning = Object.values(engine.getState().tasks)
+      .some(t => t.taskId !== taskId && t.status === 'running')
+    if (otherRunning) {
+      log.info('Other task running in same cwd, skipping cleanup', { taskId })
+      return
+    }
+
+    try {
+      const { stdout: trackedChanges } = await execFileAsync(
+        'git', ['diff', '--name-only', `${baselineSha}..HEAD`],
+        { cwd, timeout: 5000 },
+      )
+      const changedFiles = trackedChanges.trim().split('\n').filter(Boolean)
+
+      if (changedFiles.length > 0) {
+        await execFileAsync(
+          'git', ['checkout', baselineSha, '--', ...changedFiles],
+          { cwd, timeout: 10000 },
+        )
+      }
+
+      const { stdout: untrackedOutput } = await execFileAsync(
+        'git', ['ls-files', '--others', '--exclude-standard'],
+        { cwd, timeout: 5000 },
+      )
+      const untrackedFiles = untrackedOutput.trim().split('\n').filter(Boolean)
+
+      if (untrackedFiles.length > 0) {
+        await execFileAsync(
+          'git', ['clean', '-fd', '--', ...untrackedFiles],
+          { cwd, timeout: 10000 },
+        )
+      }
+
+      log.info('Cleaned up task changes before retry', {
+        taskId, baselineSha,
+        trackedReverted: changedFiles.length,
+        untrackedRemoved: untrackedFiles.length,
+      })
+    } catch (err) {
+      log.warn('Cleanup failed, retry will start from dirty state', {
+        taskId, error: err instanceof Error ? err.message : String(err),
+      })
+    }
+  }
+
   onTaskRejected(taskId: string): void {
     this.wokenLeadTasks.delete(taskId)
   }
@@ -512,6 +587,29 @@ Judgment guidance:
     }
   }
 
+  async mergeTaskWorktreeForTask(engine: WorkflowEngine, taskId: string): Promise<void> {
+    const cwd = this.resolveCwd(engine.chatId)
+    if (!cwd) return
+    await mergeTaskWorktree(engine, taskId, cwd, (conflicts, worktreePath) => {
+      this.wakeLeadAgent(engine.chatId, engine.workflowId, {
+        event: 'merge_conflict',
+        completedTaskId: taskId,
+        completedBy: engine.getTaskState(taskId)?.agentId ?? '',
+        workflowStatus: engine.status,
+        tasks: [],
+        readyTasks: [],
+        conflicts,
+        worktreePath,
+      })
+    })
+  }
+
+  private async discardTaskWorktree(engine: WorkflowEngine, taskId: string): Promise<void> {
+    const cwd = this.resolveCwd(engine.chatId)
+    if (!cwd) return
+    await discardWorktree(engine, taskId, cwd)
+  }
+
   private async startTask(engine: WorkflowEngine, taskId: string, agentId: string, description: string): Promise<void> {
     if (this.startingTasks.has(taskId)) {
       log.debug('Task already being started, skipping duplicate', { taskId, agentId })
@@ -523,6 +621,17 @@ Judgment guidance:
     const taskState = engine.getState().tasks[taskId]
 
     engine.markTaskRunning(taskId, agentId)
+
+    const taskCwd = this.resolveCwd(chatId)
+    if (taskCwd) {
+      try {
+        const { stdout } = await execFileAsync('git', ['rev-parse', 'HEAD'], { cwd: taskCwd, timeout: 5000 })
+        engine.setTaskBaseline(taskId, stdout.trim())
+      } catch (err) {
+        log.debug('Could not record baseline SHA', { taskId, error: err instanceof Error ? err.message : String(err) })
+      }
+    }
+
     log.info('Starting workflow task', { workflowId: engine.workflowId, taskId, agentId })
 
     this.deps.broadcastToChat(chatId, {
@@ -536,9 +645,29 @@ Judgment guidance:
       const realWs = this.deps.expertHandler.getConnectionWs(connectionId)
       const ws: WebSocket = realWs ?? { send: () => {}, readyState: 1 } as any
 
-      const cwd = this.resolveCwd(chatId)
+      let cwd = this.resolveCwd(chatId)
+
+      const taskDef = engine.getTask(taskId)
+
+      if (taskDef && cwd && shouldUseWorktree(engine, taskDef)) {
+        try {
+          const wtManager = createWorktreeManager(cwd)
+          const sessionId = `wf-${engine.workflowId.slice(0, 8)}-${taskId}`
+          const { path: worktreePath } = await wtManager.create({ sessionId })
+          cwd = worktreePath
+          engine.setTaskWorktree(taskId, worktreePath)
+          log.info('Created worktree for workflow task', { taskId, worktreePath })
+        } catch (err) {
+          log.warn('Worktree creation failed, using shared cwd', {
+            taskId, error: err instanceof Error ? err.message : String(err),
+          })
+        }
+      }
 
       let prompt = `[Workflow task: ${taskId}]\n\n${description}`
+      if (taskDef?.fileManifest) {
+        prompt += buildFileManifestBlock(taskDef.fileManifest)
+      }
       if (taskState?.rejectionFeedback) {
         prompt = `[IMPORTANT — Previous attempt was rejected (attempt ${taskState.rejectCount})]\n` +
           `Feedback from reviewer:\n${taskState.rejectionFeedback}\n\n` +

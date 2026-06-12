@@ -116,7 +116,7 @@ export const createWorkflowRoutes = (deps: WorkflowRouteDeps): Router => {
     res.json(engine.aggregateResults())
   })
 
-  router.post('/api/workflow/:workflowId/tasks/:taskId/reject', (req, res) => {
+  router.post('/api/workflow/:workflowId/tasks/:taskId/reject', async (req, res) => {
     const { workflowId, taskId } = req.params
     const { feedback } = req.body as { feedback?: string }
 
@@ -140,6 +140,7 @@ export const createWorkflowRoutes = (deps: WorkflowRouteDeps): Router => {
       })
     }
 
+    await workflowScheduler.cleanupTaskChanges(engine, taskId)
     workflowScheduler.onTaskRejected(taskId)
 
     const state = engine.getState()
@@ -157,8 +158,35 @@ export const createWorkflowRoutes = (deps: WorkflowRouteDeps): Router => {
     })
   })
 
-  router.post('/api/workflow/:workflowId/advance', (req, res) => {
+  router.post('/api/workflow/:workflowId/fallback', async (req, res) => {
+    const engine = workflowRegistry.get(req.params.workflowId)
+    if (!engine) {
+      return res.status(404).json({ error: 'Workflow not found' })
+    }
+
+    const result = await workflowScheduler.handleFallback(engine)
+    if (!result.dispatched) {
+      return res.status(400).json({ error: 'no_fallback_configured' })
+    }
+
+    log.info('Fallback triggered via API', { workflowId: req.params.workflowId, ...result })
+    res.json({ success: true, ...result })
+  })
+
+  router.post('/api/workflow/:workflowId/advance', async (req, res) => {
     const { workflowId } = req.params
+
+    const engine = workflowRegistry.get(workflowId)
+    if (!engine) {
+      return res.status(404).json({ error: 'workflow_not_found' })
+    }
+
+    const completedWithWorktrees = Object.values(engine.getState().tasks)
+      .filter(t => t.status === 'completed' && t.worktreePath)
+    for (const t of completedWithWorktrees) {
+      await workflowScheduler.mergeTaskWorktreeForTask(engine, t.taskId)
+    }
+
     const { started, error } = workflowScheduler.advanceWorkflow(workflowId)
 
     if (error) {

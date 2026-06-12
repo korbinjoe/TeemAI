@@ -196,6 +196,25 @@ export class ActivityAggregator {
   buildFinalPayload(chatId: string, session: ManagedSession): ChatActivityPayload {
     const agents = this.collectAgentActivities(chatId)
     const finalPhase = session.activitySnapshot?.phase === 'error' ? 'error' : 'completed'
+
+    // collectAgentActivities skips completed sessions, but the finishing
+    // session's snapshot is needed so the frontend can update its member
+    // status via reconcileMembersFromActivity.
+    const agentId = session.agentId || session.agentName
+    if (session.activitySnapshot && !agents.some((a) => a.agentId === agentId)) {
+      agents.push({
+        agentId,
+        agentName: session.agentName,
+        phase: session.activitySnapshot.phase,
+        currentTool: session.activitySnapshot.currentTool,
+        toolCount: session.activitySnapshot.toolCount,
+        toolCompleted: session.activitySnapshot.toolCompleted,
+        cost: session.activitySnapshot.cost,
+        logLine: session.activitySnapshot.logLine,
+        fileOp: session.activitySnapshot.fileOp,
+      })
+    }
+
     return {
       chatId,
       phase: finalPhase,

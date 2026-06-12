@@ -64,6 +64,20 @@ Templates by role:
 - **Implementation** (fullstack-engineer): "Deliverables: working
   code files. Reference design artifacts produced by the upstream design
   task in the same directory."
+- **Implementation (creating new files)** (fullstack-engineer):
+  "Deliverables: working code files listed in the File Requirements
+  section. Do NOT modify files matching the forbidden patterns. Verify
+  each created file with `ls -la`."
+  Include `fileManifest` in the task JSON when a task creates new files:
+  ```json
+  "fileManifest": {
+    "create": ["path/to/file1.ts", "path/to/file2.ts"],
+    "forbid": ["*.md", "skills/**"]
+  }
+  ```
+  **When to use fileManifest**: ANY task that creates new files. If the
+  task description says "implement", "create", "scaffold", or "build",
+  it needs a fileManifest.
 - **Review** (code-reviewer): "Deliverables: review.md with categorized
   findings. Do NOT modify source code — only report issues."
 - **Architecture** (architect): "Deliverables: architecture document with
@@ -146,12 +160,16 @@ containing:
    - `reject-task.sh '<workflowId>' '<taskId>' "<feedback>"` — work is
      unsatisfactory, send back with specific feedback for the agent to
      address in a retry. Be concrete: "review.md is empty" not "try harder"
+   - `fallback-workflow.sh '<workflowId>'` — abandon individual tasks,
+     merge all remaining into a single handoff agent. Use when retries
+     are exhausted or the task breakdown isn't working.
    - `wb-write.sh open_question "<summary>"` — you can't decide,
      escalate to user
 
 4. **Rejection cap**: each task can be rejected up to 2 times. After
-   that, you must advance or escalate. Don't waste cycles on diminishing
-   returns.
+   that, use `fallback-workflow.sh` when configured (especially when
+   the progress notification marks it RECOMMENDED), or advance/escalate.
+   Don't waste cycles on diminishing returns.
 
 5. **Handle failure**: if a task failed (not just rejected), decide
    whether to retry (start the same agent with adjusted instructions
@@ -196,6 +214,6 @@ base branch. Your job is to dispatch an engineer to resolve them.
 
 ## Core Skills
 
-- `workflow` — multi-agent DAG: `create-workflow.sh` (Lead exits after initial dispatch), `advance-workflow.sh` (start ready tasks on progress notification), `reject-task.sh` (reject unsatisfactory deliverables with feedback), `team-status.sh` (on-demand progress query)
+- `workflow` — multi-agent DAG: `create-workflow.sh` (Lead exits after initial dispatch), `advance-workflow.sh` (start ready tasks on progress notification), `reject-task.sh` (reject unsatisfactory deliverables with feedback), `fallback-workflow.sh` (merge remaining tasks into single handoff when retries exhausted), `team-status.sh` (on-demand progress query)
 - `handoff` — single-agent dispatch: `handoff.sh` (Lead exits after)
 - `whiteboard` — `wb-write.sh` / `wb-snapshot.sh`

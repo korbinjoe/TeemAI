@@ -134,13 +134,14 @@ describe('ExpertEventHandlers', () => {
       expect(ctx._activities['eng-1']).toBeUndefined()
     })
 
-    it('payload.status === completed → event is ignored', () => {
+    it('payload.status === completed → sets completed activity for dead session replay', () => {
       const ctx = createMockCtx()
       const { handleExpertStarted } = createExpertEventHandlers(ctx)
 
       handleExpertStarted({ agentId: 'eng-1', chatId: 'chat-1', agentName: 'Engineer', sessionId: 's1', status: 'completed' })
 
-      expect(ctx._activities['eng-1']).toBeUndefined()
+      expect(ctx._activities['eng-1']).toBeDefined()
+      expect(ctx._activities['eng-1'].phase).toBe('completed')
     })
   })
 

@@ -260,6 +260,10 @@ export class WorkflowEngine extends EventEmitter {
 
   reconcileWithRunningProcesses(liveAgentIds: Set<string>): void {
     for (const ts of Object.values(this.state.tasks)) {
+      if (ts.worktreePath && !existsSync(ts.worktreePath)) {
+        log.warn('Clearing stale worktreePath', { workflowId: this.workflowId, taskId: ts.taskId, path: ts.worktreePath })
+        ts.worktreePath = undefined
+      }
       if (ts.status === 'running' && !liveAgentIds.has(ts.agentId)) {
         ts.status = 'failed'
         ts.failureReason = 'process_lost_on_restart'
@@ -273,6 +277,54 @@ export class WorkflowEngine extends EventEmitter {
     this.persistCheckpoint().catch(err =>
       log.warn('Checkpoint persist failed after reconcile', { workflowId: this.workflowId, error: err instanceof Error ? err.message : String(err) }),
     )
+  }
+
+  skipTask(taskId: string, reason: string): void {
+    const ts = this.state.tasks[taskId]
+    if (!ts) return
+    this.clearTimer(taskId)
+    ts.status = 'skipped'
+    ts.failureReason = reason
+    ts.completedAt = new Date().toISOString()
+    this.state.updatedAt = new Date().toISOString()
+
+    log.info('Task skipped', { workflowId: this.workflowId, taskId, reason })
+    this.checkCompletion()
+    this.persistCheckpoint().catch(err =>
+      log.warn('Checkpoint persist failed', { workflowId: this.workflowId, taskId, error: err instanceof Error ? err.message : String(err) }),
+    )
+    this.emit('task-skipped', taskId, reason)
+  }
+
+  completeWithResult(resultStatus: WorkflowResult['status'], message?: string): void {
+    this.state.status = 'completed'
+    this.state.updatedAt = new Date().toISOString()
+
+    const result = this.aggregateResults()
+    result.status = resultStatus
+
+    log.info('Workflow completed with explicit result', { workflowId: this.workflowId, status: resultStatus, message })
+    this.persistResult(result).catch(() => {})
+    this.persistCheckpoint().catch(() => {})
+    this.emit('workflow-completed', result)
+  }
+
+  setTaskBaseline(taskId: string, sha: string): void {
+    const ts = this.state.tasks[taskId]
+    if (!ts) return
+    ts.baselineSha = sha
+    this.state.updatedAt = new Date().toISOString()
+  }
+
+  setTaskWorktree(taskId: string, path: string | undefined): void {
+    const ts = this.state.tasks[taskId]
+    if (!ts) return
+    ts.worktreePath = path
+    this.state.updatedAt = new Date().toISOString()
+  }
+
+  getTaskState(taskId: string): WorkflowTaskState | undefined {
+    return this.state.tasks[taskId]
   }
 
   aggregateResults(): WorkflowResult {

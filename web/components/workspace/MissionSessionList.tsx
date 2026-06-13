@@ -6,6 +6,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 // a network fetch before growing the slice.
 const INITIAL_VISIBLE = 10
 const PAGE_STEP = 10
+
+// Stable empty ref so workspaces with no chats don't get a fresh [] each render
+// (which would defeat WorkspaceGroup's chats-keyed memos).
+const EMPTY_CHATS: Chat[] = []
 import { API_BASE, authFetch } from '@/config/api'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { useDialog } from '../../contexts/DialogContext'
@@ -52,6 +56,20 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
       .sort((a, b) => (pinnedAt[b.id] ?? 0) - (pinnedAt[a.id] ?? 0)),
     [chats, pinnedIds, pinnedAt],
   )
+
+  // Group all chats by workspace once (O(C)) instead of filtering the full chat
+  // list per workspace (O(W×C)) on every render. Each group array ref is stable
+  // across renders while `chats` is unchanged, so WorkspaceGroup's chats-keyed
+  // memos survive a mission switch (which only flips activeChatId).
+  const chatsByWorkspace = useMemo(() => {
+    const m = new Map<string, Chat[]>()
+    for (const c of chats) {
+      const list = m.get(c.workspaceId)
+      if (list) list.push(c)
+      else m.set(c.workspaceId, [c])
+    }
+    return m
+  }, [chats])
 
   // Session-local expansion only. Default-collapsed so the sidebar opens as a
   // scannable index rather than a wall of nested rows; the active workspace
@@ -119,7 +137,7 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
   // we don't trigger fetches based on the query.
   const allRendered = workspaces
     .map((ws) => {
-      const wsChats = chats.filter((c) => c.workspaceId === ws.id)
+      const wsChats = chatsByWorkspace.get(ws.id) ?? EMPTY_CHATS
       if (!isSearching) return { ws, wsChats, wsNameMatches: false }
       const wsNameMatches = ws.name.toLowerCase().includes(q)
       const anyChatMatches = wsChats.some((c) => c.title.toLowerCase().includes(q))
@@ -248,9 +266,9 @@ const PinnedSection = ({ chats, activeChatId, selectedAgentId, agentNames, wsNam
           isSelected={activeChatId === c.id}
           selectedAgentId={selectedAgentId}
           agentNames={agentNames}
-          onPin={() => onPin(c.id)}
-          onArchive={() => onArchive(c.id)}
-          onAddAgent={() => onAddAgent(c.id)}
+          onPin={onPin}
+          onArchive={onArchive}
+          onAddAgent={onAddAgent}
           isPinned
           badge={wsNameById[c.workspaceId]}
         />
@@ -505,9 +523,9 @@ const WorkspaceGroup = ({
                   isSelected={activeChatId === c.id}
                   selectedAgentId={selectedAgentId}
                   agentNames={agentNames}
-                  onPin={() => onPin(c.id)}
-                  onArchive={() => onArchive(c.id)}
-                  onAddAgent={() => onAddAgent(c.id)}
+                  onPin={onPin}
+                  onArchive={onArchive}
+                  onAddAgent={onAddAgent}
                   isPinned
                 />
               ))}
@@ -525,9 +543,9 @@ const WorkspaceGroup = ({
                 isSelected={activeChatId === it.chat.id}
                 selectedAgentId={selectedAgentId}
                 agentNames={agentNames}
-                onPin={() => onPin(it.chat.id)}
-                onArchive={() => onArchive(it.chat.id)}
-                onAddAgent={() => onAddAgent(it.chat.id)}
+                onPin={onPin}
+                onArchive={onArchive}
+                onAddAgent={onAddAgent}
               />
             ) : (
               <ExternalSessionRow
@@ -572,8 +590,8 @@ const WorkspaceGroup = ({
                       isSelected={activeChatId === c.id}
                       archived
                       agentNames={agentNames}
-                      onPin={() => onPin(c.id)}
-                      onUnarchive={() => onArchive(c.id)}
+                      onPin={onPin}
+                      onUnarchive={onArchive}
                     />
                   ))}
                 </div>

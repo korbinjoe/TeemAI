@@ -102,9 +102,11 @@ interface MissionRowProps {
   agentNames: Record<string, string>
   // togglePin: same callback for pin and unpin (it's a toggle in the hook).
   // The icon and tooltip flip based on `isPinned` so the action reads correctly.
-  onPin: () => void
-  onArchive: () => void
-  onAddAgent: () => void
+  // Callbacks take the chatId so parents can pass stable hook refs (not fresh
+  // per-row arrows), keeping this memo effective when other rows change.
+  onPin: (chatId: string) => void
+  onArchive: (chatId: string) => void
+  onAddAgent: (chatId: string) => void
   isPinned?: boolean
   badge?: string
   selectedAgentId?: string | null
@@ -227,9 +229,9 @@ export const MissionRow = memo(({ chat, isSelected, agentNames, onPin, onArchive
         </span>
         <RowHoverActions
           actions={[
-            { title: isPinned ? 'Unpin mission' : 'Pin mission', onClick: onPin, children: isPinned ? <PinOff size={11} /> : <Pin size={11} /> },
-            { title: 'Add agent', onClick: onAddAgent, children: <Plus size={11} /> },
-            { title: 'Archive mission', onClick: onArchive, children: <Archive size={11} /> },
+            { title: isPinned ? 'Unpin mission' : 'Pin mission', onClick: () => onPin(chat.id), children: isPinned ? <PinOff size={11} /> : <Pin size={11} /> },
+            { title: 'Add agent', onClick: () => onAddAgent(chat.id), children: <Plus size={11} /> },
+            { title: 'Archive mission', onClick: () => onArchive(chat.id), children: <Archive size={11} /> },
             { title: 'Delete mission (purges local CLI session files)', onClick: handleDeleteTask, children: <Trash size={11} /> },
           ]}
         />
@@ -249,7 +251,7 @@ export const MissionRow = memo(({ chat, isSelected, agentNames, onPin, onArchive
             />
           ))}
           <button
-            onClick={(e) => { e.stopPropagation(); onAddAgent() }}
+            onClick={(e) => { e.stopPropagation(); onAddAgent(chat.id) }}
             className={cn('flex items-center gap-1.5 pr-2 py-1 rounded-md hover:bg-bg-hover transition-colors text-left', INDENT_ADD_AGENT)}
           >
             <Plus size={11} className="text-text-muted" />
@@ -375,8 +377,8 @@ export const CompletedRow = memo(({ chat, isSelected, archived, agentNames, onPi
   isSelected: boolean
   archived: boolean
   agentNames: Record<string, string>
-  onPin: () => void
-  onUnarchive?: () => void
+  onPin: (chatId: string) => void
+  onUnarchive?: (chatId: string) => void
 }) => {
   const navigate = useNavigate()
   const handleOpen = () => navigate(buildMissionOpenUrl(chat))
@@ -417,8 +419,8 @@ export const CompletedRow = memo(({ chat, isSelected, archived, agentNames, onPi
       </span>
       <RowHoverActions
         actions={[
-          { title: 'Pin mission', onClick: onPin, children: <Pin size={11} /> },
-          ...(onUnarchive ? [{ title: 'Restore from archive', onClick: onUnarchive, children: <Archive size={11} /> }] : []),
+          { title: 'Pin mission', onClick: () => onPin(chat.id), children: <Pin size={11} /> },
+          ...(onUnarchive ? [{ title: 'Restore from archive', onClick: () => onUnarchive(chat.id), children: <Archive size={11} /> }] : []),
           { title: 'Delete mission (purges local CLI session files)', onClick: handleDeleteTask, children: <Trash size={11} /> },
         ]}
       />

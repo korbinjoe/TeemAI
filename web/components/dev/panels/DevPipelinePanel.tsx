@@ -119,9 +119,9 @@ export const DevPipelinePanel = ({ pipeline }: { pipeline: PipelineSnapshot | nu
               Current: {activeStage.label}
             </span>
           )}
-          {pipeline.missionId && (
+          {pipeline.taskId && (
             <span className="text-[10px] text-zinc-600 font-mono">
-              mission={pipeline.missionId.slice(0, 16)}
+              mission={pipeline.taskId.slice(0, 16)}
             </span>
           )}
         </div>

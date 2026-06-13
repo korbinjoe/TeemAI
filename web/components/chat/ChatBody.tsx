@@ -4,6 +4,7 @@ import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
 import type { Message, AgentActivity } from '../../types/chat'
 import type { AgentPersonality } from '../../types/agentConfig'
 import type { MessageGroup } from './messages/groupMessages'
+import { computeDividerLabels } from './messages/groupMessages'
 import { UserMessage, AgentTurnCard } from './messages/MessageGroup'
 import NewMessagesBadge from './indicators/NewMessagesBadge'
 import { EmptyState, ThinkingIndicator } from './ChatPageWidgets'
@@ -11,6 +12,22 @@ import CompletionCeremony from './ceremonies/CompletionCeremony'
 
 const MESSAGES_AREA_STYLE: React.CSSProperties = { flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }
 const VIRTUOSO_STYLE: React.CSSProperties = { height: '100%' }
+
+const TimeDivider = ({ label }: { label: string }) => (
+  <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+    <span style={{
+      fontSize: 11,
+      color: 'rgb(var(--text-muted))',
+      background: 'rgb(var(--bg-hover-subtle) / var(--bg-hover-subtle-alpha))',
+      padding: '2px 10px',
+      borderRadius: 10,
+      letterSpacing: 0.2,
+      userSelect: 'none',
+    }}>
+      {label}
+    </span>
+  </div>
+)
 
 export interface ChatBodyProps {
   messages: Message[]
@@ -57,11 +74,17 @@ const ChatBody = ({
     return max
   }, [messages])
 
+  // Time-group dividers: anchor sections of the stream to a moment (今天/昨天/date)
+  // so users can read the message timeline at a glance without per-message noise.
+  const dividerLabels = useMemo(() => computeDividerLabels(groups), [groups])
+
   const renderItem = useCallback((index: number, group: MessageGroup) => {
     const isLast = index === totalGroups - 1
     const displayActivity = isLast ? currentMergedActivity ?? groupActivities[group.id] : groupActivities[group.id]
+    const divider = dividerLabels[index]
     return (
       <div>
+        {divider && <TimeDivider label={divider} />}
         {group.userMessage ? <UserMessage message={group.userMessage} agentNames={agentNames} agentPersonalities={agentPersonalities} /> : (
           <div style={{ padding: '8px 16px 2px', fontSize: 11, color: 'rgb(var(--text-muted))' }}>Agent Mission Progress</div>
         )}
@@ -77,7 +100,7 @@ const ChatBody = ({
         />
       </div>
     )
-  }, [totalGroups, currentMergedActivity, groupActivities, currentAgentName, agentNames, agentPersonalities, handleAnswerQuestion, targetAgentId])
+  }, [totalGroups, dividerLabels, currentMergedActivity, groupActivities, currentAgentName, agentNames, agentPersonalities, handleAnswerQuestion, targetAgentId])
 
   const computeKey = useCallback((_: number, group: MessageGroup) => group.id, [])
 

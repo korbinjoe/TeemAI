@@ -369,7 +369,11 @@ export const handleResultEvent = (
     stats,
     model: state.model || undefined,
     turnIndex: currentTurn,
-    isTurnEnd: data.stop_reason === 'end_turn',
+    // The stream-json `result` event IS the per-turn boundary and carries no
+    // stop_reason field (only subtype/is_error/usage/...). Persistent claude
+    // sessions never exit between turns, so this stats message is the only
+    // terminal signal the ActivityDeriver gets — mirror codex's turn.completed.
+    isTurnEnd: true,
   }
 
   newMessages.push(statsMsg)

@@ -67,7 +67,7 @@ export interface DevSnapshot {
   mode: DevPanelMode
   chat: {
     status: string | null
-    missionStatus: string | null
+    taskStatus: string | null
     expertSessions: Record<string, unknown> | null
   } | null
   sessions: DevSessionSnapshot[]
@@ -139,7 +139,7 @@ export interface PipelineZone {
 export interface PipelineSnapshot {
   chatId: string
   mode: DevPanelMode
-  missionId: string | null
+  taskId: string | null
   zones: PipelineZone[]
   totalElapsedMs: number | null
   health: 'green' | 'yellow' | 'red'
@@ -323,17 +323,17 @@ export const useDevPanel = (chatId: string, isOpen: boolean) => {
     }
 
     const handleChatStatusChanged = (data: unknown) => {
-      const d = data as { chatId: string; status: string; missionStatus?: string | null }
+      const d = data as { chatId: string; status: string; taskStatus?: string | null }
       if (d.chatId !== chatId) return
       setSnapshot((prev) => {
         if (!prev) return prev
-        const prevChat = prev.chat ?? { status: null, missionStatus: null, expertSessions: null }
+        const prevChat = prev.chat ?? { status: null, taskStatus: null, expertSessions: null }
         return {
           ...prev,
           chat: {
             ...prevChat,
             status: d.status,
-            missionStatus: d.missionStatus ?? prevChat.missionStatus ?? null,
+            taskStatus: d.taskStatus ?? prevChat.taskStatus ?? null,
           },
         }
       })

@@ -15,8 +15,8 @@ export const DevOverview = ({ snapshot }: { snapshot: DevSnapshot }) => {
       <KV label="chat.status" value={
         <span className={chatStatusColor(snapshot.chat?.status ?? '')}>{snapshot.chat?.status ?? 'unknown'}</span>
       } />
-      <KV label="chat.missionStatus" value={
-        <span className={missionStatusColor(snapshot.chat?.missionStatus ?? '')}>{snapshot.chat?.missionStatus ?? '—'}</span>
+      <KV label="chat.taskStatus" value={
+        <span className={missionStatusColor(snapshot.chat?.taskStatus ?? '')}>{snapshot.chat?.taskStatus ?? '—'}</span>
       } />
       <KV label="Sessions" value={snapshot.totalSessions} />
       <KV label={t('dev.snapshotTime')} value={fmtTime(snapshot.timestamp)} />

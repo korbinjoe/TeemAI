@@ -1,5 +1,6 @@
 import type { Message } from '../../../types/chat'
 import { buildContentKey, buildMessageInstanceKey } from '../../../utils/messageDedup'
+import { formatTimeDivider } from '../../../utils/format'
 
 export interface MessageGroup {
   id: string
@@ -103,4 +104,32 @@ export function groupMessages(messages: Message[]): MessageGroup[] {
   }
 
   return groups
+}
+
+/** Anchor timestamp for a group: its user message, else its first agent message. */
+export const getGroupTimestamp = (g: MessageGroup): number =>
+  g.userMessage?.timestamp ?? g.agentMessages[0]?.timestamp ?? 0
+
+/** A new time divider is inserted between groups separated by this gap, so a
+ *  mission resumed after a break shows when work picked back up. */
+const DIVIDER_GAP_MS = 30 * 60 * 1000
+
+const isSameDay = (a: number, b: number): boolean => {
+  const da = new Date(a)
+  const db = new Date(b)
+  return da.getFullYear() === db.getFullYear() && da.getMonth() === db.getMonth() && da.getDate() === db.getDate()
+}
+
+/** Per-group divider labels (null = no divider). Shows on the first group, on a
+ *  day change, or after a >30min gap — giving the message stream a time pulse
+ *  without labeling every message. */
+export function computeDividerLabels(groups: MessageGroup[]): (string | null)[] {
+  let prevTs = 0
+  return groups.map((g) => {
+    const ts = getGroupTimestamp(g)
+    if (!ts) return null
+    const show = prevTs === 0 || !isSameDay(prevTs, ts) || ts - prevTs >= DIVIDER_GAP_MS
+    prevTs = ts
+    return show ? formatTimeDivider(ts) : null
+  })
 }

@@ -1,6 +1,8 @@
+import { useState } from 'react'
+import { Copy } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DevSnapshot, DevWorkflowPayload, DevWhiteboardPayload, PipelineSnapshot } from '@/hooks/useDevPanel'
-import { Section } from './helpers'
+import { Section, CopyableText } from './helpers'
 
 interface DevOverviewTabProps {
   snapshot: DevSnapshot
@@ -21,6 +23,51 @@ const StatusDot = ({ status }: { status: string }) => {
 const formatCost = (cost: number) => cost < 0.01 ? `$${cost.toFixed(4)}` : `$${cost.toFixed(2)}`
 const formatDuration = (ms: number) => ms < 1000 ? `${ms}ms` : ms < 60000 ? `${(ms / 1000).toFixed(1)}s` : `${(ms / 60000).toFixed(1)}m`
 
+const IdRow = ({ label, value }: { label: string; value: string | null | undefined }) => (
+  <div className="flex items-center justify-between gap-2 py-0.5">
+    <span className="text-zinc-500 shrink-0">{label}</span>
+    {value ? <CopyableText text={value} /> : <span className="text-zinc-600 italic">—</span>}
+  </div>
+)
+
+const Identifiers = ({ snapshot, workflow, pipeline }: Omit<DevOverviewTabProps, 'whiteboard'>) => {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopyAll = () => {
+    const bundle = [
+      `Chat ID: ${snapshot.chatId}`,
+      `Mission ID: ${pipeline?.taskId ?? '—'}`,
+      `Workflow ID: ${workflow?.workflowId ?? '—'}`,
+      `Mission Status: ${snapshot.chat?.taskStatus ?? '—'}`,
+      `Chat Status: ${snapshot.chat?.status ?? '—'}`,
+      `Snapshot At: ${new Date(snapshot.timestamp).toISOString()}`,
+    ].join('\n')
+    navigator.clipboard.writeText(bundle).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
+  return (
+    <Section title="Identifiers">
+      <div className="text-[11px] space-y-0.5">
+        <IdRow label="Chat ID" value={snapshot.chatId} />
+        <IdRow label="Mission ID" value={pipeline?.taskId} />
+        <IdRow label="Workflow ID" value={workflow?.workflowId} />
+        <IdRow label="Mission Status" value={snapshot.chat?.taskStatus} />
+        <div className="pt-1.5">
+          <button
+            onClick={handleCopyAll}
+            className="flex items-center gap-1 px-2 py-1 text-[10px] text-zinc-400 bg-zinc-800 hover:bg-zinc-700 rounded border border-zinc-700"
+          >
+            {copied ? <span className="text-green-400">copied</span> : <><Copy size={10} /> Copy debug info</>}
+          </button>
+        </div>
+      </div>
+    </Section>
+  )
+}
+
 export const DevOverviewTab = ({ snapshot, workflow, whiteboard, pipeline }: DevOverviewTabProps) => {
   const totalCost = snapshot.sessions.reduce((acc, s) => {
     const usage = s.activity.modelUsage
@@ -32,6 +79,9 @@ export const DevOverviewTab = ({ snapshot, workflow, whiteboard, pipeline }: Dev
 
   return (
     <div className="p-3 space-y-3">
+      {/* Identifiers */}
+      <Identifiers snapshot={snapshot} workflow={workflow} pipeline={pipeline} />
+
       {/* Status Bar */}
       <Section title="Status">
         <div className="grid grid-cols-2 gap-2 text-[11px]">

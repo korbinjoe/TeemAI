@@ -1,10 +1,9 @@
 /**
- *  cwd  Claude Code  projectKey~/.claude/projects/<projectKey>/
- *  `/`  `.`  `-` Claude Code
+ * Derive a CLI provider's projectKey from a cwd, e.g. ~/.claude/projects/<projectKey>/.
+ * Replaces every `/` and `.` with `-`. Shared by Claude and Qoder, whose
+ * project-key derivation is identical.
  *
- * ⚠  Claude providerCodex  ~/.codex/sessions/YYYY/MM/DD/
- *  codex
+ * ⚠ Only applies to providers that key sessions by cwd (Claude, Qoder).
+ * Codex keys sessions by date (~/.codex/sessions/YYYY/MM/DD/), not projectKey.
  */
-export const cwdToClaudeProjectKey = (cwd: string): string => cwd.replace(/[/.]/g, '-')
-
-export const cwdToQoderProjectKey = (cwd: string): string => cwd.replace(/[/.]/g, '-')
+export const cwdToCliProjectKey = (cwd: string): string => cwd.replace(/[/.]/g, '-')

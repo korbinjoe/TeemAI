@@ -18,7 +18,7 @@ import { WHITEBOARD_SUMMARY_MAX } from '../../../shared/whiteboard-types'
 import { TERMINAL_PHASES, type ExpertEvent } from '../../../shared/expert-event-types'
 import { parseAgentId } from '../../ws/ExpertSessionStore'
 import { expandSlashCommand } from '../../runtime/SlashCommandResolver'
-import { cwdToClaudeProjectKey } from '../../../shared/projectKey'
+import { cwdToCliProjectKey } from '../../../shared/projectKey'
 import { createLogger } from '../../lib/logger'
 import { homedir } from 'os'
 
@@ -334,7 +334,7 @@ ${expandedTask}`
         lastMessage: context?.workDoneSoFar,
         jsonlPath: sourceEntry.cliSessionId
           ? join(homedir(), '.claude', 'projects',
-              cwdToClaudeProjectKey(sourceEntry.cwd),
+              cwdToCliProjectKey(sourceEntry.cwd),
               `${sourceEntry.cliSessionId}.jsonl`)
           : undefined,
       }

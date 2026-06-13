@@ -12,7 +12,7 @@ import chalk from 'chalk'
 import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { TEEMAI_HOME } from '../../shared/teemai-home'
-import { cwdToClaudeProjectKey } from '../../shared/projectKey'
+import { cwdToCliProjectKey } from '../../shared/projectKey'
 import type { ChatReadyParams } from '../tui/App.js'
 
 /**  server fire-and-forget */
@@ -374,7 +374,7 @@ export class PTYSessionManager {
 
   private resolveJsonlPath(cliSessionId: string): string {
     const cwd = this.params.repoPaths[0] || process.cwd()
-    const projectKey = cwdToClaudeProjectKey(cwd)
+    const projectKey = cwdToCliProjectKey(cwd)
     const homedir = process.env.HOME || process.env.USERPROFILE || '~'
     return `${homedir}/.claude/projects/${projectKey}/${cliSessionId}.jsonl`
   }

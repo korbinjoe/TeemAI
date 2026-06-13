@@ -16,7 +16,7 @@ import type { OutputParser } from './OutputParser'
 import { codexOutputParser } from './CodexParser'
 import type { CliProvider } from '../config/types'
 import { createLogger } from '../lib/logger'
-import { cwdToClaudeProjectKey, cwdToQoderProjectKey } from '../../shared/projectKey'
+import { cwdToCliProjectKey } from '../../shared/projectKey'
 
 const log = createLogger('SessionDiscovery')
 
@@ -44,7 +44,7 @@ export const createSessionDiscovery = (provider: CliProvider, sessionId: string)
     case 'qoder':
     case 'qodercli':
       return new ClaudeSessionDiscovery(sessionId, (cwd) => {
-        return join(homedir(), '.qoder', 'projects', cwdToQoderProjectKey(cwd), 'transcript')
+        return join(homedir(), '.qoder', 'projects', cwdToCliProjectKey(cwd), 'transcript')
       })
     default: {
       const _exhaustive: never = provider
@@ -69,7 +69,7 @@ class ClaudeSessionDiscovery implements SessionDiscovery {
   watch(cwd: string, spawnedAt: number, onFound: (result: SessionDiscoveryResult) => void): void {
     const claudeProjectDir = this.dirBuilder
       ? this.dirBuilder(cwd)
-      : join(homedir(), '.claude', 'projects', cwdToClaudeProjectKey(cwd))
+      : join(homedir(), '.claude', 'projects', cwdToCliProjectKey(cwd))
 
     const baselineFiles = new Set<string>()
     const dirExists = existsSync(claudeProjectDir)

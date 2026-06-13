@@ -27,7 +27,7 @@ import { homedir } from 'os'
 import { createLogger } from '../lib/logger'
 import type { CliProvider } from '../config/types'
 import { getRuntimeInspect, type RuntimeInspect } from '../lib/resolveCliCommand'
-import { cwdToClaudeProjectKey } from '../../shared/projectKey'
+import { cwdToCliProjectKey } from '../../shared/projectKey'
 
 const log = createLogger('DevInspector')
 
@@ -379,7 +379,7 @@ export class DevInspector {
       const projectKey = cwd.replace(/[/.]/g, '-')
       return join(homedir(), '.qoder', 'projects', projectKey, 'transcript', `${cliSessionId}.jsonl`)
     }
-    const projectKey = cwdToClaudeProjectKey(cwd)
+    const projectKey = cwdToCliProjectKey(cwd)
     return join(homedir(), '.claude', 'projects', projectKey, `${cliSessionId}.jsonl`)
   }
 
@@ -388,7 +388,7 @@ export class DevInspector {
     if (!filePath) {
       const placeholder = provider === 'codex'
         ? join(homedir(), '.codex', 'sessions', `<not-found>-${cliSessionId}.jsonl`)
-        : join(homedir(), '.claude', 'projects', cwdToClaudeProjectKey(cwd), `${cliSessionId}.jsonl`)
+        : join(homedir(), '.claude', 'projects', cwdToCliProjectKey(cwd), `${cliSessionId}.jsonl`)
       return { filePath: placeholder, fileExists: false, fileSizeBytes: 0 }
     }
     const fileExists = existsSync(filePath)
@@ -413,7 +413,7 @@ export class DevInspector {
     if (!filePath) {
       const placeholder = provider === 'codex'
         ? join(homedir(), '.codex', 'sessions', `<not-found>-${cliSessionId}.jsonl`)
-        : join(homedir(), '.claude', 'projects', cwdToClaudeProjectKey(session.cwd), `${cliSessionId}.jsonl`)
+        : join(homedir(), '.claude', 'projects', cwdToCliProjectKey(session.cwd), `${cliSessionId}.jsonl`)
       return { filePath: placeholder, fileExists: false, fileSizeBytes: 0 }
     }
     if (existsSync(filePath)) {

@@ -13,7 +13,7 @@ import { lstatSync, unlinkSync, existsSync } from 'fs'
 import { join, resolve } from 'path'
 import { homedir } from 'os'
 import type { ExpertSessionInfo } from '../config/types'
-import { cwdToClaudeProjectKey } from '../../shared/projectKey'
+import { cwdToCliProjectKey } from '../../shared/projectKey'
 import { locateCodexRollout } from '../terminal/CodexRolloutLocator'
 import { createLogger } from '../lib/logger'
 
@@ -42,7 +42,7 @@ export const resolveExpertSessionJsonl = (session: ExpertSessionInfo): { path: s
     const found = locateCodexRollout(session.cliSessionId)
     return { path: found, provider: 'codex' }
   }
-  const projectKey = cwdToClaudeProjectKey(session.cwd)
+  const projectKey = cwdToCliProjectKey(session.cwd)
   const absPath = join(homedir(), '.claude', 'projects', projectKey, `${session.cliSessionId}.jsonl`)
   return { path: absPath, provider: 'claude' }
 }

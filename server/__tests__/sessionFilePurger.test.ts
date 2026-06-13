@@ -24,7 +24,7 @@ afterEach(async () => {
 
 describe('sessionFilePurger', () => {
   describe('resolveExpertSessionJsonl', () => {
-    it('claude path uses cwdToClaudeProjectKey + cliSessionId', () => {
+    it('claude path uses cwdToCliProjectKey + cliSessionId', () => {
       const { path, provider } = purger.resolveExpertSessionJsonl({
         cliSessionId: 'session-abc',
         cwd: '/Users/test/repo',
@@ -107,7 +107,7 @@ describe('sessionFilePurger', () => {
       writeFileSync(outside, 'PROTECT')
 
       // craft a cwd whose projectKey resolves outside ~/.claude/projects/
-      // cwdToClaudeProjectKey replaces / and . with - so traversal via that
+      // cwdToCliProjectKey replaces / and . with - so traversal via that
       // path is structurally blocked; we still verify with an absolute escape
       const result = purger.purgeExpertSessionJsonl({
         cliSessionId: '../../outside',

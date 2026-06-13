@@ -23,7 +23,7 @@ import { acpUpdateToWSMessage } from '../acp/ACPToFrontendBridge'
 import type { CliProvider, ExpertSessionInfo } from '../config/types'
 import { createLogger } from '../lib/logger'
 import { trackEvent } from '../lib/eventTracker'
-import { cwdToClaudeProjectKey, cwdToQoderProjectKey } from '../../shared/projectKey'
+import { cwdToCliProjectKey } from '../../shared/projectKey'
 import { scanPluginSlashCommands, scanProjectSlashCommands, scanUserSkills } from '../runtime/PluginCommandsScanner'
 
 const log = createLogger('ExpertResume')
@@ -64,13 +64,13 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
       return readCodexRollout(cliSessionId)
     }
     if (provider === 'qoder' || provider === 'qodercli') {
-      const projectKey = cwdToQoderProjectKey(cwd)
+      const projectKey = cwdToCliProjectKey(cwd)
       const jsonlPath = join(homedir(), '.qoder', 'projects', projectKey, 'transcript', `${cliSessionId}.jsonl`)
       if (!existsSync(jsonlPath)) return null
       const msgs = parseConversationFile(jsonlPath)
       return msgs.length > 0 ? msgs : null
     }
-    const projectKey = cwdToClaudeProjectKey(cwd)
+    const projectKey = cwdToCliProjectKey(cwd)
     const jsonlPath = join(homedir(), '.claude', 'projects', projectKey, `${cliSessionId}.jsonl`)
     if (!existsSync(jsonlPath)) return null
     const msgs = parseConversationFile(jsonlPath)

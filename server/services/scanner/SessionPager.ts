@@ -4,7 +4,7 @@
  * Called when the user expands a directory in the sidebar. For the requested
  * cwd we:
  *   1. Locate any jsonl files belonging to it (Claude: derive project dir from
- *      cwdToClaudeProjectKey; Codex: query external_session_index by cwd).
+ *      cwdToCliProjectKey; Codex: query external_session_index by cwd).
  *   2. For each file not yet in external_session_index — or cached with a
  *      stale (mtime, size) — parseHeader (≤ 8 KB) to extract first user
  *      message, then upsert.
@@ -25,7 +25,7 @@ import { homedir } from 'os'
 import type BetterSqlite3 from 'better-sqlite3'
 import { getDatabase } from '../../stores/Database'
 import { createLogger } from '../../lib/logger'
-import { cwdToClaudeProjectKey } from '../../../shared/projectKey'
+import { cwdToCliProjectKey } from '../../../shared/projectKey'
 import { safeJsonParse } from './readHead'
 
 const log = createLogger('SessionPager')
@@ -369,7 +369,7 @@ export class SessionPager {
   private async listClaudeFiles(
     cwd: string,
   ): Promise<Array<{ filePath: string; sessionId: string; mtime: number; size: number }>> {
-    const projectKey = cwdToClaudeProjectKey(cwd)
+    const projectKey = cwdToCliProjectKey(cwd)
     const dir = join(CLAUDE_ROOT, projectKey)
     if (!existsSync(dir)) return []
     let names: string[]

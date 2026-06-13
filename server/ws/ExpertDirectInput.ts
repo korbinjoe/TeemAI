@@ -11,7 +11,7 @@ import { silentlyIgnore } from '../lib/silentlyIgnore'
 import { createLogger } from '../lib/logger'
 import { expandSlashCommand } from '../runtime/SlashCommandResolver'
 import { trackEvent } from '../lib/eventTracker'
-import { cwdToClaudeProjectKey } from '../../shared/projectKey'
+import { cwdToCliProjectKey } from '../../shared/projectKey'
 import { locateCodexRollout } from '../terminal/CodexRolloutLocator'
 import { isPlaceholderTitle } from '../../shared/placeholderTitles'
 
@@ -160,7 +160,7 @@ export const createExpertDirectInput = (deps: ExpertDirectInputDeps) => {
         if (oldCliSessionId) {
           const canResume = oldProvider === 'codex'
             ? !!locateCodexRollout(oldCliSessionId)
-            : existsSync(join(homedir(), '.claude', 'projects', cwdToClaudeProjectKey(sessionCwd), `${oldCliSessionId}.jsonl`))
+            : existsSync(join(homedir(), '.claude', 'projects', cwdToCliProjectKey(sessionCwd), `${oldCliSessionId}.jsonl`))
           if (canResume) {
             resumeSessionId = oldCliSessionId
             if (!effectiveCwd) effectiveCwd = sessionCwd

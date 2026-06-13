@@ -10,7 +10,7 @@ import type { SessionRegistry } from '../../terminal/SessionRegistry'
 import { MemberAggregator } from '../../stores/MemberAggregator'
 import { WorktreeManager } from '../../git/WorktreeManager'
 import { createLogger } from '../../lib/logger'
-import { cwdToClaudeProjectKey } from '../../../shared/projectKey'
+import { cwdToCliProjectKey } from '../../../shared/projectKey'
 import { purgeExpertSessionJsonl, type PurgeResult } from '../../services/sessionFilePurger'
 
 const log = createLogger('ChatRoutes')
@@ -173,7 +173,7 @@ export const createChatRoutes = ({ chatStore, chatService, tokenUsageStore, sess
       let jsonlPath: string | null = null
 
       if (provider === 'claude') {
-        const projectKey = cwdToClaudeProjectKey(session.cwd)
+        const projectKey = cwdToCliProjectKey(session.cwd)
         const absPath = join(homedir(), '.claude', 'projects', projectKey, `${session.cliSessionId}.jsonl`)
         if (existsSync(absPath)) jsonlPath = absPath
       }

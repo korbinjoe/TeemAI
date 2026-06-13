@@ -22,7 +22,7 @@ import type { ChatStore } from '../stores/ChatStore'
 import type { AgentStore } from '../stores/AgentStore'
 import { createParserState, parseConversationFile, type ParsedMessage } from '../terminal/ConversationParser'
 import { acpUpdateToWSMessage } from '../acp/ACPToFrontendBridge'
-import { cwdToClaudeProjectKey } from '../../shared/projectKey'
+import { cwdToCliProjectKey } from '../../shared/projectKey'
 import { codexOutputParser } from '../terminal/CodexParser'
 import { locateCodexRollout } from '../terminal/CodexRolloutLocator'
 import { createLogger } from '../lib/logger'
@@ -167,7 +167,7 @@ export const createExpertExitHandler = (deps: ExitHandlerDeps) => {
         if (expertInfo.provider === 'codex') {
           jsonlPath = locateCodexRollout(ctx.resumeSessionId)
         } else {
-          const projectKey = cwdToClaudeProjectKey(cwd)
+          const projectKey = cwdToCliProjectKey(cwd)
           const candidatePath = join(homedir(), '.claude', 'projects', projectKey, `${ctx.resumeSessionId}.jsonl`)
           if (existsSync(candidatePath)) {
             jsonlPath = candidatePath

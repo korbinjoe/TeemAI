@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Check } from 'lucide-react'
+import { Check, Database, ChevronRight } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { useTheme, COLOR_THEMES, type ColorTheme } from '../../contexts/ThemeContext'
@@ -78,6 +79,7 @@ const SUPPORTED_LANGUAGES = ['en', 'zh', 'ja', 'ko', 'es', 'fr', 'de', 'pt'] as 
 const GeneralSettings = () => {
   const { t, i18n } = useTranslation(['settings', 'common'])
   const { theme, toggleTheme } = useTheme()
+  const navigate = useNavigate()
   const [preventSleep, setPreventSleep] = useState(false)
 
   useEffect(() => {
@@ -161,6 +163,21 @@ const GeneralSettings = () => {
 
       <Section title={t('settings:saveSettings', { defaultValue: 'Updates' })} />
       <UpdateSettings />
+
+      <Section title={t('settings:advanced', { defaultValue: 'Advanced' })} />
+      <button
+        onClick={() => navigate('/admin')}
+        className="flex w-full items-center justify-between rounded-lg border border-border-subtle bg-bg-secondary px-3 py-2.5 text-left transition-all hover:border-border hover:bg-bg-hover-muted"
+      >
+        <div className="flex items-center gap-2.5">
+          <Database size={16} className="shrink-0 text-text-secondary" />
+          <div>
+            <div className="text-[13px] text-text-primary">{t('settings:adminConsole', { defaultValue: 'Admin Console' })}</div>
+            <div className="mt-0.5 text-xs text-text-secondary">{t('settings:adminConsoleDesc', { defaultValue: 'Browse local database tables' })}</div>
+          </div>
+        </div>
+        <ChevronRight size={16} className="shrink-0 text-text-muted" />
+      </button>
 
     </div>
   )

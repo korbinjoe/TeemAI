@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { getWebSocketClient, sendTelemetry } from '../services/WebSocketClient'
 import type { Message, AgentActivity, WorktreeSession, ChatActivityPayload } from '../types/chat'
 import { ACTIVE_PHASES } from '@/lib/memberStatus'
+import { reconcileExpertActivitiesFromChat } from '@/lib/expertActivityReconcile'
 import type { AgentSummary } from '../types/agentConfig'
 import { API_BASE, authFetch } from '@/config/api'
 import { DEFAULT_AGENT, DEFAULT_MODEL } from '@/lib/models'
@@ -322,6 +323,11 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       if (phase === 'completed' || phase === 'error') setChatStatus('stopped')
       else if (phase === 'waiting_input' || phase === 'waiting_confirmation') setChatStatus('idle')
       else if (ACTIVE_PHASES.has(phase)) setChatStatus('running')
+      // Reconcile the message-area progress cards: the per-agent expert:activity
+      // stream is isActive-gated and can miss a turn-end event, freezing a card
+      // at a working phase. This authoritative payload advances any such stuck
+      // card to its terminal phase (same signal the right Agents panel uses).
+      setExpertActivities((prev) => reconcileExpertActivitiesFromChat(prev, payload))
     }
 
     wsClient.on('expert:structured-message', onStructuredMessage)

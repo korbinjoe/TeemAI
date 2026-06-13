@@ -377,6 +377,7 @@ describe('ExpertEventHandlers', () => {
       }))
 
       handleExpertPartialText({ agentId: 'eng-1', chatId: 'chat-1', sessionId: 's1', blockIndex: 0, text: 'world' })
+      vi.runAllTimers() // partial text is coalesced and flushed on a 16ms timer
 
       expect(ctx._agentMessages['eng-1'][0].content).toBe('Hello world')
     })
@@ -386,6 +387,7 @@ describe('ExpertEventHandlers', () => {
       const { handleExpertPartialText } = createExpertEventHandlers(ctx)
 
       handleExpertPartialText({ agentId: 'eng-1', chatId: 'chat-1', sessionId: 's1', blockIndex: 0, text: 'First chunk' })
+      vi.runAllTimers() // partial text is coalesced and flushed on a 16ms timer
 
       expect(ctx._agentMessages['eng-1']).toHaveLength(1)
       expect(ctx._agentMessages['eng-1'][0].content).toBe('First chunk')

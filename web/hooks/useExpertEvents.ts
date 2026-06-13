@@ -194,7 +194,12 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
       for (const [agentId, { messages: batch, replacedIds }] of snapshot.entries()) {
         if (batch.length === 0 && replacedIds.size === 0) continue
         const base = next[agentId] ?? []
-        const merged = mergeAgentBatch(base, batch, replacedIds, true)
+        // Only drop the streamed bubble when this batch actually carries the
+        // committed text that supersedes it. A turn-end stats-only (or tool-only)
+        // delta must not discard streamed text that was never committed — that
+        // would erase the final reply the user already watched stream in.
+        const batchSupersedesStream = batch.some((m) => m.role === 'agent' && m.type === 'text' && !!m.content)
+        const merged = mergeAgentBatch(base, batch, replacedIds, batchSupersedesStream)
         if (merged !== base) {
           next[agentId] = merged
           changed = true
@@ -218,10 +223,12 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
   }
 
   const pushDelta = (agentId: string, messages: Message[], replacedStatsId?: string | null) => {
-    // A structured delta supersedes the streaming bubble (mergeAgentBatch drops
-    // streaming entries), so drop any buffered partial text for this agent to
-    // avoid re-adding a stale streaming bubble after the delta lands.
-    partialTextBuffers.delete(agentId)
+    // Only drop buffered partial text when this delta carries the committed text
+    // that supersedes it. A stats-only/tool-only delta (e.g. turn-end) must keep
+    // the buffer so the streamed final reply isn't erased before it commits.
+    if (messages.some((m) => m.role === 'agent' && m.type === 'text' && !!m.content)) {
+      partialTextBuffers.delete(agentId)
+    }
     let bucket = deltaBuffers.get(agentId)
     if (!bucket) {
       bucket = { messages: [], replacedIds: new Set() }

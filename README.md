@@ -2,19 +2,17 @@
 
 [![CI](https://github.com/korbinjoe/TeemAI/actions/workflows/ci.yml/badge.svg)](https://github.com/korbinjoe/TeemAI/actions/workflows/ci.yml)
 
-**Your AI teammates — with names, memory, and growing expertise.**
+**The GUI and team layer for Claude Code, Codex, and Qoder CLI.**
 
-You already use Claude Code or Codex. But every session starts from zero. Your agent doesn't remember your stack, your conventions, or the 20 times you told it "we use Tailwind, not CSS modules." And when you need three things done at once, you're stuck in one terminal, waiting.
-
-TeemAI turns disposable AI sessions into a **persistent, professional team** — agents that know your project, work in parallel, and keep going while you're away.
+You already ship with AI CLIs. But you're still juggling raw terminals: hunting for the right session, re-explaining your stack every time, and watching one agent while three other tasks wait. TeemAI is the control surface those CLIs never gave you — one place to see every session, run a team in parallel, and come back to finished work.
 
 ```
-You:    "Build the auth module, add tests, and update the docs."
+You:    "Build auth, add tests, update the docs."
 
-        ✦ Lead breaks it into 3 tasks
-        ✦ Engineer, Reviewer, and Tech Writer work simultaneously
-        ✦ You go grab coffee
-        ✦ Come back — 3 PRs ready for review
+        ✦ Lead splits it into 3 parallel missions
+        ✦ Engineer, Reviewer, Tech Writer — each in its own worktree
+        ✦ You leave for a meeting
+        ✦ Return: "3 done, 1 needs your sign-off"
 ```
 
 [![Watch the demo](https://github.com/user-attachments/assets/5f7b0993-b334-4e62-8114-3a24c6bd7a2c)](https://www.youtube.com/watch?v=NdwieO0M27E)
@@ -29,31 +27,99 @@ You:    "Build the auth module, add tests, and update the docs."
 
 ---
 
-## Why TeemAI?
+## Sound familiar?
 
-### Your agents start from zero every time
+| What you do today | What it costs you |
+|-------------------|-------------------|
+| Open 4 terminal tabs for Claude Code / Codex / Qoder | No overview — which session is stuck? which one finished? |
+| Scroll JSONL or restart the CLI to find an old conversation | Context lost; you re-read or re-prompt from scratch |
+| Copy-paste between agents because they can't see each other | You become the router — the bottleneck |
+| One CLI session = one task | Three features in parallel means three context switches |
+| Every new session forgets your conventions | "We use Tailwind" for the 21st time |
+| Close the laptop → work stops | Your away time is dead time |
 
-Every Claude Code session is a blank slate. No memory of your project, no awareness of your coding standards, no specialization. You re-explain the same context over and over.
+TeemAI doesn't replace your CLIs. It **wraps them** — same binaries, same models, same tool permissions — with a GUI, persistent agents, and orchestration you can't get from a bare terminal.
 
-**TeemAI fix**: Each agent has a persistent identity (IDENTITY.md), defined expertise (AGENTS.md), and personality (SOUL.md). They accumulate memory across sessions. A built-in coach (Sensei) analyzes their task history and automatically optimizes their capabilities.
+---
 
-### You're stuck running one agent at a time
+## Four things CLI power users actually need
 
-You have three things to do, but your single terminal blocks you from doing any of them in parallel.
+### 1. A real GUI for your CLIs
 
-**TeemAI fix**: Dispatch multiple agents simultaneously. Engineer writes code while Reviewer audits while Designer prototypes — each in its own isolated git worktree, no merge conflicts.
+Raw PTY terminals are fine for hacking. They're terrible for **operating** a fleet of agents.
 
-### You have to babysit every step
+TeemAI gives Claude Code, Codex, and Qoder CLI a unified desktop:
 
-Context-switch between agents, relay information manually, confirm every small decision. Managing AI is more exhausting than doing the work yourself.
+- **Mission sidebar** — every active and historical session in one list, with status dots (running / waiting / error / done)
+- **Structured chat** — tool calls, diffs, and approvals parsed from JSONL, not a wall of ANSI
+- **Live permission gate** — approve or reject tool use without missing it in scrollback
+- **Web IDE built in** — file tree, Monaco editor, multi-tab terminal, git diff, browser preview
+- **Electron desktop** — optional native app, same backend
 
-**TeemAI fix**: Agents coordinate through a shared War Room — they see each other's goals, decisions, and artifacts. They self-decide when possible and only escalate when human judgment is genuinely needed.
+Your CLIs keep running underneath. TeemAI is the cockpit.
 
-### When you leave, everything stops
+### 2. Multi-session management that scales
 
-You go to a meeting, and your AI stops working. Your time away is wasted productivity.
+When you run more than one agent, "session management" becomes the product.
 
-**TeemAI fix**: Pulse-mode — batch-dispatch tasks, walk away, come back to results. The workflow engine handles dependencies, retries, and failure policies. When you return: "You were away for 2 hours. 3 completed, 1 needs your review."
+- **One view, all sessions** — Claude, Codex, and Qoder sessions side by side; no tab archaeology
+- **Session recovery** — refresh the page, reconnect WebSocket, reopen a mission — conversation reloads from JSONL (source of truth)
+- **PTY persistence** — terminal processes survive disconnects; you don't lose in-flight work
+- **Per-agent isolation** — each agent gets its own CLI session and git worktree; parallel work without merge fights
+- **Token and cost visibility** — see spend by model and conversation before the invoice surprises you
+
+Stop treating sessions as disposable. Treat them as assets you can return to.
+
+### 3. Multi-agent definition — a team, not a prompt dump
+
+A single generic "coding agent" can't cover review, design, DevOps, and product strategy. You need **roles with memory**.
+
+Each agent is a directory of markdown — identity, expertise, personality:
+
+```
+ai-assets/agents/code-reviewer/
+├── IDENTITY.md    ← name, provider, tools
+├── AGENTS.md      ← system prompt, expertise, workflows
+└── SOUL.md        ← personality, tone, collaboration style
+```
+
+Register in `teemai.json` — mix providers per agent (Claude Code on one, Codex on another, Qoder on a third):
+
+```jsonc
+{
+  "agents": {
+    "list": [
+      { "id": "lead", "name": "Lead", "model": "claude-sonnet-4-6" },
+      { "id": "fullstack-product-engineer", "name": "Fullstack Engineer" },
+      { "id": "code-reviewer", "name": "Code Reviewer", "provider": "codex" },
+      { "id": "ui-designer", "name": "UI Designer" }
+    ]
+  }
+}
+```
+
+**10 built-in specialists** — Lead, Engineer, Reviewer, Designer, DevOps, Architect, Product Strategist, Growth Marketer, Image Creator, Sensei. Add your own: one `SOUL.md` + one config line.
+
+Agents carry **Skills** (workflow, handoff, playwright-cli, code-reviewer-*, skill-creator, …) — executable capabilities, not just longer prompts.
+
+### 4. Evolution and orchestration — dispatch, leave, review
+
+**Evolution** — agents improve with use, not reset every Monday:
+
+- **Cross-session memory** — agents retain project context across missions
+- **DNA metrics** — task count, success rate, first-pass rate, quality score per agent
+- **Evolution log** — visible growth trajectory
+- **Sensei** — built-in coach that reads task history and optimizes agent prompts automatically
+
+**Orchestration** — one human, many agents, one review pass:
+
+- **Missions** — dispatch a goal; Lead routes, hands off, or builds a DAG workflow
+- **War Room** — shared whiteboard where agents post goals, decisions, artifacts, blockers — no you-as-relay
+- **DAG workflows** — dependencies, retries, `stop` / `skip` / `retry` failure policies
+- **Pulse-mode** — batch-dispatch → walk away → batch-review: *"You were away 2 hours. 3 completed, 1 needs review."*
+- **Cron scheduler** — recurring missions with natural-language time rules
+
+This is the operating system for the **AI super-individual** — one person orchestrating what used to take a team.
 
 ---
 
@@ -71,49 +137,20 @@ npm run dev
 npm run dev:electron
 ```
 
-**Prerequisites**: Node.js >= 18, npm, and a Claude Code or Codex CLI installed.
+**Prerequisites**: Node.js >= 18, npm, and at least one supported CLI installed (Claude Code, Codex, or Qoder CLI).
 
 ---
 
-## How It Works
+## How it works
 
-### 1. Define your team
-
-Each agent is a directory with markdown files that define who it is:
-
-```
-ai-assets/agents/code-reviewer/
-├── IDENTITY.md    ← name, provider, tools
-├── AGENTS.md      ← system prompt, expertise, workflows
-└── SOUL.md        ← personality, tone, collaboration style
-```
-
-Or configure via `teemai.json`:
-
-```jsonc
-{
-  "agents": {
-    "list": [
-      { "id": "lead", "name": "Lead", "model": "claude-sonnet-4-6" },
-      { "id": "fullstack-product-engineer", "name": "Fullstack Engineer" },
-      { "id": "code-reviewer", "name": "Code Reviewer" },
-      { "id": "ui-designer", "name": "UI Designer" }
-    ]
-  }
-}
-```
-
-### 2. Start a mission
-
-Tell the Lead what you need. It decides whether to answer directly, hand off to one specialist, or decompose into a multi-step workflow across several agents.
-
-### 3. Walk away
-
-Agents work in isolated git worktrees. The workflow engine handles task dependencies, retries, and failure policies. When you come back, review the results and ship.
+1. **Define your team** — built-in agents or custom roles in `ai-assets/agents/` + `teemai.json`
+2. **Start a mission** — tell Lead what you need; it answers, delegates, or decomposes into parallel work
+3. **Walk away** — agents work in isolated worktrees; workflow engine handles deps and failures
+4. **Review and ship** — structured results, permission history, and PR-ready diffs when you return
 
 ---
 
-## Your Built-in Team
+## Built-in team
 
 | Agent | Role | What makes it special |
 |-------|------|----------------------|
@@ -128,83 +165,25 @@ Agents work in isolated git worktrees. The workflow engine handles task dependen
 | **Growth Marketer** | Distribution | Social media, promotion content |
 | **Sensei** | Coach | Analyzes team performance, optimizes agent prompts |
 
-Every agent remembers. Sensei watches their task history and evolves their capabilities over time. The team gets better the more you use it.
-
-Adding a custom agent = create a directory with a `SOUL.md` and add one entry to `teemai.json`.
-
 ---
 
-## Key Capabilities
+## Use cases
 
-### Session Management
-- Unified view of all CLI AI sessions (Claude Code, Codex) — status visible at a glance
-- Session history recovery — never lose a conversation
-- Cross-session agent memory — your agents remember what they learned
+**Solo founder** — "Landing page, signup API, and copy." Three agents, one review. Next week they already know your stack.
 
-### Orchestration
-- DAG workflows — Lead decomposes tasks into dependency graphs
-- Handoff protocol — agents route work to the right specialist
-- Workspace isolation — each agent works in its own git worktree
-- Failure policies — per-task `stop`, `skip`, or `retry` with configurable timeouts
+**Maintainer** — Large contributor PR? Reviewer scans backend, frontend, and config in parallel. Structured report in minutes — and it remembers your conventions next time.
 
-### Collaboration
-- War Room — shared context board where agents post goals, decisions, and blockers
-- Agent-to-agent coordination without user as relay
-- Attention-first — agents self-decide, only escalate when necessary
-
-### Transparency
-- Real-time token tracking by model and conversation
-- Permission interception — approve or reject agent tool calls live
-- DevPanel — 5-tab dashboard with protocol timeline and workflow DAG inspector
-- Cron scheduler — recurring agent tasks with natural-language time parsing
-
-### Agent Growth
-- DNA metrics — task count, success rate, first-pass rate, quality score per agent
-- Evolution log — visible growth trajectory over time
-- Sensei — automatic prompt optimization based on task history
-
-### Web IDE
-- File tree + Monaco editor + multi-tab terminal
-- Built-in browser preview for frontend work
-- Git diff viewer and commit panel
-
----
-
-## Use Cases
-
-**Solo Founder** — You have a product idea. "Build the landing page, implement the signup API, and write the copy." Three agents work in parallel. You review one PR with all the pieces. Next week, they already know your tech stack.
-
-**Open Source Maintainer** — A contributor submits a large PR. Dispatch Code Reviewer across backend, frontend, and config simultaneously. Get a structured review report in minutes. The reviewer remembers your project's conventions for next time.
-
-**Freelancer** — Client wants a feature + tests + docs. Dispatch once, go work on another client. Come back to a complete deliverable. Your agents have been learning your client's codebase with each task.
-
----
-
-## Skills System
-
-Agents aren't just prompts — they carry executable skills:
-
-| Skill | Description |
-|-------|-------------|
-| `workflow` | DAG creation, advancement, status tracking |
-| `handoff` | Transfer tasks to the right specialist |
-| `whiteboard` | Read/write shared War Room context |
-| `playwright-cli` | Browser automation and screenshot verification |
-| `image-generator` | AI image generation |
-| `code-reviewer-*` | Language-specific review checklists |
-| `skill-creator` | Create new skills dynamically |
-
-Skills are composable — any agent can carry any combination. Build your own by dropping a script into the skills directory.
+**Freelancer** — Feature + tests + docs on one client while agents finish another. Pulse-mode turns dead time into deliverables.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌──────────────────────────┐
-│   Web UI    │────▶│   Express    │────▶│  CLI Agents (PTY Sessions) │
-│  (React 18) │◀────│   + WS       │◀────│  Claude Code / Codex       │
-└─────────────┘     └──────────────┘     └──────────────────────────┘
+┌─────────────┐     ┌──────────────┐     ┌──────────────────────────────┐
+│   Web UI    │────▶│   Express    │────▶│  CLI Agents (PTY Sessions)   │
+│  (React 18) │◀────│   + WS       │◀────│  Claude Code / Codex / Qoder │
+└─────────────┘     └──────────────┘     └──────────────────────────────┘
        │                   │                        │
   Electron app        REST + WS              WorkflowEngine
   (optional)          endpoints              WorkflowScheduler

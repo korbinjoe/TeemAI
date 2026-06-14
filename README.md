@@ -1,5 +1,7 @@
 # TeemAI
 
+[![CI](https://github.com/korbinjoe/TeemAI/actions/workflows/ci.yml/badge.svg)](https://github.com/korbinjoe/TeemAI/actions/workflows/ci.yml)
+
 **Your AI teammates — with names, memory, and growing expertise.**
 
 You already use Claude Code or Codex. But every session starts from zero. Your agent doesn't remember your stack, your conventions, or the 20 times you told it "we use Tailwind, not CSS modules." And when you need three things done at once, you're stuck in one terminal, waiting.
@@ -17,7 +19,7 @@ You:    "Build the auth module, add tests, and update the docs."
 
 [![Watch the demo](https://github.com/user-attachments/assets/5f7b0993-b334-4e62-8114-3a24c6bd7a2c)](https://www.youtube.com/watch?v=NdwieO0M27E)
 
-📦 [Releases](https://github.com/korbinjoe/openteam/releases)
+📦 [Releases](https://github.com/korbinjoe/TeemAI/releases)
 
 > **Brand vs code naming.** "OpenTeam" is the public-facing product brand. The
 > runtime and code truth is **TeemAI / teemai** — everything on disk and in the
@@ -58,8 +60,8 @@ You go to a meeting, and your AI stops working. Your time away is wasted product
 ## Quick Start
 
 ```bash
-git clone https://github.com/korbinjoe/teemai.git
-cd teemai && npm install
+git clone https://github.com/korbinjoe/TeemAI.git
+cd TeemAI && npm install
 
 # Run (frontend + backend)
 npm run dev

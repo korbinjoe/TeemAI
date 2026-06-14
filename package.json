@@ -51,6 +51,7 @@
   "build": {
     "appId": "com.teemai.app",
     "productName": "TeemAI",
+    "afterPack": "scripts/electron-after-pack.cjs",
     "npmRebuild": false,
     "files": [
       "dist/electron/**/*",

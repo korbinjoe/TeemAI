@@ -133,7 +133,17 @@ export class WorkspaceSeeder {
     for (const entry of entries) {
       const srcPath = join(src, entry.name)
       const dstPath = join(dst, entry.name)
-      const srcStat = await stat(srcPath)
+
+      // stat() follows symlinks; a dangling symlink (e.g. a packaged skill
+      // pointing at an external repo absent from the bundle) throws ENOENT.
+      // Skip it instead of letting boot crash the whole app.
+      let srcStat
+      try {
+        srcStat = await stat(srcPath)
+      } catch (err) {
+        log.warn('Skipping unreadable seed entry (broken symlink?)', { srcPath, error: String(err) })
+        continue
+      }
 
       if (srcStat.isDirectory()) {
         if (overwrite) await this.removeSymlinkIfPresent(dstPath)

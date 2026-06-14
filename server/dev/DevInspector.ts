@@ -666,10 +666,10 @@ export class DevInspector {
 
   async collectPipelineState(chatId: string): Promise<PipelineSnapshot> {
     const sessions = this.sessionRegistry.findAllByChat(chatId)
-    return this.buildLocalPipeline(sessions)
+    return this.buildLocalPipeline(chatId, sessions)
   }
 
-  private buildLocalPipeline(sessions: ManagedSession[]): PipelineSnapshot {
+  private buildLocalPipeline(chatId: string, sessions: ManagedSession[]): PipelineSnapshot {
     const s = sessions[0]
     const inspect = s?.streamManager.getInspectState()
     const sj = inspect?.streamJson
@@ -712,7 +712,7 @@ export class DevInspector {
     }]
 
     return {
-      mode: 'local', taskId: null, zones,
+      mode: 'local', taskId: chatId, zones,
       totalElapsedMs: sj?.spawnedAt ? Date.now() - sj.spawnedAt : null,
       health: this.deriveHealthFromZones(zones),
     }

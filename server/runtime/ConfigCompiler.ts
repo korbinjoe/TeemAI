@@ -10,6 +10,7 @@ import { existsSync } from 'fs'
 import { readFile, writeFile, unlink, mkdir } from 'fs/promises'
 import { randomUUID } from 'crypto'
 import type { Agent, AgentPersonality, AgentMemory, McpServerConfig, CliProvider, HooksConfig, HookEntry } from '../config/types'
+import { isQoderVendor } from '../config/types'
 import type { SkillManager } from '../config/SkillManager'
 import type { MemoryStore } from '../stores/MemoryStore'
 import type { WhiteboardManager } from '../whiteboard/WhiteboardManager'
@@ -150,13 +151,13 @@ export class ConfigCompiler {
       const resumeEnv: Record<string, string> = {}
       if (context.chatId) resumeEnv.TEEMAI_CHAT_ID = context.chatId
       if (context.instanceId) resumeEnv.TEEMAI_INSTANCE_ID = context.instanceId
-      resumeEnv.EXPERT_API_BASE = `http://localhost:${context.serverPort}`
+      resumeEnv.AGENT_API_BASE = `http://localhost:${context.serverPort}`
       resumeEnv.EXPERT_CONNECTION_ID = context.connectionId || ''
 
       await this.writeEnvFile(context, resumeEnv)
 
       return {
-        command: (effectiveProvider === 'qoder' || effectiveProvider === 'qodercli') ? 'qodercli' : 'claude',
+        command: isQoderVendor(effectiveProvider) ? 'qodercli' : 'claude',
         args,
         env: resumeEnv,
         cwd,
@@ -243,7 +244,7 @@ export class ConfigCompiler {
       ...(agent.mcpServers || {}),
     }
 
-    env.EXPERT_API_BASE = `http://localhost:${context.serverPort}`
+    env.AGENT_API_BASE = `http://localhost:${context.serverPort}`
     env.EXPERT_CONNECTION_ID = context.connectionId || ''
     if (context.availableExperts?.length) {
       env.AVAILABLE_EXPERTS = JSON.stringify(context.availableExperts)
@@ -298,7 +299,7 @@ export class ConfigCompiler {
     await this.writeEnvFile(context, env)
 
     return {
-      command: (effectiveProvider === 'qoder' || effectiveProvider === 'qodercli') ? 'qodercli' : 'claude',
+      command: isQoderVendor(effectiveProvider) ? 'qodercli' : 'claude',
       args,
       env,
       cwd,
@@ -419,7 +420,7 @@ export class ConfigCompiler {
     // --session-id, --allowedTools, --mcp-config, --settings, --resume
 
     const env: Record<string, string> = {}
-    env.EXPERT_API_BASE = `http://localhost:${context.serverPort}`
+    env.AGENT_API_BASE = `http://localhost:${context.serverPort}`
     if (context.chatId) env.TEEMAI_CHAT_ID = context.chatId
     if (context.instanceId) env.TEEMAI_INSTANCE_ID = context.instanceId
     if (context.connectionId) env.EXPERT_CONNECTION_ID = context.connectionId
@@ -586,7 +587,7 @@ export class ConfigCompiler {
     const envDir = join(homedir(), '.teemai', 'tmp', 'env')
     await mkdir(envDir, { recursive: true })
     const envPath = join(envDir, `${context.chatId}-${context.instanceId}.env`)
-    const keys = ['EXPERT_API_BASE', 'TEEMAI_CHAT_ID', 'TEEMAI_INSTANCE_ID', 'EXPERT_CONNECTION_ID']
+    const keys = ['AGENT_API_BASE', 'TEEMAI_CHAT_ID', 'TEEMAI_INSTANCE_ID', 'EXPERT_CONNECTION_ID']
     const lines = keys
       .filter(k => env[k] !== undefined)
       .map(k => `export ${k}="${env[k]}"`)

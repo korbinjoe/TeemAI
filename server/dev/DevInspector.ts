@@ -12,7 +12,7 @@
 import type { WebSocket } from 'ws'
 import type { SessionRegistry, ManagedSession } from '../terminal/SessionRegistry'
 import type { ChatStore } from '../stores/ChatStore'
-import type { ExpertSessionStore } from '../ws/ExpertSessionStore'
+import type { MissionAgentSessionStore } from '../ws/MissionAgentSessionStore'
 import type { ACPAdapterInspect, ACPUpdateEntry } from '../acp/ACPAgentAdapter'
 import type { ParsedMessage } from '../terminal/ConversationParser'
 import type { WorkflowRegistry } from '../orchestration/WorkflowRegistry'
@@ -26,6 +26,7 @@ import { join } from 'path'
 import { homedir } from 'os'
 import { createLogger } from '../lib/logger'
 import type { CliProvider } from '../config/types'
+import { isQoderVendor } from '../config/types'
 import { getRuntimeInspect, type RuntimeInspect } from '../lib/resolveCliCommand'
 import { cwdToCliProjectKey } from '../../shared/projectKey'
 
@@ -182,7 +183,7 @@ export class DevInspector {
   constructor(
     private sessionRegistry: SessionRegistry,
     private chatStore?: ChatStore,
-    private expertStore?: ExpertSessionStore,
+    private expertStore?: MissionAgentSessionStore,
     private workflowRegistry?: WorkflowRegistry,
     private whiteboardManager?: WhiteboardManager,
   ) {}
@@ -375,7 +376,7 @@ export class DevInspector {
     if (provider === 'codex') {
       return locateCodexRollout(cliSessionId)
     }
-    if (provider === 'qoder' || provider === 'qodercli') {
+    if (isQoderVendor(provider)) {
       const projectKey = cwd.replace(/[/.]/g, '-')
       return join(homedir(), '.qoder', 'projects', projectKey, 'transcript', `${cliSessionId}.jsonl`)
     }
@@ -525,7 +526,7 @@ export class DevInspector {
     this.hookACPAdapter(chatId, sid, agentId)
   }
 
-  /**  ExpertSessionStore  ACP adapter inspect  */
+  /**  MissionAgentSessionStore  ACP adapter inspect  */
   private getACPInspect(sessionId: string): ACPAdapterInspect | null {
     if (!this.expertStore) return null
     const found = this.expertStore.findBySessionId(sessionId)
@@ -533,7 +534,7 @@ export class DevInspector {
     return found.entry.acpClient?.getInspectState() ?? null
   }
 
-  /**  ACP adapter  debug  ExpertSessionStore  */
+  /**  ACP adapter  debug  MissionAgentSessionStore  */
   private hookACPAdapter(chatId: string, sessionId: string, agentId: string | undefined): void {
     if (!this.expertStore) return
     const found = this.expertStore.findBySessionId(sessionId)
@@ -666,10 +667,10 @@ export class DevInspector {
 
   async collectPipelineState(chatId: string): Promise<PipelineSnapshot> {
     const sessions = this.sessionRegistry.findAllByChat(chatId)
-    return this.buildLocalPipeline(sessions)
+    return this.buildLocalPipeline(chatId, sessions)
   }
 
-  private buildLocalPipeline(sessions: ManagedSession[]): PipelineSnapshot {
+  private buildLocalPipeline(chatId: string, sessions: ManagedSession[]): PipelineSnapshot {
     const s = sessions[0]
     const inspect = s?.streamManager.getInspectState()
     const sj = inspect?.streamJson
@@ -712,7 +713,7 @@ export class DevInspector {
     }]
 
     return {
-      mode: 'local', taskId: null, zones,
+      mode: 'local', taskId: chatId, zones,
       totalElapsedMs: sj?.spawnedAt ? Date.now() - sj.spawnedAt : null,
       health: this.deriveHealthFromZones(zones),
     }

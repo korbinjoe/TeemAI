@@ -1,7 +1,7 @@
 /**
  * ExpertResumeHandler - Expert Agent
  *
- *  ExpertHandler
+ *  MissionAgentHandler
  * -  Chat resumeFromChat
  * - Re-attach  Agent session
  * - Dead Agent
@@ -17,10 +17,11 @@ import type { AgentStore } from '../stores/AgentStore'
 import type { SessionRegistry } from '../terminal/SessionRegistry'
 import { parseConversationFile, createParserState, type ParsedMessage } from '../terminal/ConversationParser'
 import { codexOutputParser } from '../terminal/CodexParser'
-import { ExpertSessionStore, compositeKey, parseAgentId, parseChatId } from './ExpertSessionStore'
+import { MissionAgentSessionStore, compositeKey, parseAgentId, parseChatId } from './MissionAgentSessionStore'
 import { StreamJsonManager } from '../terminal/StreamJsonManager'
 import { acpUpdateToWSMessage } from '../acp/ACPToFrontendBridge'
 import type { CliProvider, ExpertSessionInfo } from '../config/types'
+import { isQoderVendor } from '../config/types'
 import { createLogger } from '../lib/logger'
 import { trackEvent } from '../lib/eventTracker'
 import { cwdToCliProjectKey } from '../../shared/projectKey'
@@ -28,12 +29,12 @@ import { scanPluginSlashCommands, scanProjectSlashCommands, scanUserSkills } fro
 
 const log = createLogger('ExpertResume')
 
-export interface ExpertResumeDeps {
+export interface MissionAgentResumeDeps {
   chatStore: ChatStore
   workspaceStore: WorkspaceStore
   agentStore: AgentStore
   sessionRegistry: SessionRegistry
-  store: ExpertSessionStore
+  store: MissionAgentSessionStore
   sendTo: (connectionId: string, msg: Record<string, unknown>) => void
   handleStart: (
     ws: WebSocket,
@@ -42,7 +43,7 @@ export interface ExpertResumeDeps {
   ) => Promise<void>
 }
 
-export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
+export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) => {
   const { chatStore, workspaceStore, agentStore, sessionRegistry, store, sendTo, handleStart } = deps
 
   /** Agent spawn key=chatId::agentId → { count, lastFailedAt } */
@@ -63,7 +64,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
     if (provider === 'codex') {
       return readCodexRollout(cliSessionId)
     }
-    if (provider === 'qoder' || provider === 'qodercli') {
+    if (isQoderVendor(provider)) {
       const projectKey = cwdToCliProjectKey(cwd)
       const jsonlPath = join(homedir(), '.qoder', 'projects', projectKey, 'transcript', `${cliSessionId}.jsonl`)
       if (!existsSync(jsonlPath)) return null
@@ -245,7 +246,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
     const agentIcon = agent?.icon || ''
 
     sendTo(connectionId, {
-      type: 'expert:started',
+      type: 'agent:started',
       payload: { agentId, chatId, sessionId: cliSessionId, agentName, agentIcon, status: 'completed' },
     })
 
@@ -258,7 +259,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
     )
 
     sendTo(connectionId, {
-      type: 'expert:exit',
+      type: 'agent:exit',
       payload: { agentId, chatId, exitCode: exitCode ?? 0 },
     })
 
@@ -320,7 +321,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
       commandsPromise.then((commands) => {
         if (commands.length === 0) return
         sendTo(connectionId, {
-          type: 'expert:slash-commands',
+          type: 'agent:slash-commands',
           payload: { agentId, chatId, commands },
         })
       })
@@ -341,7 +342,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
       if (!existingSession || !existingSession.streamManager.isAlive()) continue
 
       sendTo(connectionId, {
-        type: 'expert:started',
+        type: 'agent:started',
         payload: {
           agentId,
           chatId,
@@ -381,7 +382,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
 
       const lastActivity = store.getActivity(compositeKey(connectionId, chatId, agentId))
       sendTo(connectionId, {
-        type: 'expert:activity',
+        type: 'agent:activity',
         payload: {
           agentId, chatId, sessionId: existingSession.sessionId,
           startedAt: existingSession.createdAt,
@@ -437,7 +438,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
 
         log.debug('Re-attach sendTo check', { connectionId, oldKey: oldKey ?? 'none', newKey })
         sendTo(connectionId, {
-          type: 'expert:started',
+          type: 'agent:started',
           payload: {
             agentId,
             chatId,
@@ -453,7 +454,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
 
         const lastActivity = store.getActivity(compositeKey(connectionId, chatId, agentId))
         sendTo(connectionId, {
-          type: 'expert:activity',
+          type: 'agent:activity',
           payload: {
             agentId, chatId, sessionId: existingSession.sessionId,
             startedAt: existingSession.createdAt,
@@ -499,7 +500,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
       if (!existsSync(cwd)) {
         log.warn('Resume skipped: original CWD no longer exists', { agentId, cwd })
         sendTo(connectionId, {
-          type: 'expert:resume-failed',
+          type: 'agent:resume-failed',
           payload: {
             agentId,
             chatId,
@@ -520,7 +521,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
       if (provider === 'codex') {
         log.info('Codex resume skipped: rollout not found', { agentId, cliSessionId })
         sendTo(connectionId, {
-          type: 'expert:resume-failed',
+          type: 'agent:resume-failed',
           payload: {
             agentId,
             chatId,
@@ -538,7 +539,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
         if (Date.now() - failRecord.lastFailedAt < SPAWN_FAILURE_COOLDOWN_MS) {
           log.info('Skip resume: spawn failure cooldown', { agentId, failCount: failRecord.count })
           sendTo(connectionId, {
-            type: 'expert:resume-failed',
+            type: 'agent:resume-failed',
             payload: {
               agentId,
               chatId,
@@ -578,13 +579,13 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
 
           if (isCommandNotFound) {
             sendTo(connectionId, {
-              type: 'expert:resume-failed',
+              type: 'agent:resume-failed',
               payload: {
                 agentId,
                 chatId,
                 agentName: agentId,
                 reason: 'command_not_found',
-                message: (failedProvider === 'qoder' || failedProvider === 'qodercli')
+                message: isQoderVendor(failedProvider)
                   ? 'Qoder CLI not found. Install it with: curl -fsSL https://qoder.com/install | bash'
                   : 'CLI tool not installed, please install Claude Code or Codex CLI first',
               },
@@ -595,7 +596,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
           const replayed = replayHistoryForDeadSession(connectionId, agentId, chatId, cliSessionId, cwd, failedProvider)
           if (!replayed) {
             sendTo(connectionId, {
-              type: 'expert:resume-failed',
+              type: 'agent:resume-failed',
               payload: {
                 agentId,
                 chatId,

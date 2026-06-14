@@ -10,7 +10,7 @@ source "$(dirname "$0")/_env.sh"
 
 WORKFLOW_ID="${1:?Usage: fallback-workflow.sh '<workflowId>'}"
 
-RESPONSE=$(curl -s -X POST "${EXPERT_API_BASE}/api/workflow/${WORKFLOW_ID}/fallback" \
+RESPONSE=$(curl -s -X POST "${AGENT_API_BASE}/api/workflow/${WORKFLOW_ID}/fallback" \
   -H "Content-Type: application/json")
 
 SUCCESS=$(echo "$RESPONSE" | jq -r '.success // false')

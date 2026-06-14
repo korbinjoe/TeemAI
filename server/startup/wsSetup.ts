@@ -5,7 +5,7 @@ import { createLogger } from '../lib/logger'
 import { trackEvent } from '../lib/eventTracker'
 import { verifyWsConnection } from '../middleware/auth'
 import type { WSRouter } from '../ws'
-import type { ExpertHandler } from '../ws'
+import type { MissionAgentHandler } from '../ws'
 import type { SessionRegistry } from '../terminal/SessionRegistry'
 import type { NotificationStore } from '../stores'
 import type { CliAutoInstallResult } from '../services/CliAutoInstaller'
@@ -20,7 +20,7 @@ const WS_PING_INTERVAL = 30_000
 interface WsDeps {
   wss: WebSocketServer
   wsRouter: WSRouter
-  expertHandler: ExpertHandler
+  expertHandler: MissionAgentHandler
   sessionRegistry: SessionRegistry
   notificationStore: NotificationStore
   serverVersion: string
@@ -108,7 +108,7 @@ export const setupWebSocket = (d: WsDeps) => {
         const latest = d.expertHandler.getLatestMessage(payload.chatId)
         if (latest) payload.latestMessage = latest
       }
-      ws.send(JSON.stringify({ type: 'chat:activity', payload }))
+      ws.send(JSON.stringify({ type: 'mission.activity', payload }))
     }
   })
 

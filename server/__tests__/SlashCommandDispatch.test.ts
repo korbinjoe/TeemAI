@@ -20,8 +20,8 @@ vi.mock('os', async () => {
 })
 
 const { setProjectRoot } = await import('../runtime/SlashCommandResolver')
-const { createExpertDirectInput } = await import('../ws/ExpertDirectInput')
-const { ExpertSessionStore, compositeKey } = await import('../ws/ExpertSessionStore')
+const { createMissionAgentDirectInput } = await import('../ws/MissionAgentDirectInput')
+const { MissionAgentSessionStore, compositeKey } = await import('../ws/MissionAgentSessionStore')
 
 const PROJECT_ROOT = join(FAKE_HOME, 'teemai')
 
@@ -52,11 +52,11 @@ describe('slash command dispatch — end-to-end expansion', () => {
   const connId = 'conn-1'
   const chatId = 'chat-1'
   const agentId = 'agent-1'
-  let store: InstanceType<typeof ExpertSessionStore>
+  let store: InstanceType<typeof MissionAgentSessionStore>
   let handleStart: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
-    store = new ExpertSessionStore()
+    store = new MissionAgentSessionStore()
     handleStart = vi.fn(async () => {})
   })
 
@@ -90,7 +90,7 @@ describe('slash command dispatch — end-to-end expansion', () => {
 
     const deps = buildDeps()
     deps.ensureAttachedRunning.mockReturnValue(store.get(key))
-    const { handleDirectInput } = createExpertDirectInput(deps)
+    const { handleDirectInput } = createMissionAgentDirectInput(deps)
 
     await handleDirectInput(makeWs(), {
       chatId,
@@ -127,7 +127,7 @@ describe('slash command dispatch — end-to-end expansion', () => {
 
     const deps = buildDeps()
     deps.ensureAttachedRunning.mockReturnValue(store.get(key))
-    const { handleDirectInput } = createExpertDirectInput(deps)
+    const { handleDirectInput } = createMissionAgentDirectInput(deps)
 
     await handleDirectInput(makeWs(), {
       chatId,
@@ -158,7 +158,7 @@ describe('slash command dispatch — end-to-end expansion', () => {
 
     const deps = buildDeps()
     deps.ensureAttachedRunning.mockReturnValue(store.get(key))
-    const { handleDirectInput } = createExpertDirectInput(deps)
+    const { handleDirectInput } = createMissionAgentDirectInput(deps)
 
     await handleDirectInput(makeWs(), {
       chatId,
@@ -173,7 +173,7 @@ describe('slash command dispatch — end-to-end expansion', () => {
   })
 
   it('cold start: /openspec:proposal is passed to handleStart (expansion happens there)', async () => {
-    const { handleDirectInput } = createExpertDirectInput(buildDeps())
+    const { handleDirectInput } = createMissionAgentDirectInput(buildDeps())
 
     await handleDirectInput(makeWs(), {
       chatId,
@@ -203,7 +203,7 @@ describe('slash command dispatch — end-to-end expansion', () => {
 
     const deps = buildDeps()
     deps.ensureAttachedRunning.mockReturnValue(store.get(key))
-    const { handleDirectInput } = createExpertDirectInput(deps)
+    const { handleDirectInput } = createMissionAgentDirectInput(deps)
 
     await handleDirectInput(makeWs(), {
       chatId,

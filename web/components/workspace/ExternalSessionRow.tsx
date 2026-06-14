@@ -78,7 +78,7 @@ export const ExternalSessionRow = ({
     const chatId = await adoptOnly()
     if (!chatId) return
     try {
-      const chatRes = await authFetch(`${API_BASE}/api/chats/${chatId}`)
+      const chatRes = await authFetch(`${API_BASE}/api/missions/${chatId}`)
       if (chatRes.ok) {
         const chat = (await chatRes.json()) as { workspaceId: string; primaryAgentId: string }
         navigate(buildMissionUrl(chat.workspaceId, chatId, chat.primaryAgentId))

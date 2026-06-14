@@ -11,6 +11,7 @@
  */
 
 import type { WebSocket } from 'ws'
+import { outboundFrames } from '../ws/wsFrame'
 import type { StreamJsonManager } from './StreamJsonManager'
 import type { ActivityState } from './ActivityDeriver'
 import { HooksConfigManager } from '../runtime/HooksConfigManager'
@@ -310,11 +311,11 @@ export class SessionRegistry {
   sendToSession(sessionId: string, message: Record<string, unknown>): boolean {
     const session = this.sessions.get(sessionId)
     if (!session?.connectedWs || session.connectedWs.readyState !== 1 /* OPEN */) {
-      const logFn = message.type === 'expert:data' ? log.debug : log.warn
+      const logFn = message.type === 'agent:data' ? log.debug : log.warn
       logFn('Message dropped (no WS)', { sessionId, type: message.type, hasSession: !!session, hasWs: !!session?.connectedWs, wsState: session?.connectedWs?.readyState, agentId: session?.agentId })
       return false
     }
-    session.connectedWs.send(JSON.stringify(message))
+    for (const frame of outboundFrames(message)) session.connectedWs.send(frame)
     return true
   }
 }

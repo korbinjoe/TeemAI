@@ -17,7 +17,7 @@ export class ExecutionLogStore extends SqliteBaseStore<ExecutionLog> {
 
   listByChat(chatId: string): ExecutionLog[] {
     const rows = this.db.prepare(
-      'SELECT * FROM execution_logs WHERE chat_id = ?'
+      'SELECT * FROM execution_logs WHERE mission_id = ?'
     ).all(chatId)
     return rows.map((row) => this.rowToEntity(row as Record<string, unknown>))
   }
@@ -102,7 +102,7 @@ export class ExecutionLogStore extends SqliteBaseStore<ExecutionLog> {
 
   listUnsyncedByChat(chatId: string): ExecutionLog[] {
     const rows = this.db.prepare(
-      'SELECT * FROM execution_logs WHERE chat_id = ? AND synced_at IS NULL'
+      'SELECT * FROM execution_logs WHERE mission_id = ? AND synced_at IS NULL'
     ).all(chatId)
     const records = rows.map((row) => this.rowToEntity(row as Record<string, unknown>))
     logger.debug('listUnsyncedByChat', { chatId, count: records.length })
@@ -111,16 +111,16 @@ export class ExecutionLogStore extends SqliteBaseStore<ExecutionLog> {
 
   listUnsyncedChatIds(): string[] {
     const rows = this.db.prepare(
-      'SELECT DISTINCT chat_id FROM execution_logs WHERE synced_at IS NULL'
-    ).all() as Array<{ chat_id: string }>
-    const ids = rows.map((r) => r.chat_id)
+      'SELECT DISTINCT mission_id FROM execution_logs WHERE synced_at IS NULL'
+    ).all() as Array<{ mission_id: string }>
+    const ids = rows.map((r) => r.mission_id)
     logger.debug('listUnsyncedChatIds', { count: ids.length, chatIds: ids.slice(0, 10) })
     return ids
   }
 
   markSynced(chatId: string): void {
     const result = this.db.prepare(
-      'UPDATE execution_logs SET synced_at = ? WHERE chat_id = ? AND synced_at IS NULL'
+      'UPDATE execution_logs SET synced_at = ? WHERE mission_id = ? AND synced_at IS NULL'
     ).run(new Date().toISOString(), chatId)
     logger.debug('markSynced', { chatId, rowsAffected: result.changes })
   }
@@ -172,7 +172,7 @@ export class ExecutionLogStore extends SqliteBaseStore<ExecutionLog> {
     const cacheCreationTokens = (row.cache_creation_tokens as number) || 0
     return {
       id: row.id as string,
-      chatId: row.chat_id as string,
+      chatId: row.mission_id as string,
       workspaceId: row.workspace_id as string,
       agentId: row.agent_id as string,
       totalCost: row.total_cost as number | undefined,
@@ -198,7 +198,7 @@ export class ExecutionLogStore extends SqliteBaseStore<ExecutionLog> {
   protected entityToRow(entity: ExecutionLog): Record<string, unknown> {
     return {
       id: entity.id,
-      chat_id: entity.chatId,
+      mission_id: entity.chatId,
       workspace_id: entity.workspaceId,
       agent_id: entity.agentId,
       total_cost: entity.totalCost ?? null,

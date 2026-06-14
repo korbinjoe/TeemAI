@@ -2,11 +2,12 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
 import { getWebSocketClient, sendTelemetry } from '../services/WebSocketClient'
 import type { Message, AgentActivity, WorktreeSession, ChatActivityPayload } from '../types/chat'
-import { ACTIVE_PHASES } from '@/lib/memberStatus'
+import { ACTIVE_PHASES } from '@/lib/agentStatus'
+import { reconcileExpertActivitiesFromChat } from '@/lib/expertActivityReconcile'
 import type { AgentSummary } from '../types/agentConfig'
 import { API_BASE, authFetch } from '@/config/api'
 import { DEFAULT_AGENT, DEFAULT_MODEL } from '@/lib/models'
-import { createExpertEventHandlers, type ExpertEventHandlers } from './useExpertEvents'
+import { createAgentEventHandlers, type AgentEventHandlers } from './useAgentEvents'
 import { usePermissionEvents } from './usePermissionEvents'
 import { useAgentMessages, SYSTEM_MESSAGE_AGENT } from './useAgentMessages'
 import type { PrefetchedWorkspaceData } from '../components/chat/ChatInstance'
@@ -120,9 +121,9 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
 
   const { permissionRequests, handleExpertPermissionRequest, handleChatPermissionResolved, dismissPermissionRequest } = usePermissionEvents(chatIdRef)
 
-  const expertHandlersRef = useRef<ExpertEventHandlers | null>(null)
+  const expertHandlersRef = useRef<AgentEventHandlers | null>(null)
   if (!expertHandlersRef.current) {
-    expertHandlersRef.current = createExpertEventHandlers({
+    expertHandlersRef.current = createAgentEventHandlers({
       isCurrentChatEvent, addSystemMessage, uid, t,
       setExpertActivities, setAgentMessages, setLoading, setThinking,
       setAgentSlashCommands, setAgentPlans, setAgentModes,
@@ -151,8 +152,8 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       const fire = () => {
         const cid = chatIdRef.current
         if (!cid || !wsClient.isConnected() || !isActiveRef.current) return
-        wsClient.send('chat:set-context', { chatId: cid })
-        if (!isNewChatRef.current) wsClient.send('chat:resume-experts', { chatId: cid })
+        wsClient.send('mission:set-context', { chatId: cid })
+        if (!isNewChatRef.current) wsClient.send('mission:resume-agents', { chatId: cid })
       }
       if (isNewChatRef.current) { fire(); return }
       sendContextTimerRef.current = setTimeout(() => {
@@ -176,8 +177,8 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     const fire = () => {
       const cid = chatIdRef.current
       if (!cid || !wsClient.isConnected() || !isActiveRef.current) return
-      wsClient.send('chat:set-context', { chatId: cid })
-      if (!isNewChatRef.current) wsClient.send('chat:resume-experts', { chatId: cid })
+      wsClient.send('mission:set-context', { chatId: cid })
+      if (!isNewChatRef.current) wsClient.send('mission:resume-agents', { chatId: cid })
     }
     if (isNewChatRef.current) { fire(); return }
     sendContextTimerRef.current = setTimeout(() => {
@@ -201,7 +202,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
 
         const [wsRes, chatRes, agentsRes] = await Promise.all([
           hasCachedWs ? Promise.resolve(null) : authFetch(`${API_BASE}/api/workspaces/${workspaceId}`),
-          chatId ? authFetch(`${API_BASE}/api/chats/${chatId}`) : Promise.resolve(null),
+          chatId ? authFetch(`${API_BASE}/api/missions/${chatId}`) : Promise.resolve(null),
           hasCachedWs ? Promise.resolve(null) : authFetch(`${API_BASE}/api/agents`),
         ])
 
@@ -322,29 +323,34 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       if (phase === 'completed' || phase === 'error') setChatStatus('stopped')
       else if (phase === 'waiting_input' || phase === 'waiting_confirmation') setChatStatus('idle')
       else if (ACTIVE_PHASES.has(phase)) setChatStatus('running')
+      // Reconcile the message-area progress cards: the per-agent expert:activity
+      // stream is isActive-gated and can miss a turn-end event, freezing a card
+      // at a working phase. This authoritative payload advances any such stuck
+      // card to its terminal phase (same signal the right Agents panel uses).
+      setExpertActivities((prev) => reconcileExpertActivitiesFromChat(prev, payload))
     }
 
-    wsClient.on('expert:structured-message', onStructuredMessage)
+    wsClient.on('agent:structured-message', onStructuredMessage)
     wsClient.on('error', onError)
-    wsClient.on('expert:error', onExpertError)
-    wsClient.on('expert:activity', onExpertActivity)
-    wsClient.on('expert:exit', onExpertExit)
-    wsClient.on('expert:stopped', onExpertExit)
-    wsClient.on('expert:started', onExpertStarted)
-    wsClient.on('expert:resume-failed', onExpertResumeFailed)
-    wsClient.on('expert:version-blocked', onVersionBlocked)
-    wsClient.on('expert:slash-commands', onExpertSlashCommands)
-    wsClient.on('expert:partial-text', onExpertPartialText)
-    wsClient.on('expert:plan-update', onExpertPlanUpdate)
-    wsClient.on('expert:mode-change', onExpertModeChange)
-    wsClient.on('expert:commands-update', onExpertCommandsUpdate)
-    wsClient.on('expert:session-info', onExpertSessionInfo)
-    wsClient.on('expert:permission-request', onExpertPermissionRequest)
-    wsClient.on('chat:permission-resolved', onChatPermissionResolved)
-    wsClient.on('chat:title-updated', onChatTitleUpdated)
-    wsClient.on('chat:available-commands', onChatAvailableCommands)
-    wsClient.on('chat:status-changed', onChatStatusChanged)
-    wsClient.on('chat:activity', onChatActivity)
+    wsClient.on('agent:error', onExpertError)
+    wsClient.on('agent:activity', onExpertActivity)
+    wsClient.on('agent:exit', onExpertExit)
+    wsClient.on('agent:stopped', onExpertExit)
+    wsClient.on('agent:started', onExpertStarted)
+    wsClient.on('agent:resume-failed', onExpertResumeFailed)
+    wsClient.on('agent:version-blocked', onVersionBlocked)
+    wsClient.on('agent:slash-commands', onExpertSlashCommands)
+    wsClient.on('agent:partial-text', onExpertPartialText)
+    wsClient.on('agent:plan-update', onExpertPlanUpdate)
+    wsClient.on('agent:mode-change', onExpertModeChange)
+    wsClient.on('agent:commands-update', onExpertCommandsUpdate)
+    wsClient.on('agent:session-info', onExpertSessionInfo)
+    wsClient.on('agent:permission-request', onExpertPermissionRequest)
+    wsClient.on('mission.permission-resolved', onChatPermissionResolved)
+    wsClient.on('mission.title-updated', onChatTitleUpdated)
+    wsClient.on('mission.available-commands', onChatAvailableCommands)
+    wsClient.on('mission.status-changed', onChatStatusChanged)
+    wsClient.on('mission.activity', onChatActivity)
 
     const handleReconnected = () => {
       setConnected(true)
@@ -389,27 +395,27 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       cancelled = true
       expertHandlers.cleanupDeltaTimer()
       if (sendContextTimerRef.current) { clearTimeout(sendContextTimerRef.current); sendContextTimerRef.current = null }
-      wsClient.off('expert:structured-message', onStructuredMessage)
+      wsClient.off('agent:structured-message', onStructuredMessage)
       wsClient.off('error', onError)
-      wsClient.off('expert:error', onExpertError)
-      wsClient.off('expert:activity', onExpertActivity)
-      wsClient.off('expert:exit', onExpertExit)
-      wsClient.off('expert:stopped', onExpertExit)
-      wsClient.off('expert:started', onExpertStarted)
-      wsClient.off('expert:resume-failed', onExpertResumeFailed)
-      wsClient.off('expert:version-blocked', onVersionBlocked)
-      wsClient.off('expert:slash-commands', onExpertSlashCommands)
-      wsClient.off('expert:partial-text', onExpertPartialText)
-      wsClient.off('expert:plan-update', onExpertPlanUpdate)
-      wsClient.off('expert:mode-change', onExpertModeChange)
-      wsClient.off('expert:commands-update', onExpertCommandsUpdate)
-      wsClient.off('expert:session-info', onExpertSessionInfo)
-      wsClient.off('expert:permission-request', onExpertPermissionRequest)
-      wsClient.off('chat:permission-resolved', onChatPermissionResolved)
-      wsClient.off('chat:title-updated', onChatTitleUpdated)
-      wsClient.off('chat:available-commands', onChatAvailableCommands)
-      wsClient.off('chat:status-changed', onChatStatusChanged)
-      wsClient.off('chat:activity', onChatActivity)
+      wsClient.off('agent:error', onExpertError)
+      wsClient.off('agent:activity', onExpertActivity)
+      wsClient.off('agent:exit', onExpertExit)
+      wsClient.off('agent:stopped', onExpertExit)
+      wsClient.off('agent:started', onExpertStarted)
+      wsClient.off('agent:resume-failed', onExpertResumeFailed)
+      wsClient.off('agent:version-blocked', onVersionBlocked)
+      wsClient.off('agent:slash-commands', onExpertSlashCommands)
+      wsClient.off('agent:partial-text', onExpertPartialText)
+      wsClient.off('agent:plan-update', onExpertPlanUpdate)
+      wsClient.off('agent:mode-change', onExpertModeChange)
+      wsClient.off('agent:commands-update', onExpertCommandsUpdate)
+      wsClient.off('agent:session-info', onExpertSessionInfo)
+      wsClient.off('agent:permission-request', onExpertPermissionRequest)
+      wsClient.off('mission.permission-resolved', onChatPermissionResolved)
+      wsClient.off('mission.title-updated', onChatTitleUpdated)
+      wsClient.off('mission.available-commands', onChatAvailableCommands)
+      wsClient.off('mission.status-changed', onChatStatusChanged)
+      wsClient.off('mission.activity', onChatActivity)
       wsClient.off('reconnected', handleReconnected)
       wsClient.off('disconnected', handleDisconnected)
       wsClient.off('reconnect_failed', handleReconnectFailed)
@@ -452,7 +458,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       ...prev,
       [agentId]: { phase: 'initializing', background: false, toolCount: 0, toolCompleted: 0, hasText: false, startedAt: Date.now(), updatedAt: Date.now() },
     }))
-    wsClient.send('expert:direct-input', {
+    wsClient.send('agent:direct-input', {
       chatId,
       agentId,
       message: opts.initialMessage || '',

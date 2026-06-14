@@ -177,7 +177,7 @@ const NewChatForm = ({ currentWorkspaceId, currentAgentId, onCreated }: NewChatF
         throw new Error(errData.error || 'Create failed')
       }
       const { workspace, chat } = await res.json()
-      // Notify useWorkspaceChats listeners so the sidebar/quad pick up the new
+      // Notify useWorkspaceMissions listeners so the sidebar/quad pick up the new
       // chat before WorkspaceLayout's auto-redirect runs against a stale list.
       window.dispatchEvent(new CustomEvent('teemai:chat-created', {
         detail: { workspaceId: workspace.id, chatId: chat.id },

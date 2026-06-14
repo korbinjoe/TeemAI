@@ -27,11 +27,11 @@ const buildFallbackOption = (
   p: { completedTaskId: string; tasks: Array<{ taskId: string; rejectCount?: number }> },
   engine: WorkflowEngine | undefined,
 ): string => {
-  if (!engine) return '3. Write an `open_question` to the war-room — you need user input to decide\n'
+  if (!engine) return '3. Write an `open_question` to the whiteboard — you need user input to decide\n'
 
   const dag = engine.getState().dag
   if (!dag.fallback) {
-    return '3. Write an `open_question` to the war-room — you need user input to decide\n'
+    return '3. Write an `open_question` to the whiteboard — you need user input to decide\n'
   }
 
   const task = dag.tasks.find(t => t.taskId === p.completedTaskId)
@@ -41,10 +41,10 @@ const buildFallbackOption = (
 
   if (atPenultimate) {
     return `3. \`fallback-workflow.sh '${workflowId}'\` — abandon individual tasks, merge all remaining into a single handoff (RECOMMENDED: next rejection hits the cap)\n` +
-      '4. Write an `open_question` to the war-room — you need user input to decide\n'
+      '4. Write an `open_question` to the whiteboard — you need user input to decide\n'
   }
   return `3. \`fallback-workflow.sh '${workflowId}'\` — merge remaining tasks into single handoff\n` +
-    '4. Write an `open_question` to the war-room — you need user input to decide\n'
+    '4. Write an `open_question` to the whiteboard — you need user input to decide\n'
 }
 
 export const buildLeadPrompt = (

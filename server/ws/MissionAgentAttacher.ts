@@ -7,22 +7,28 @@
  */
 
 import type { WebSocket } from 'ws'
+import { existsSync } from 'fs'
+import { homedir } from 'os'
+import { join } from 'path'
 import type { SessionRegistry } from '../terminal/SessionRegistry'
 import type { ChatStore } from '../stores/ChatStore'
-import { ExpertSessionStore, compositeKey, parseAgentId, parseChatId, type ExpertEntry } from './ExpertSessionStore'
+import { MissionAgentSessionStore, compositeKey, parseAgentId, parseChatId, type MissionAgentEntry } from './MissionAgentSessionStore'
+import { cwdToCliProjectKey } from '../../shared/projectKey'
+import { parseConversationFile } from '../terminal/ConversationParser'
+import { buildJsonlBackfillReplay } from './MissionAgentExitHandler'
 import { createLogger } from '../lib/logger'
 
 const log = createLogger('ExpertAttacher')
 
-export interface ExpertAttacherDeps {
+export interface MissionAgentAttacherDeps {
   sessionRegistry: SessionRegistry
   chatStore: ChatStore
-  store: ExpertSessionStore
+  store: MissionAgentSessionStore
   getConnectionChatId: (connectionId: string) => string | undefined
   sendTo: (connectionId: string, msg: Record<string, unknown>) => void
 }
 
-export const createExpertAttacher = (deps: ExpertAttacherDeps) => {
+export const createMissionAgentAttacher = (deps: MissionAgentAttacherDeps) => {
   const { sessionRegistry, chatStore, store, getConnectionChatId, sendTo } = deps
 
   const trackParticipant = (agentName: string, connectionId: string, chatId?: string): void => {
@@ -51,7 +57,7 @@ export const createExpertAttacher = (deps: ExpertAttacherDeps) => {
     chatId: string,
     agentId: string,
     connectionId: string,
-  ): ExpertEntry | undefined => {
+  ): MissionAgentEntry | undefined => {
     if (!chatId) return undefined
     const existingSession = sessionRegistry.findByChat(chatId, agentId)
     if (!existingSession) return undefined
@@ -90,7 +96,7 @@ export const createExpertAttacher = (deps: ExpertAttacherDeps) => {
     }
 
     sendTo(connectionId, {
-      type: 'expert:started',
+      type: 'agent:started',
       payload: {
         agentId,
         chatId,
@@ -102,8 +108,8 @@ export const createExpertAttacher = (deps: ExpertAttacherDeps) => {
       },
     })
     sendTo(connectionId, {
-      type: 'expert:list-updated',
-      payload: { experts: store.getExpertListForConnection(connectionId, chatId), chatId },
+      type: 'agent:list-updated',
+      payload: { agents: store.getExpertListForConnection(connectionId, chatId), chatId },
     })
 
     const replayMessages = existingSession.acpClient.getCurrentMessages()
@@ -111,9 +117,25 @@ export const createExpertAttacher = (deps: ExpertAttacherDeps) => {
       existingSession.acpClient.replayMessages(replayMessages, 'full')
     }
 
+    // In-memory stream messages can be lossy. Reconcile against the JSONL
+    // (single source of truth) and backfill any agent messages the live stream
+    // dropped, so reload/attach shows the full conversation.
+    if (entry.provider !== 'codex' && entry.cwd && entry.cliSessionId) {
+      const projectKey = cwdToCliProjectKey(entry.cwd)
+      const jsonlPath = join(homedir(), '.claude', 'projects', projectKey, `${entry.cliSessionId}.jsonl`)
+      if (existsSync(jsonlPath)) {
+        const jsonlMessages = parseConversationFile(jsonlPath)
+        const backfill = buildJsonlBackfillReplay(replayMessages ?? null, jsonlMessages)
+        if (backfill.length > 0) {
+          existingSession.acpClient.replayMessages(backfill, 'delta')
+          log.info('Backfilled missing messages from JSONL on attach', { agentId, chatId, count: backfill.length })
+        }
+      }
+    }
+
     const lastActivity = store.getActivity(compositeKey(connectionId, chatId, agentId))
     sendTo(connectionId, {
-      type: 'expert:activity',
+      type: 'agent:activity',
       payload: {
         agentId, chatId, sessionId: existingSession.sessionId,
         startedAt: existingSession.createdAt,

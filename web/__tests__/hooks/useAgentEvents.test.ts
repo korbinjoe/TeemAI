@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createExpertEventHandlers, type ExpertEventContext } from '../../hooks/useExpertEvents'
+import { createAgentEventHandlers, type AgentEventContext } from '../../hooks/useAgentEvents'
 import type { AgentActivity, Message } from '../../types/chat'
 import type { AgentMessagesMap } from '../../hooks/useAgentMessages'
 
@@ -25,7 +25,7 @@ function createMockCtx(chatId = 'chat-1') {
   }) as unknown as React.Dispatch<React.SetStateAction<AgentMessagesMap>>
 
   let idCounter = 0
-  const ctx: ExpertEventContext & {
+  const ctx: AgentEventContext & {
     readonly _activities: Record<string, AgentActivity>
     readonly _agentMessages: AgentMessagesMap
   } = {
@@ -60,7 +60,7 @@ function mkActivity(phase: AgentActivity['phase'], extra: Partial<AgentActivity>
   }
 }
 
-describe('ExpertEventHandlers', () => {
+describe('AgentEventHandlers', () => {
   beforeEach(() => { vi.useFakeTimers() })
   afterEach(() => { vi.useRealTimers() })
 
@@ -69,7 +69,7 @@ describe('ExpertEventHandlers', () => {
   describe('handleExpertStarted', () => {
     it('first start writes initializing activity', () => {
       const ctx = createMockCtx()
-      const { handleExpertStarted } = createExpertEventHandlers(ctx)
+      const { handleExpertStarted } = createAgentEventHandlers(ctx)
 
       handleExpertStarted({ agentId: 'eng-1', chatId: 'chat-1', agentName: 'Engineer', sessionId: 's1' })
 
@@ -79,7 +79,7 @@ describe('ExpertEventHandlers', () => {
 
     it('re-start when existing phase=waiting_input → overwrites to initializing (bug regression)', () => {
       const ctx = createMockCtx()
-      const { handleExpertStarted } = createExpertEventHandlers(ctx)
+      const { handleExpertStarted } = createAgentEventHandlers(ctx)
 
       // Seed agent in waiting_input (finished first dispatch, cleanup timer not yet fired)
       ctx.setExpertActivities(() => ({ 'eng-1': mkActivity('waiting_input') }))
@@ -91,7 +91,7 @@ describe('ExpertEventHandlers', () => {
 
     it('re-start when existing phase=completed → overwrites to initializing', () => {
       const ctx = createMockCtx()
-      const { handleExpertStarted } = createExpertEventHandlers(ctx)
+      const { handleExpertStarted } = createAgentEventHandlers(ctx)
 
       handleExpertStarted({ agentId: 'eng-1', chatId: 'chat-1', agentName: 'Engineer', sessionId: 's1' })
       // Simulate completion
@@ -104,7 +104,7 @@ describe('ExpertEventHandlers', () => {
 
     it('re-start when existing phase=error → overwrites to initializing', () => {
       const ctx = createMockCtx()
-      const { handleExpertStarted } = createExpertEventHandlers(ctx)
+      const { handleExpertStarted } = createAgentEventHandlers(ctx)
 
       ctx.setExpertActivities(() => ({ 'eng-1': mkActivity('error') }))
 
@@ -115,7 +115,7 @@ describe('ExpertEventHandlers', () => {
 
     it('re-start when existing phase=running → does NOT overwrite (duplicate event)', () => {
       const ctx = createMockCtx()
-      const { handleExpertStarted } = createExpertEventHandlers(ctx)
+      const { handleExpertStarted } = createAgentEventHandlers(ctx)
 
       ctx.setExpertActivities(() => ({ 'eng-1': mkActivity('tool_running', { toolCount: 5, toolCompleted: 3 }) }))
 
@@ -127,7 +127,7 @@ describe('ExpertEventHandlers', () => {
 
     it('chatId mismatch → event is dropped', () => {
       const ctx = createMockCtx('chat-1')
-      const { handleExpertStarted } = createExpertEventHandlers(ctx)
+      const { handleExpertStarted } = createAgentEventHandlers(ctx)
 
       handleExpertStarted({ agentId: 'eng-1', chatId: 'chat-OTHER', agentName: 'Engineer', sessionId: 's1' })
 
@@ -136,7 +136,7 @@ describe('ExpertEventHandlers', () => {
 
     it('payload.status === completed → sets completed activity for dead session replay', () => {
       const ctx = createMockCtx()
-      const { handleExpertStarted } = createExpertEventHandlers(ctx)
+      const { handleExpertStarted } = createAgentEventHandlers(ctx)
 
       handleExpertStarted({ agentId: 'eng-1', chatId: 'chat-1', agentName: 'Engineer', sessionId: 's1', status: 'completed' })
 
@@ -150,7 +150,7 @@ describe('ExpertEventHandlers', () => {
   describe('handleExpertExit', () => {
     it('exit sets phase to completed', () => {
       const ctx = createMockCtx()
-      const { handleExpertStarted, handleExpertExit } = createExpertEventHandlers(ctx)
+      const { handleExpertStarted, handleExpertExit } = createAgentEventHandlers(ctx)
 
       handleExpertStarted({ agentId: 'eng-1', chatId: 'chat-1', agentName: 'Eng', sessionId: 's1' })
       handleExpertExit({ agentId: 'eng-1', chatId: 'chat-1' })
@@ -160,7 +160,7 @@ describe('ExpertEventHandlers', () => {
 
     it('exit preserves exitReason', () => {
       const ctx = createMockCtx()
-      const { handleExpertStarted, handleExpertExit } = createExpertEventHandlers(ctx)
+      const { handleExpertStarted, handleExpertExit } = createAgentEventHandlers(ctx)
 
       handleExpertStarted({ agentId: 'eng-1', chatId: 'chat-1', agentName: 'Eng', sessionId: 's1' })
       handleExpertExit({ agentId: 'eng-1', chatId: 'chat-1', exitReason: 'user_stop' })
@@ -171,7 +171,7 @@ describe('ExpertEventHandlers', () => {
 
     it('chatId mismatch → event is dropped', () => {
       const ctx = createMockCtx('chat-1')
-      const { handleExpertStarted, handleExpertExit } = createExpertEventHandlers(ctx)
+      const { handleExpertStarted, handleExpertExit } = createAgentEventHandlers(ctx)
 
       handleExpertStarted({ agentId: 'eng-1', chatId: 'chat-1', agentName: 'Eng', sessionId: 's1' })
       handleExpertExit({ agentId: 'eng-1', chatId: 'chat-OTHER' })
@@ -186,7 +186,7 @@ describe('ExpertEventHandlers', () => {
   describe('handleExpertError', () => {
     it('error with agentId writes to agent messages slot', () => {
       const ctx = createMockCtx()
-      const { handleExpertError } = createExpertEventHandlers(ctx)
+      const { handleExpertError } = createAgentEventHandlers(ctx)
 
       handleExpertError({ agentId: 'eng-1', chatId: 'chat-1', error: 'runtime_error', message: 'Something broke' })
 
@@ -197,7 +197,7 @@ describe('ExpertEventHandlers', () => {
 
     it('error without agentId writes system message', () => {
       const ctx = createMockCtx()
-      const { handleExpertError } = createExpertEventHandlers(ctx)
+      const { handleExpertError } = createAgentEventHandlers(ctx)
 
       handleExpertError({ chatId: 'chat-1', error: 'server_error', message: 'Internal error' })
 
@@ -208,7 +208,7 @@ describe('ExpertEventHandlers', () => {
 
     it('command_not_found error triggers toast, not message', () => {
       const ctx = createMockCtx()
-      const { handleExpertError } = createExpertEventHandlers(ctx)
+      const { handleExpertError } = createAgentEventHandlers(ctx)
 
       handleExpertError({ agentId: 'eng-1', chatId: 'chat-1', error: 'command_not_found', message: 'CLI not installed' })
 
@@ -222,7 +222,7 @@ describe('ExpertEventHandlers', () => {
   describe('onExpertStructuredMessage', () => {
     it('delta type buffers messages via pushDelta', () => {
       const ctx = createMockCtx()
-      const { onExpertStructuredMessage, flushDeltaBuffer } = createExpertEventHandlers(ctx)
+      const { onExpertStructuredMessage, flushDeltaBuffer } = createAgentEventHandlers(ctx)
 
       const msg: Message = { id: 'm1', role: 'agent', content: 'Hello', timestamp: Date.now(), agentId: 'eng-1' }
       onExpertStructuredMessage({
@@ -244,7 +244,7 @@ describe('ExpertEventHandlers', () => {
 
     it('full type clears delta buffer and applies replay', () => {
       const ctx = createMockCtx()
-      const { onExpertStructuredMessage, flushDeltaBuffer } = createExpertEventHandlers(ctx)
+      const { onExpertStructuredMessage, flushDeltaBuffer } = createAgentEventHandlers(ctx)
 
       // Queue a delta first
       onExpertStructuredMessage({
@@ -273,7 +273,7 @@ describe('ExpertEventHandlers', () => {
 
     it('non-current chat messages are dropped', () => {
       const ctx = createMockCtx('chat-1')
-      const { onExpertStructuredMessage, flushDeltaBuffer } = createExpertEventHandlers(ctx)
+      const { onExpertStructuredMessage, flushDeltaBuffer } = createAgentEventHandlers(ctx)
 
       onExpertStructuredMessage({
         agentId: 'eng-1',
@@ -289,7 +289,7 @@ describe('ExpertEventHandlers', () => {
 
     it('empty messages array is ignored', () => {
       const ctx = createMockCtx()
-      const { onExpertStructuredMessage } = createExpertEventHandlers(ctx)
+      const { onExpertStructuredMessage } = createAgentEventHandlers(ctx)
 
       onExpertStructuredMessage({
         agentId: 'eng-1',
@@ -304,7 +304,7 @@ describe('ExpertEventHandlers', () => {
 
     it('keeps a re-dispatch user turn in delta so it forms a new boundary', () => {
       const ctx = createMockCtx()
-      const { onExpertStructuredMessage, flushDeltaBuffer } = createExpertEventHandlers(ctx)
+      const { onExpertStructuredMessage, flushDeltaBuffer } = createAgentEventHandlers(ctx)
 
       // First handoff turn: user prompt + agent reply
       onExpertStructuredMessage({
@@ -333,7 +333,7 @@ describe('ExpertEventHandlers', () => {
 
     it('dedups the parsed echo of an optimistic typed user message by content', () => {
       const ctx = createMockCtx()
-      const { onExpertStructuredMessage, flushDeltaBuffer } = createExpertEventHandlers(ctx)
+      const { onExpertStructuredMessage, flushDeltaBuffer } = createAgentEventHandlers(ctx)
 
       // Optimistic user message added client-side when the user types
       ctx.setAgentMessages(() => ({
@@ -361,7 +361,7 @@ describe('ExpertEventHandlers', () => {
   describe('handleExpertPartialText', () => {
     it('appends to existing streaming message', () => {
       const ctx = createMockCtx()
-      const { handleExpertPartialText } = createExpertEventHandlers(ctx)
+      const { handleExpertPartialText } = createAgentEventHandlers(ctx)
 
       // Seed an existing streaming message
       ctx.setAgentMessages(() => ({
@@ -384,7 +384,7 @@ describe('ExpertEventHandlers', () => {
 
     it('creates new streaming message when none exists', () => {
       const ctx = createMockCtx()
-      const { handleExpertPartialText } = createExpertEventHandlers(ctx)
+      const { handleExpertPartialText } = createAgentEventHandlers(ctx)
 
       handleExpertPartialText({ agentId: 'eng-1', chatId: 'chat-1', sessionId: 's1', blockIndex: 0, text: 'First chunk' })
       vi.runAllTimers() // partial text is coalesced and flushed on a 16ms timer
@@ -396,7 +396,7 @@ describe('ExpertEventHandlers', () => {
 
     it('skips when delta buffer has pending messages (delta wins)', () => {
       const ctx = createMockCtx()
-      const { onExpertStructuredMessage, handleExpertPartialText } = createExpertEventHandlers(ctx)
+      const { onExpertStructuredMessage, handleExpertPartialText } = createAgentEventHandlers(ctx)
 
       // Queue a delta first
       onExpertStructuredMessage({
@@ -419,7 +419,7 @@ describe('ExpertEventHandlers', () => {
   describe('delta buffer behavior', () => {
     it('multiple agents delta buffers are independent', () => {
       const ctx = createMockCtx()
-      const { onExpertStructuredMessage, flushDeltaBuffer } = createExpertEventHandlers(ctx)
+      const { onExpertStructuredMessage, flushDeltaBuffer } = createAgentEventHandlers(ctx)
 
       onExpertStructuredMessage({
         agentId: 'eng-1',
@@ -446,7 +446,7 @@ describe('ExpertEventHandlers', () => {
 
     it('flushDeltaBuffer merges into agentMessages', () => {
       const ctx = createMockCtx()
-      const { onExpertStructuredMessage, flushDeltaBuffer } = createExpertEventHandlers(ctx)
+      const { onExpertStructuredMessage, flushDeltaBuffer } = createAgentEventHandlers(ctx)
 
       // Seed existing messages
       ctx.setAgentMessages(() => ({

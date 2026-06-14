@@ -87,7 +87,7 @@ export class CronJobStore extends SqliteBaseStore<CronJob> {
     if (existing) {
       this.db.prepare(`
         UPDATE cron_job_executions
-        SET started_at = ?, finished_at = ?, status = ?, chat_id = ?, exit_code = ?, error_message = ?
+        SET started_at = ?, finished_at = ?, status = ?, mission_id = ?, exit_code = ?, error_message = ?
         WHERE id = ?
       `).run(
         exec.startedAt, exec.finishedAt ?? null, exec.status,
@@ -96,7 +96,7 @@ export class CronJobStore extends SqliteBaseStore<CronJob> {
       )
     } else {
       this.db.prepare(`
-        INSERT INTO cron_job_executions (id, job_id, started_at, finished_at, status, chat_id, exit_code, error_message)
+        INSERT INTO cron_job_executions (id, job_id, started_at, finished_at, status, mission_id, exit_code, error_message)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         exec.id, jobId, exec.startedAt, exec.finishedAt ?? null,
@@ -133,7 +133,7 @@ export class CronJobStore extends SqliteBaseStore<CronJob> {
       startedAt: e.started_at as string,
       finishedAt: e.finished_at as string | undefined,
       status: e.status as CronJobExecution['status'],
-      chatId: e.chat_id as string | undefined,
+      chatId: e.mission_id as string | undefined,
       exitCode: e.exit_code as number | undefined,
       errorMessage: e.error_message as string | undefined,
     }))
@@ -177,7 +177,7 @@ export class CronJobStore extends SqliteBaseStore<CronJob> {
         startedAt: e.started_at as string,
         finishedAt: e.finished_at as string | undefined,
         status: e.status as CronJobExecution['status'],
-        chatId: e.chat_id as string | undefined,
+        chatId: e.mission_id as string | undefined,
         exitCode: e.exit_code as number | undefined,
         errorMessage: e.error_message as string | undefined,
       })

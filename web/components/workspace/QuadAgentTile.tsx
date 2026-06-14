@@ -6,11 +6,11 @@ import { useAgents } from '../../hooks/useAgents'
 import { cn } from '../../lib/utils'
 import { buildMissionUrl } from './urls'
 import { Maximize } from './icons'
-import type { Chat, ChatMember } from './types'
+import type { Chat, MissionAgent } from './types'
 
 type AgentStatus = 'running' | 'waiting' | 'waiting_input' | 'error' | 'done' | 'idle'
 
-const memberStatus = (s: ChatMember['status']): AgentStatus => (s === 'idle' ? 'idle' : s)
+const memberStatus = (s: MissionAgent['status']): AgentStatus => (s === 'idle' ? 'idle' : s)
 
 const dotColor = (s: AgentStatus): string => {
   if (s === 'error') return 'bg-accent-red'
@@ -28,7 +28,7 @@ const stripeColor = (s: AgentStatus): string | null => {
 }
 
 interface Props {
-  member: ChatMember
+  member: MissionAgent
   parentChat: Chat
   shortcutKey?: string
 }

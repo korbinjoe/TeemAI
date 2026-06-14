@@ -12,9 +12,9 @@ import conversationRoutes from '../routes/chat/conversationRoutes'
 import worktreeRoutes, { setConflictResolver } from '../routes/workspace/worktreeRoutes'
 import { ConflictResolver } from '../git/ConflictResolver'
 import { createAgentRoutes } from '../routes/agent/agentRoutes'
-import { createExpertRoutes } from '../routes/agent/expertRoutes'
+import { createMissionAgentRoutes } from '../routes/agent/missionAgentRoutes'
 import { createWorkspaceApiRoutes } from '../routes/workspace/workspaceApiRoutes'
-import { createChatRoutes } from '../routes/chat/chatRoutes'
+import { createMissionRoutes } from '../routes/chat/missionRoutes'
 import { createWhiteboardRoutes } from '../routes/chat/whiteboardRoutes'
 import { createExternalSessionRoutes } from '../routes/external/externalSessionRoutes'
 import { createExecutionLogRoutes } from '../routes/system/executionLogRoutes'
@@ -47,10 +47,10 @@ interface RouteDeps {
   agentStore: Parameters<typeof createAgentRoutes>[0]['agentStore']
   skillManager: Parameters<typeof createAgentRoutes>[0]['skillManager']
   senseiPromptPaths: Parameters<typeof createAgentRoutes>[0]['senseiPromptPaths']
-  expertHandler: Parameters<typeof createExpertRoutes>[0]['expertHandler']
-  executionPlanManager: Parameters<typeof createExpertRoutes>[0]['executionPlanManager']
+  expertHandler: Parameters<typeof createMissionAgentRoutes>[0]['expertHandler']
+  executionPlanManager: Parameters<typeof createMissionAgentRoutes>[0]['executionPlanManager']
   workspaceStore: Parameters<typeof createWorkspaceApiRoutes>[0]['workspaceStore']
-  chatStore: Parameters<typeof createChatRoutes>[0]['chatStore']
+  chatStore: Parameters<typeof createMissionRoutes>[0]['chatStore']
   chatService: Parameters<typeof createWorkspaceApiRoutes>[0]['chatService']
   tokenUsageStore: Parameters<typeof createTokenUsageRoutes>[0]['tokenUsageStore']
   executionLogStore: Parameters<typeof createExecutionLogRoutes>[0]
@@ -60,7 +60,7 @@ interface RouteDeps {
   notificationStore: Parameters<typeof createNotificationRoutes>[0]['notificationStore']
   memoryStore: Parameters<typeof createMemoryRoutes>[0]['memoryStore']
   eventStore: Parameters<typeof createEventRoutes>[0]
-  sessionRegistry: Parameters<typeof createChatRoutes>[0]['sessionRegistry']
+  sessionRegistry: Parameters<typeof createMissionRoutes>[0]['sessionRegistry']
   whiteboardManager: Parameters<typeof createWhiteboardRoutes>[0]['whiteboardManager']
   updateManager: Parameters<typeof createUpdateRoutes>[0]['updateManager']
   bundleStorage: Parameters<typeof createUpdateRoutes>[0]['bundleStorage']
@@ -142,10 +142,10 @@ export const setupRoutes = (app: Express, d: RouteDeps) => {
   setConflictResolver(new ConflictResolver(d.workflowScheduler, d.broadcastToChat))
   app.use(worktreeRoutes)
   app.use(createAgentRoutes({ agentRegistry: d.agentRegistry, agentStore: d.agentStore, skillManager: d.skillManager, senseiPromptPaths: d.senseiPromptPaths }))
-  app.use(createExpertRoutes({ expertHandler: d.expertHandler, agentRegistry: d.agentRegistry, executionPlanManager: d.executionPlanManager, whiteboardManager: d.whiteboardManager, workflowRegistry: d.workflowRegistry, broadcastToChat: d.broadcastToChat }))
+  app.use(createMissionAgentRoutes({ expertHandler: d.expertHandler, agentRegistry: d.agentRegistry, executionPlanManager: d.executionPlanManager, whiteboardManager: d.whiteboardManager, workflowRegistry: d.workflowRegistry, broadcastToChat: d.broadcastToChat }))
   app.use(createWorkspaceApiRoutes({ workspaceStore: d.workspaceStore, chatStore: d.chatStore, chatService: d.chatService }))
   app.use(createExternalSessionRoutes({ workspaceStore: d.workspaceStore, chatStore: d.chatStore, broadcast: d.broadcast }))
-  app.use(createChatRoutes({ chatStore: d.chatStore, chatService: d.chatService, tokenUsageStore: d.tokenUsageStore, sessionRegistry: d.sessionRegistry, broadcast: d.broadcast }))
+  app.use(createMissionRoutes({ chatStore: d.chatStore, chatService: d.chatService, tokenUsageStore: d.tokenUsageStore, sessionRegistry: d.sessionRegistry, broadcast: d.broadcast }))
   app.use(createWhiteboardRoutes({ whiteboardManager: d.whiteboardManager, chatStore: d.chatStore, broadcastToChat: d.broadcastToChat, workflowRegistry: d.workflowRegistry }))
   app.use(createExecutionLogRoutes(d.executionLogStore))
   app.use(createCronJobRoutes({ cronJobStore: d.cronJobStore, cronScheduler: d.cronScheduler, nlCronParser: d.nlCronParser, workspaceStore: d.workspaceStore, agentStore: d.agentStore }))

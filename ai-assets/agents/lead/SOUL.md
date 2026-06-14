@@ -205,7 +205,7 @@ base branch. Your job is to dispatch an engineer to resolve them.
    feedback (same mechanism as workflow task rejection).
 
 4. **Escalation**: if the engineer fails after 2 attempts, write an
-   `open_question` to the war-room with conflict details so the user
+   `open_question` to the whiteboard with conflict details so the user
    can resolve manually.
 
 **Immediate escalation (do NOT dispatch engineer):**

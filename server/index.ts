@@ -23,7 +23,8 @@ import { TEEMAI_HOME } from './config/paths'
 import { ConfigCompiler } from './runtime/ConfigCompiler'
 import { HooksConfigManager } from './runtime/HooksConfigManager'
 
-import { WSRouter, ExpertHandler } from './ws'
+import { WSRouter, MissionAgentHandler } from './ws'
+import { outboundFrames, sendFrame } from './ws/wsFrame'
 import { SemanticLogBroadcaster } from './ws/SemanticLogBroadcaster'
 
 import {
@@ -139,8 +140,8 @@ const configCompiler = new ConfigCompiler(
 )
 
 const broadcast = (msg: Record<string, unknown>) => {
-  const data = JSON.stringify(msg)
-  wss.clients.forEach((c) => { if (c.readyState === WebSocket.OPEN) c.send(data) })
+  const frames = outboundFrames(msg)
+  wss.clients.forEach((c) => { if (c.readyState === WebSocket.OPEN) frames.forEach((f) => c.send(f)) })
 }
 
 const updateMonitor = new UpdateMonitor(updateManager, broadcast)
@@ -148,20 +149,20 @@ const updateMonitor = new UpdateMonitor(updateManager, broadcast)
 const sessionRegistry = new SessionRegistry(hooksConfigManager, chatStore)
 sessionRegistry.onChatStatusChanged((chatId, status) => {
   const chat = chatStore.get(chatId)
-  broadcast({ type: 'chat:status-changed', payload: { chatId, status, taskStatus: chat?.taskStatus } })
+  broadcast({ type: 'mission.status-changed', payload: { chatId, status, taskStatus: chat?.taskStatus } })
 })
 sessionRegistry.onActivityChanged((payload) => {
   if (!payload.latestMessage) {
     const latest = expertHandler.getLatestMessage(payload.chatId)
     if (latest) payload.latestMessage = latest
   }
-  broadcast({ type: 'chat:activity', payload })
+  broadcast({ type: 'mission.activity', payload })
   semanticLogBroadcaster.handle(payload)
   workflowScheduler.onActivityChanged(payload)
   const sessions = sessionRegistry.findAllByChat(payload.chatId)
   for (const s of sessions) {
     if (s.connectionType === 'virtual') {
-      sessionRegistry.sendToSession(s.sessionId, { type: 'chat:activity', payload })
+      sessionRegistry.sendToSession(s.sessionId, { type: 'mission.activity', payload })
     }
   }
 })
@@ -177,12 +178,12 @@ const broadcastToChat = (chatId: string, msg: Record<string, unknown>) => {
     }
     targetConnIds = viewing
   }
-  const data = JSON.stringify(msg)
+  const frames = outboundFrames(msg)
   let sent = 0
   for (const connId of targetConnIds) {
     const ws = expertHandler.getConnectionWs(connId)
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(data)
+      frames.forEach((f) => ws.send(f))
       sent++
     }
   }
@@ -190,7 +191,7 @@ const broadcastToChat = (chatId: string, msg: Record<string, unknown>) => {
     log.warn('broadcastToChat dropped: no open ws among connections', { chatId, type: msg.type })
   }
 }
-const expertHandler = new ExpertHandler(configCompiler, agentRegistry, agentStore, chatStore, workspaceStore, tokenUsageStore, executionLogStore, undefined, sessionRegistry, versionGate, broadcastToChat, whiteboardManager, broadcast)
+const expertHandler = new MissionAgentHandler(configCompiler, agentRegistry, agentStore, chatStore, workspaceStore, tokenUsageStore, executionLogStore, undefined, sessionRegistry, versionGate, broadcastToChat, whiteboardManager, broadcast)
 const workflowScheduler = new WorkflowScheduler({ workflowRegistry, expertHandler, chatStore, workspaceStore, sessionRegistry, broadcastToChat })
 const memoryGrowthCapture = new MemoryGrowthCapture(memoryStore, whiteboardManager, agentRegistry)
 whiteboardManager.onEntryAppended((chatId, entry) => {
@@ -222,7 +223,7 @@ const senseiUpgradeService = new SenseiUpgradeService(
   (connectionId, event, data) => {
     const ws = expertHandler.getConnectionWs(connectionId)
     if (ws && ws.readyState === 1) {
-      ws.send(JSON.stringify({ type: event, payload: data }))
+      sendFrame(ws, { type: event, payload: data })
     }
   },
 )

@@ -7,7 +7,7 @@ import type { ChatService } from '../../services/chat/ChatService'
 import type { TokenUsageStore } from '../../stores/TokenUsageStore'
 import type { Chat } from '../../config/types'
 import type { SessionRegistry } from '../../terminal/SessionRegistry'
-import { MemberAggregator } from '../../stores/MemberAggregator'
+import { MissionAgentAggregator } from '../../stores/MissionAgentAggregator'
 import { WorktreeManager } from '../../git/WorktreeManager'
 import { createLogger } from '../../lib/logger'
 import { cwdToCliProjectKey } from '../../../shared/projectKey'
@@ -49,9 +49,9 @@ const pickUpdatableFields = (body: Record<string, unknown>): Partial<Chat> => {
   return updates as Partial<Chat>
 }
 
-export const createChatRoutes = ({ chatStore, chatService, tokenUsageStore, sessionRegistry, broadcast }: ChatRouteDeps): Router => {
+export const createMissionRoutes = ({ chatStore, chatService, tokenUsageStore, sessionRegistry, broadcast }: ChatRouteDeps): Router => {
   const router = Router()
-  const memberAggregator = new MemberAggregator(sessionRegistry)
+  const memberAggregator = new MissionAgentAggregator(sessionRegistry)
 
   const enrichWithMembers = <T extends Chat>(chats: T[]): T[] => {
     return chats.map((chat) => ({ ...chat, members: memberAggregator.enrich(chat) }))
@@ -75,7 +75,7 @@ export const createChatRoutes = ({ chatStore, chatService, tokenUsageStore, sess
     })
   }
 
-  router.get('/api/chats/recent', (req, res) => {
+  router.get('/api/missions/recent', (req, res) => {
     const limit = Number(req.query.limit) || 10
     const chats = chatStore.listRecent(limit)
     const enriched = enrichWithMembers(enrichWithTokenUsage(chats))
@@ -129,14 +129,14 @@ export const createChatRoutes = ({ chatStore, chatService, tokenUsageStore, sess
     }
   })
 
-  router.get('/api/chats/:id', (req, res) => {
+  router.get('/api/missions/:id', (req, res) => {
     const chat = chatStore.get(req.params.id)
     if (!chat) return res.status(404).json({ error: 'Chat not found' })
     const [enriched] = enrichWithMembers(enrichWithTokenUsage([chat]))
     res.json(enriched)
   })
 
-  router.put('/api/chats/:id', async (req, res) => {
+  router.put('/api/missions/:id', async (req, res) => {
     try {
       const updates = pickUpdatableFields(req.body)
       if (Object.keys(updates).length === 0) {
@@ -145,11 +145,11 @@ export const createChatRoutes = ({ chatStore, chatService, tokenUsageStore, sess
       const chat = await chatStore.update(req.params.id, updates)
       if (!chat) return res.status(404).json({ error: 'Chat not found' })
       if (broadcast && typeof updates.title === 'string') {
-        broadcast({ type: 'chat:title-updated', payload: { chatId: chat.id, title: updates.title } })
+        broadcast({ type: 'mission.title-updated', payload: { chatId: chat.id, title: updates.title } })
       }
       if (broadcast && ('archivedAt' in updates || 'pinnedAt' in updates)) {
         broadcast({
-          type: 'chat:meta-updated',
+          type: 'mission.meta-updated',
           payload: {
             chatId: chat.id,
             archivedAt: chat.archivedAt ?? null,
@@ -163,7 +163,7 @@ export const createChatRoutes = ({ chatStore, chatService, tokenUsageStore, sess
     }
   })
 
-  router.get('/api/chats/:id/sessions', (req, res) => {
+  router.get('/api/missions/:id/sessions', (req, res) => {
     const chat = chatStore.get(req.params.id)
     if (!chat) return res.status(404).json({ error: 'Chat not found' })
 
@@ -194,7 +194,7 @@ export const createChatRoutes = ({ chatStore, chatService, tokenUsageStore, sess
     })
   })
 
-  router.delete('/api/chats/:id', async (req, res) => {
+  router.delete('/api/missions/:id', async (req, res) => {
     const chat = chatStore.get(req.params.id)
     if (!chat) return res.status(404).json({ error: 'Chat not found' })
 
@@ -243,7 +243,7 @@ export const createChatRoutes = ({ chatStore, chatService, tokenUsageStore, sess
     res.json({ success: true, purged })
   })
 
-  router.delete('/api/chats/:id/sessions/:agentId', async (req, res) => {
+  router.delete('/api/missions/:id/sessions/:agentId', async (req, res) => {
     const { id: chatId, agentId } = req.params
     const chat = chatStore.get(chatId)
     if (!chat) return res.status(404).json({ error: 'Chat not found' })

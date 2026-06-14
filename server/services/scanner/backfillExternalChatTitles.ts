@@ -39,7 +39,7 @@ export const backfillExternalChatTitles = async (): Promise<number> => {
               esi.session_id AS sessionId,
               c.title AS title
        FROM external_session_index esi
-       JOIN chats c ON c.id = esi.adopted_chat_id
+       JOIN missions c ON c.id = esi.adopted_chat_id
        WHERE esi.adopted_chat_id IS NOT NULL
          AND esi.first_user_message IS NOT NULL
          AND length(esi.first_user_message) > 0`,
@@ -54,7 +54,7 @@ export const backfillExternalChatTitles = async (): Promise<number> => {
 
   if (rows.length === 0) return 0
 
-  const update = db.prepare('UPDATE chats SET title = ? WHERE id = ?')
+  const update = db.prepare('UPDATE missions SET title = ? WHERE id = ?')
   let fixed = 0
   for (const r of rows) {
     if (!isFallbackTitle(r.title, r.cwd, r.sessionId)) continue

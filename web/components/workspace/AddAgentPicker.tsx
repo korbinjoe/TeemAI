@@ -44,14 +44,14 @@ const AddAgentPicker = () => {
     if (!addAgentTaskId || busyAgentId) return
     setBusyAgentId(agentId)
     try {
-      const getRes = await authFetch(`${API_BASE}/api/chats/${addAgentTaskId}`)
+      const getRes = await authFetch(`${API_BASE}/api/missions/${addAgentTaskId}`)
       if (!getRes.ok) throw new Error('Chat not found')
       const chat = await getRes.json()
       const teamAgentIds: string[] = Array.isArray(chat.teamAgentIds) ? [...chat.teamAgentIds] : []
       const allIds = [chat.primaryAgentId, ...teamAgentIds].filter(Boolean)
       const memberId = nextInstanceId(agentId, allIds)
       teamAgentIds.push(memberId)
-      const putRes = await authFetch(`${API_BASE}/api/chats/${addAgentTaskId}`, {
+      const putRes = await authFetch(`${API_BASE}/api/missions/${addAgentTaskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ teamAgentIds }),

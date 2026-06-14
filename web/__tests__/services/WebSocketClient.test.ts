@@ -67,20 +67,20 @@ describe('WebSocketClient', () => {
     await connectAndCapture()
     const handler = vi.fn()
     client.on('*', handler)
-    mockWs._simulateMessage({ type: 'chat:status-changed', payload: { chatId: '1', status: 'running' } })
-    expect(handler).toHaveBeenCalledWith({ type: 'chat:status-changed', payload: { chatId: '1', status: 'running' } })
+    mockWs._simulateMessage({ type: 'mission.status-changed', payload: { chatId: '1', status: 'running' } })
+    expect(handler).toHaveBeenCalledWith({ type: 'mission.status-changed', payload: { chatId: '1', status: 'running' } })
   })
 
   it('send directly sends when connected', async () => {
     await connectAndCapture()
-    client.send('chat:set-context', { chatId: '123' })
-    expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({ type: 'chat:set-context', payload: { chatId: '123' } }))
+    client.send('mission:set-context', { chatId: '123' })
+    expect(mockWs.send).toHaveBeenCalledWith(JSON.stringify({ type: 'mission:set-context', payload: { chatId: '123' } }))
   })
 
   it('send queues to pendingQueue when disconnected, flushes after reconnect', async () => {
     await connectAndCapture()
     mockWs._simulateClose()
-    client.send('chat:set-context', { chatId: 'pending1' })
+    client.send('mission:set-context', { chatId: 'pending1' })
     const queue = (client as unknown as { pendingQueue: string[] }).pendingQueue
     expect(queue).toHaveLength(1)
   })

@@ -34,7 +34,8 @@ export const handleSystemEvent = (
     state.turnIndex++
     state.currentBlocks.clear()
     state.currentApiCallId = null
-    state.streamedCurrentTurn = false
+    state.streamedApiCalls.clear()
+    state.emittedTextSinceResult = false
     log.debug('System init', { sessionId: state.sessionId, turn: state.turnIndex })
   }
   return {
@@ -59,13 +60,17 @@ export const handleAssistantEvent = (
   const model = msg.model as string | undefined
   if (model) state.model = model
 
-  if (state.streamedCurrentTurn) {
+  const apiCallId = msg.id as string | undefined
+
+  // Skip only if THIS api call was already streamed via stream_event. The old
+  // per-turn boolean discarded authoritative `assistant` messages that were
+  // never streamed — the root cause of missing messages.
+  if (apiCallId && state.streamedApiCalls.has(apiCallId)) {
     return { newMessages: [] }
   }
 
   const ts = Date.now()
   const blocks = Array.isArray(msg.content) ? msg.content : []
-  const apiCallId = msg.id as string | undefined
   const currentTurn = Math.max(state.turnIndex, 0)
 
   const newMessages: ParsedMessage[] = []
@@ -141,7 +146,10 @@ export const handleAssistantEvent = (
   const reordered = reorderToolMessages(newMessages)
   state.messages.push(...reordered)
 
-  if (reordered.length > 0) state.streamedCurrentTurn = true
+  if (reordered.length > 0) {
+    if (apiCallId) state.streamedApiCalls.add(apiCallId)
+    if (reordered.some((m) => m.type === 'text')) state.emittedTextSinceResult = true
+  }
 
   return { newMessages: reordered }
 }
@@ -160,7 +168,6 @@ export const handleStreamEvent = (
       const msg = event.message
       if (msg?.model) state.model = msg.model
       if (msg?.id) state.currentApiCallId = msg.id
-      state.streamedCurrentTurn = false
       return { newMessages: [] }
     }
 
@@ -269,7 +276,10 @@ export const handleStreamEvent = (
       }
 
       state.messages.push(...newMessages)
-      if (newMessages.length > 0) state.streamedCurrentTurn = true
+      if (newMessages.length > 0) {
+        if (state.currentApiCallId) state.streamedApiCalls.add(state.currentApiCallId)
+        if (newMessages.some((m) => m.type === 'text')) state.emittedTextSinceResult = true
+      }
       return { newMessages }
     }
 
@@ -333,7 +343,7 @@ export const handleResultEvent = (
   const newMessages: ParsedMessage[] = []
 
   const resultText = data.result as string | undefined
-  if (resultText && !state.streamedCurrentTurn) {
+  if (resultText && !state.emittedTextSinceResult) {
     const textMsg: ParsedMessage = {
       id: stableId(state.idPrefix, state.messageSeq++),
       role: 'agent',
@@ -378,6 +388,11 @@ export const handleResultEvent = (
 
   newMessages.push(statsMsg)
   state.messages.push(statsMsg)
+
+  // `result` is the per-turn boundary for persistent claude sessions. Reset
+  // per-call dedup so the next turn starts clean.
+  state.streamedApiCalls.clear()
+  state.emittedTextSinceResult = false
 
   return { newMessages }
 }

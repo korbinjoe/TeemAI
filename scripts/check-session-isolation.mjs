@@ -15,25 +15,20 @@ function assertContains(source, pattern, message) {
 }
 
 function checkServerLifecycle() {
-  const src = read('server/ws/ExpertLifecycle.ts')
+  const src = read('server/ws/MissionAgentLifecycle.ts')
   const checks = [
-    [/type:\s*'expert:started'[\s\S]{0,260}?chatId/s, 'ExpertLifecycle: expert:started payload must include chatId'],
-    [/type:\s*'expert:data'[\s\S]{0,260}?chatId/s, 'ExpertLifecycle: expert:data payload must include chatId'],
-    [/type:\s*'expert:activity'[\s\S]{0,260}?chatId/s, 'ExpertLifecycle: expert:activity payload must include chatId'],
-    [/type:\s*'expert:exit'[\s\S]{0,260}?chatId/s, 'ExpertLifecycle: expert:exit payload must include chatId'],
-    [/type:\s*'expert:resume-failed'[\s\S]{0,260}?chatId/s, 'ExpertLifecycle: expert:resume-failed payload must include chatId'],
-    [/type:\s*'expert:error'[\s\S]{0,260}?chatId/s, 'ExpertLifecycle: expert:error payload must include chatId'],
+    [/type:\s*'agent:started'[\s\S]{0,260}?chatId/s, 'MissionAgentLifecycle: agent:started payload must include chatId'],
+    [/type:\s*'agent:error'[\s\S]{0,260}?chatId/s, 'MissionAgentLifecycle: agent:error payload must include chatId'],
   ]
   for (const [pattern, message] of checks) assertContains(src, pattern, message)
 }
 
 function checkServerResume() {
-  const src = read('server/ws/ExpertResumeHandler.ts')
+  const src = read('server/ws/MissionAgentResumeHandler.ts')
   const checks = [
-    [/type:\s*'expert:started'[\s\S]{0,260}?chatId/s, 'ExpertResumeHandler: expert:started payload must include chatId'],
-    [/type:\s*'expert:data'[\s\S]{0,260}?chatId/s, 'ExpertResumeHandler: expert:data payload must include chatId'],
-    [/type:\s*'expert:activity'[\s\S]{0,260}?chatId/s, 'ExpertResumeHandler: expert:activity payload must include chatId'],
-    [/type:\s*'expert:resume-failed'[\s\S]{0,260}?chatId/s, 'ExpertResumeHandler: expert:resume-failed payload must include chatId'],
+    [/type:\s*'agent:started'[\s\S]{0,260}?chatId/s, 'MissionAgentResumeHandler: agent:started payload must include chatId'],
+    [/type:\s*'agent:activity'[\s\S]{0,260}?chatId/s, 'MissionAgentResumeHandler: agent:activity payload must include chatId'],
+    [/type:\s*'agent:resume-failed'[\s\S]{0,260}?chatId/s, 'MissionAgentResumeHandler: agent:resume-failed payload must include chatId'],
   ]
   for (const [pattern, message] of checks) assertContains(src, pattern, message)
 }

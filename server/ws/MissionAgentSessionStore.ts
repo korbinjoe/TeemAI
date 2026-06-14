@@ -1,5 +1,5 @@
 /**
- * ExpertSessionStore — Expert Agent runtime state
+ * MissionAgentSessionStore — Expert Agent runtime state
  *
  * Holds the in-memory per-key state for spawned/attached experts (running entries,
  * starting locks, completed entries, pending-task queue, activity, meta).
@@ -36,7 +36,7 @@ export function parseChatId(key: string): string {
   return parts.length >= 3 ? parts[1] : ''
 }
 
-export interface ExpertEntry {
+export interface MissionAgentEntry {
   sessionId: string
   acpClient: ACPClient
   agentName: string
@@ -60,7 +60,7 @@ export interface CompletedEntry {
   model?: string
 }
 
-export interface ExpertListItem {
+export interface MissionAgentListItem {
   agentId: string
   sessionId: string
   agentName: string
@@ -84,8 +84,8 @@ export interface PendingTaskEntry {
 export type PendingTaskLossReason = 'ttl' | 'stop' | 'cleanup'
 export type PendingTaskLossListener = (entry: PendingTaskEntry, key: string, reason: PendingTaskLossReason) => void
 
-export class ExpertSessionStore {
-  private running = new Map<string, ExpertEntry>()
+export class MissionAgentSessionStore {
+  private running = new Map<string, MissionAgentEntry>()
   private completed = new Map<string, CompletedEntry>()
   private starting = new Set<string>()
   private pendingTask = new Map<string, PendingTaskEntry[]>()
@@ -140,11 +140,11 @@ export class ExpertSessionStore {
 
   // ── Running Map ──
 
-  set(key: string, entry: ExpertEntry): void {
+  set(key: string, entry: MissionAgentEntry): void {
     this.running.set(key, entry)
   }
 
-  get(key: string): ExpertEntry | undefined {
+  get(key: string): MissionAgentEntry | undefined {
     return this.running.get(key)
   }
 
@@ -152,7 +152,7 @@ export class ExpertSessionStore {
     return this.running.has(key)
   }
 
-  runningEntries(): IterableIterator<[string, ExpertEntry]> {
+  runningEntries(): IterableIterator<[string, MissionAgentEntry]> {
     return this.running.entries()
   }
 
@@ -263,7 +263,7 @@ export class ExpertSessionStore {
    * loss listener with reason='cleanup' before being deleted. Returns the
    * removed running entry and last activity (if any) for caller bookkeeping.
    */
-  cleanup(key: string): { entry?: ExpertEntry; activity?: ActivityState } {
+  cleanup(key: string): { entry?: MissionAgentEntry; activity?: ActivityState } {
     const entry = this.running.get(key)
     const activity = this.lastActivity.get(key)
 
@@ -288,7 +288,7 @@ export class ExpertSessionStore {
    * handleStop / handleStopAll. Drained pending tasks are surfaced via
    * the loss listener with reason='stop'.
    */
-  cleanupWithStop(key: string, connectionId: string): ExpertEntry | undefined {
+  cleanupWithStop(key: string, connectionId: string): MissionAgentEntry | undefined {
     const expert = this.running.get(key)
     if (!expert) return undefined
 
@@ -319,8 +319,8 @@ export class ExpertSessionStore {
   }
 
   /** Collect running entries by chatId — used by team-status API. */
-  collectByChatId(chatId: string): Array<{ key: string; expert: ExpertEntry }> {
-    const result: Array<{ key: string; expert: ExpertEntry }> = []
+  collectByChatId(chatId: string): Array<{ key: string; expert: MissionAgentEntry }> {
+    const result: Array<{ key: string; expert: MissionAgentEntry }> = []
     for (const [key, expert] of this.running) {
       if (expert.chatId === chatId) {
         result.push({ key, expert })
@@ -330,8 +330,8 @@ export class ExpertSessionStore {
   }
 
   /** Collect running entries for a connectionId. */
-  collectByConnection(connectionId: string): Array<{ key: string; expert: ExpertEntry }> {
-    const result: Array<{ key: string; expert: ExpertEntry }> = []
+  collectByConnection(connectionId: string): Array<{ key: string; expert: MissionAgentEntry }> {
+    const result: Array<{ key: string; expert: MissionAgentEntry }> = []
     for (const [key, expert] of this.running) {
       if (expert.connectionId === connectionId) {
         result.push({ key, expert })
@@ -349,7 +349,7 @@ export class ExpertSessionStore {
     }
   }
 
-  findBySessionId(sessionId: string): { key: string; entry: ExpertEntry } | undefined {
+  findBySessionId(sessionId: string): { key: string; entry: MissionAgentEntry } | undefined {
     for (const [key, entry] of this.running) {
       if (entry.sessionId === sessionId) return { key, entry }
     }
@@ -396,7 +396,7 @@ export class ExpertSessionStore {
   }
 
   /** Find a running entry by agentId, optionally constrained by connectionId/chatId. */
-  findRunning(agentId: string, connectionId?: string, chatId?: string): ExpertEntry | undefined {
+  findRunning(agentId: string, connectionId?: string, chatId?: string): MissionAgentEntry | undefined {
     if (connectionId && chatId) {
       return this.running.get(compositeKey(connectionId, chatId, agentId))
     }
@@ -409,7 +409,7 @@ export class ExpertSessionStore {
     return undefined
   }
 
-  getExpertListForConnection(connectionId: string, chatId?: string): ExpertListItem[] {
+  getExpertListForConnection(connectionId: string, chatId?: string): MissionAgentListItem[] {
     const runningList = Array.from(this.running.entries())
       .filter(([, info]) => info.connectionId === connectionId && (!chatId || info.chatId === chatId))
       .map(([key, info]) => ({
@@ -436,7 +436,7 @@ export class ExpertSessionStore {
     return [...runningList, ...completedList]
   }
 
-  getExpertList(): ExpertListItem[] {
+  getExpertList(): MissionAgentListItem[] {
     const runningList = Array.from(this.running.entries()).map(([key, info]) => ({
       agentId: parseAgentId(key),
       sessionId: info.sessionId,

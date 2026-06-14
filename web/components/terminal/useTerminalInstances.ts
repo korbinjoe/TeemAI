@@ -67,7 +67,7 @@ export const useTerminalInstances = ({
         const cid = chatIdRef.current
         if (!cid) return
         if (wsClient.isConnected()) {
-          wsClient.send('expert:input', { chatId: cid, agentId, data })
+          wsClient.send('agent:input', { chatId: cid, agentId, data })
         }
       })
       let lastSentCols = 0, lastSentRows = 0
@@ -77,7 +77,7 @@ export const useTerminalInstances = ({
         const cid = chatIdRef.current
         if (!cid) return
         if (wsClient.isConnected()) {
-          wsClient.send('expert:resize', { chatId: cid, agentId, cols: size.cols, rows: size.rows })
+          wsClient.send('agent:resize', { chatId: cid, agentId, cols: size.cols, rows: size.rows })
         }
       })
       terminalsRef.current.set(agentId, inst)

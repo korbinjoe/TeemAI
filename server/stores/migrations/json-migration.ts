@@ -71,15 +71,15 @@ const MIGRATION_MAP: MigrationEntry[] = [
   },
   {
     file: 'chats.json',
-    table: 'chats',
+    table: 'missions',
     convert: (item) => ({
       id: item.id,
       workspace_id: item.workspaceId,
       worktree_sessions: jsonOrNull(item.worktreeSessions),
       title: item.title,
-      primary_agent_id: item.leadAgentName ?? item.primaryAgentName ?? item.primaryAgentId,
+      lead_agent_id: item.leadAgentName ?? item.primaryAgentName ?? item.primaryAgentId,
       team_agent_ids: jsonOrNull(item.expertAgentNames) ?? jsonOrNull(item.teamAgentNames) ?? jsonOrNull(item.teamAgentIds) ?? '[]',
-      expert_sessions: jsonOrNull(item.expertSessions),
+      mission_agent_sessions: jsonOrNull(item.expertSessions),
       model: item.model ?? null,
       status: item.status,
       total_cost: item.totalCost ?? null,
@@ -95,7 +95,7 @@ const MIGRATION_MAP: MigrationEntry[] = [
     table: 'execution_logs',
     convert: (item) => ({
       id: item.id,
-      chat_id: item.chatId,
+      mission_id: item.chatId,
       workspace_id: item.workspaceId,
       agent_id: item.agentName ?? item.agentId,
       total_cost: item.totalCost ?? null,
@@ -120,7 +120,7 @@ const MIGRATION_MAP: MigrationEntry[] = [
             started_at: exec.startedAt,
             finished_at: exec.finishedAt ?? null,
             status: exec.status,
-            chat_id: exec.chatId ?? null,
+            mission_id: exec.chatId ?? null,
             exit_code: exec.exitCode ?? null,
             error_message: exec.errorMessage ?? null,
           })

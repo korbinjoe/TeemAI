@@ -25,26 +25,26 @@ const mockWsClient = {
 describe('useChatWebSocket (WS event routing)', () => {
   it('handler can be triggered after registration', () => {
     const handler = vi.fn()
-    mockWsClient.on('chat:status-changed', handler)
-    mockWsClient._emit('chat:status-changed', { chatId: '1', status: 'running' })
+    mockWsClient.on('mission.status-changed', handler)
+    mockWsClient._emit('mission.status-changed', { chatId: '1', status: 'running' })
     expect(handler).toHaveBeenCalledWith({ chatId: '1', status: 'running' })
   })
 
   it('multiple handlers for same event all get called', () => {
     const h1 = vi.fn()
     const h2 = vi.fn()
-    mockWsClient.on('expert:exit', h1)
-    mockWsClient.on('expert:exit', h2)
-    mockWsClient._emit('expert:exit', { agentId: 'a1', chatId: 'c1' })
+    mockWsClient.on('agent:exit', h1)
+    mockWsClient.on('agent:exit', h2)
+    mockWsClient._emit('agent:exit', { agentId: 'a1', chatId: 'c1' })
     expect(h1).toHaveBeenCalled()
     expect(h2).toHaveBeenCalled()
   })
 
   it('no longer triggers after off', () => {
     const handler = vi.fn()
-    mockWsClient.on('expert:stopped', handler)
-    mockWsClient.off('expert:stopped', handler)
-    mockWsClient._emit('expert:stopped', { agentId: 'a1', chatId: 'c1' })
+    mockWsClient.on('agent:stopped', handler)
+    mockWsClient.off('agent:stopped', handler)
+    mockWsClient._emit('agent:stopped', { agentId: 'a1', chatId: 'c1' })
     expect(handler).not.toHaveBeenCalled()
   })
 })

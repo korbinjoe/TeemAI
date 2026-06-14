@@ -147,7 +147,7 @@ export const runCommand = new Command('run')
     const repoPaths = workspace.repositories?.map((r: any) => r.path) ?? [cwd]
 
     if (model) {
-      await fetch(`http://127.0.0.1:${port}/api/chats/${chatId}`, {
+      await fetch(`http://127.0.0.1:${port}/api/missions/${chatId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model }),
@@ -166,20 +166,20 @@ export const runCommand = new Command('run')
     }
 
     process.on('SIGTERM', () => {
-      ws.send(JSON.stringify({ type: 'expert:stop', payload: { agentId, chatId } }))
+      ws.send(JSON.stringify({ type: 'agent:stop', payload: { agentId, chatId } }))
       cleanup()
       process.exit(0)
     })
     process.on('SIGINT', () => {
-      ws.send(JSON.stringify({ type: 'expert:stop', payload: { agentId, chatId } }))
+      ws.send(JSON.stringify({ type: 'agent:stop', payload: { agentId, chatId } }))
       cleanup()
       process.exit(0)
     })
 
     ws.on('open', () => {
-      ws.send(JSON.stringify({ type: 'chat:set-context', payload: { chatId } }))
+      ws.send(JSON.stringify({ type: 'mission:set-context', payload: { chatId } }))
       ws.send(JSON.stringify({
-        type: 'expert:direct-input',
+        type: 'agent:direct-input',
         payload: {
           chatId,
           agentId,
@@ -196,13 +196,13 @@ export const runCommand = new Command('run')
         const msg = JSON.parse(data.toString()) as { type: string; payload: any }
 
         switch (msg.type) {
-          case 'expert:started':
+          case 'agent:started':
             if (msg.payload.agentId !== agentId) break
             started = true
             process.stderr.write(chalk.dim(`[teemai] Agent started (session=${msg.payload.sessionId})\n`))
             break
 
-          case 'expert:partial-text':
+          case 'agent:partial-text':
             if (msg.payload.agentId !== agentId) break
             if (msg.payload.text) {
               partialOutputted = true
@@ -210,7 +210,7 @@ export const runCommand = new Command('run')
             }
             break
 
-          case 'expert:structured-message':
+          case 'agent:structured-message':
             if (msg.payload.agentId !== agentId) break
             if (!partialOutputted && msg.payload.messages) {
               for (const m of msg.payload.messages) {
@@ -221,14 +221,14 @@ export const runCommand = new Command('run')
             }
             break
 
-          case 'expert:activity':
+          case 'agent:activity':
             if (msg.payload.agentId !== agentId) break
             if (msg.payload.activity?.state) {
               process.stderr.write(chalk.dim(`[teemai] ${msg.payload.activity.state}\n`))
             }
             break
 
-          case 'expert:exit': {
+          case 'agent:exit': {
             if (msg.payload.agentId !== agentId) break
             const exitCode = msg.payload.exitCode ?? 0
             process.stderr.write(chalk.dim(`[teemai] Agent exited (code=${exitCode})\n`))
@@ -238,7 +238,7 @@ export const runCommand = new Command('run')
             break
           }
 
-          case 'expert:error':
+          case 'agent:error':
             if (msg.payload.agentId !== agentId) break
             process.stderr.write(chalk.red(`Error: ${msg.payload.message}\n`))
             cleanup()

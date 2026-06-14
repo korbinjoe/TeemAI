@@ -4,7 +4,7 @@ import { Zap, Wrench, Eye, LayoutGrid, ClipboardCheck, Package } from 'lucide-re
 import { cn } from '@/lib/utils'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { useDialog } from '../../contexts/DialogContext'
-import { useWorkspaceChats } from '../../hooks/useWorkspaceChats'
+import { useWorkspaceMissions } from '../../hooks/useWorkspaceMissions'
 import { useAgents } from '../../hooks/useAgents'
 import useTeamStats from '../../hooks/useTeamStats'
 import AgentAvatar from '../ui/agent-avatar'
@@ -40,7 +40,7 @@ const getGreeting = (): string => {
 const WorkspaceHome = () => {
   const { workspaceId } = useWorkspace()
   const { openNewMission } = useDialog()
-  const { running, awaitingReview, done } = useWorkspaceChats(workspaceId)
+  const { running, awaitingReview, done } = useWorkspaceMissions(workspaceId)
   const { hiredAgents, resolveAgentName } = useAgents()
   const teamStats = useTeamStats()
   const navigate = useNavigate()

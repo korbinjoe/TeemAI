@@ -45,19 +45,19 @@ const makeChatStore = (initial: Chat[]) => {
   } as any
 }
 
-let createChatRoutes: typeof import('../routes/chat/chatRoutes').createChatRoutes
+let createMissionRoutes: typeof import('../routes/chat/missionRoutes').createMissionRoutes
 
 beforeAll(async () => {
   await fs.mkdir(TMP_HOME, { recursive: true })
   vi.resetModules()
-  ;({ createChatRoutes } = await import('../routes/chat/chatRoutes'))
+  ;({ createMissionRoutes } = await import('../routes/chat/missionRoutes'))
 })
 
 afterAll(async () => {
   await fs.rm(TMP_HOME, { recursive: true, force: true })
 })
 
-// Minimal SessionRegistry stub. MemberAggregator only reaches into
+// Minimal SessionRegistry stub. MissionAgentAggregator only reaches into
 // findAllByChat() and getActiveActivities(); other methods are unused at
 // runtime for these tests so we can leave them as no-ops.
 const makeSessionRegistry = (runningChatIds: string[] = []) => ({
@@ -73,7 +73,7 @@ const startServer = (chats: Chat[], opts: { runningChatIds?: string[] } = {}) =>
   const sessionRegistry = makeSessionRegistry(opts.runningChatIds)
   const app = express()
   app.use(express.json())
-  app.use(createChatRoutes({ chatStore, chatService, sessionRegistry }))
+  app.use(createMissionRoutes({ chatStore, chatService, sessionRegistry }))
   return new Promise<{ server: Server; baseUrl: string; chatStore: typeof chatStore }>((resolveServer) => {
     const server = createServer(app)
     server.listen(0, '127.0.0.1', () => {
@@ -95,7 +95,7 @@ const writeClaudeJsonl = (cwd: string, cliSessionId: string): string => {
   return file
 }
 
-describe('DELETE /api/chats/:id with purgeJsonl', () => {
+describe('DELETE /api/missions/:id with purgeJsonl', () => {
   let server: Server
   let baseUrl: string
 
@@ -121,7 +121,7 @@ describe('DELETE /api/chats/:id with purgeJsonl', () => {
     server = ctx.server
     baseUrl = ctx.baseUrl
 
-    const r = await fetch(`${baseUrl}/api/chats/chat-1`, { method: 'DELETE' })
+    const r = await fetch(`${baseUrl}/api/missions/chat-1`, { method: 'DELETE' })
     expect(r.status).toBe(200)
     const body = await r.json() as { success: boolean; purged: unknown[] }
     expect(body.success).toBe(true)
@@ -151,7 +151,7 @@ describe('DELETE /api/chats/:id with purgeJsonl', () => {
     server = ctx.server
     baseUrl = ctx.baseUrl
 
-    const r = await fetch(`${baseUrl}/api/chats/chat-2?purgeJsonl=1`, { method: 'DELETE' })
+    const r = await fetch(`${baseUrl}/api/missions/chat-2?purgeJsonl=1`, { method: 'DELETE' })
     expect(r.status).toBe(200)
     const body = await r.json() as { success: boolean; purged: Array<{ deleted: boolean; agentId: string }> }
     expect(body.purged.length).toBe(2)
@@ -175,7 +175,7 @@ describe('DELETE /api/chats/:id with purgeJsonl', () => {
     server = ctx.server
     baseUrl = ctx.baseUrl
 
-    const r = await fetch(`${baseUrl}/api/chats/chat-3?purgeJsonl=1`, { method: 'DELETE' })
+    const r = await fetch(`${baseUrl}/api/missions/chat-3?purgeJsonl=1`, { method: 'DELETE' })
     expect(r.status).toBe(200)
     const body = await r.json() as { purged: Array<{ deleted: boolean; error?: string }> }
     expect(body.purged[0].deleted).toBe(false)
@@ -200,7 +200,7 @@ describe('DELETE /api/chats/:id with purgeJsonl', () => {
     server = ctx.server
     baseUrl = ctx.baseUrl
 
-    const r = await fetch(`${baseUrl}/api/chats/chat-4?purgeJsonl=1`, { method: 'DELETE' })
+    const r = await fetch(`${baseUrl}/api/missions/chat-4?purgeJsonl=1`, { method: 'DELETE' })
     expect(r.status).toBe(409)
     expect(existsSync(file)).toBe(true)
   })
@@ -223,14 +223,14 @@ describe('DELETE /api/chats/:id with purgeJsonl', () => {
     server = ctx.server
     baseUrl = ctx.baseUrl
 
-    const r = await fetch(`${baseUrl}/api/chats/chat-fresh?purgeJsonl=1`, { method: 'DELETE' })
+    const r = await fetch(`${baseUrl}/api/missions/chat-fresh?purgeJsonl=1`, { method: 'DELETE' })
     expect(r.status).toBe(200)
     const body = await r.json() as { success: boolean }
     expect(body.success).toBe(true)
   })
 })
 
-describe('DELETE /api/chats/:id/sessions/:agentId', () => {
+describe('DELETE /api/missions/:id/sessions/:agentId', () => {
   let server: Server
   let baseUrl: string
 
@@ -260,7 +260,7 @@ describe('DELETE /api/chats/:id/sessions/:agentId', () => {
     server = ctx.server
     baseUrl = ctx.baseUrl
 
-    const r = await fetch(`${baseUrl}/api/chats/chat-5/sessions/worker`, { method: 'DELETE' })
+    const r = await fetch(`${baseUrl}/api/missions/chat-5/sessions/worker`, { method: 'DELETE' })
     expect(r.status).toBe(200)
     const body = await r.json() as { chat: Chat; purged: { deleted: boolean; agentId: string } }
     expect(body.purged.deleted).toBe(true)
@@ -286,7 +286,7 @@ describe('DELETE /api/chats/:id/sessions/:agentId', () => {
     server = ctx.server
     baseUrl = ctx.baseUrl
 
-    const r = await fetch(`${baseUrl}/api/chats/chat-6/sessions/never`, { method: 'DELETE' })
+    const r = await fetch(`${baseUrl}/api/missions/chat-6/sessions/never`, { method: 'DELETE' })
     expect(r.status).toBe(404)
   })
 
@@ -295,7 +295,7 @@ describe('DELETE /api/chats/:id/sessions/:agentId', () => {
     server = ctx.server
     baseUrl = ctx.baseUrl
 
-    const r = await fetch(`${baseUrl}/api/chats/missing/sessions/x`, { method: 'DELETE' })
+    const r = await fetch(`${baseUrl}/api/missions/missing/sessions/x`, { method: 'DELETE' })
     expect(r.status).toBe(404)
   })
 
@@ -320,9 +320,9 @@ describe('DELETE /api/chats/:id/sessions/:agentId', () => {
     server = ctx.server
     baseUrl = ctx.baseUrl
 
-    const r1 = await fetch(`${baseUrl}/api/chats/chat-7/sessions/worker`, { method: 'DELETE' })
+    const r1 = await fetch(`${baseUrl}/api/missions/chat-7/sessions/worker`, { method: 'DELETE' })
     expect(r1.status).toBe(200)
-    const r2 = await fetch(`${baseUrl}/api/chats/chat-7/sessions/worker`, { method: 'DELETE' })
+    const r2 = await fetch(`${baseUrl}/api/missions/chat-7/sessions/worker`, { method: 'DELETE' })
     expect(r2.status).toBe(404)
   })
 })

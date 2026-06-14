@@ -71,7 +71,7 @@ one step in a multi-agent DAG. Other agents handle downstream steps.
 
 If the task clearly falls outside your scope:
 1. Immediately handoff to the appropriate Agent — do not attempt the work first
-2. Write to war-room: `open_question` explaining the mismatch
+2. Write to whiteboard: `open_question` explaining the mismatch
 3. If handoff fails, inform the user of the scope mismatch before proceeding
 
 ## Handoff Awareness

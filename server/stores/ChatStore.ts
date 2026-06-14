@@ -10,7 +10,7 @@ const MAX_CHATS = 500
 
 export class ChatStore extends SqliteBaseStore<Chat> {
   constructor(_filePath?: string) {
-    super(_filePath, { tableName: 'chats', maxItems: MAX_CHATS })
+    super(_filePath, { tableName: 'missions', maxItems: MAX_CHATS })
   }
 
   get(id: string): Chat | undefined {
@@ -19,21 +19,21 @@ export class ChatStore extends SqliteBaseStore<Chat> {
 
   listByWorkspace(workspaceId: string): Chat[] {
     const rows = this.db.prepare(
-      'SELECT * FROM chats WHERE workspace_id = ? ORDER BY last_message_at DESC'
+      'SELECT * FROM missions WHERE workspace_id = ? ORDER BY last_message_at DESC'
     ).all(workspaceId)
     return rows.map((row) => this.rowToEntity(row as Record<string, unknown>))
   }
 
   listAll(): Chat[] {
     const rows = this.db.prepare(
-      'SELECT * FROM chats ORDER BY last_message_at DESC'
+      'SELECT * FROM missions ORDER BY last_message_at DESC'
     ).all()
     return rows.map((row) => this.rowToEntity(row as Record<string, unknown>))
   }
 
   countByWorkspace(): Record<string, number> {
     const rows = this.db.prepare(
-      'SELECT workspace_id, COUNT(*) as cnt FROM chats GROUP BY workspace_id'
+      'SELECT workspace_id, COUNT(*) as cnt FROM missions GROUP BY workspace_id'
     ).all() as Array<{ workspace_id: string; cnt: number }>
     const result: Record<string, number> = {}
     for (const row of rows) {
@@ -44,7 +44,7 @@ export class ChatStore extends SqliteBaseStore<Chat> {
 
   listRecent(limit = 10): Chat[] {
     const rows = this.db.prepare(
-      'SELECT * FROM chats ORDER BY last_message_at DESC LIMIT ?'
+      'SELECT * FROM missions ORDER BY last_message_at DESC LIMIT ?'
     ).all(limit)
     return rows.map((row) => this.rowToEntity(row as Record<string, unknown>))
   }
@@ -92,9 +92,9 @@ export class ChatStore extends SqliteBaseStore<Chat> {
       workspaceId: row.workspace_id as string,
       worktreeSessions: row.worktree_sessions ? JSON.parse(row.worktree_sessions as string) : undefined,
       title: row.title as string,
-      primaryAgentId: row.primary_agent_id as string,
+      primaryAgentId: row.lead_agent_id as string,
       teamAgentIds: JSON.parse(row.team_agent_ids as string),
-      expertSessions: row.expert_sessions ? JSON.parse(row.expert_sessions as string) : undefined,
+      expertSessions: row.mission_agent_sessions ? JSON.parse(row.mission_agent_sessions as string) : undefined,
       model: row.model as string | undefined,
       status: row.status as Chat['status'],
       taskStatus: row.task_status as TaskStatus | undefined,
@@ -119,9 +119,9 @@ export class ChatStore extends SqliteBaseStore<Chat> {
       workspace_id: entity.workspaceId,
       worktree_sessions: entity.worktreeSessions ? JSON.stringify(entity.worktreeSessions) : null,
       title: entity.title,
-      primary_agent_id: entity.primaryAgentId,
+      lead_agent_id: entity.primaryAgentId,
       team_agent_ids: JSON.stringify(entity.teamAgentIds),
-      expert_sessions: entity.expertSessions ? JSON.stringify(entity.expertSessions) : null,
+      mission_agent_sessions: entity.expertSessions ? JSON.stringify(entity.expertSessions) : null,
       model: entity.model ?? null,
       status: entity.status,
       task_status: entity.taskStatus ?? null,

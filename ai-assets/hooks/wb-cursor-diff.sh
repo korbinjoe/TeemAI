@@ -7,7 +7,7 @@
 #   - Has diff -> outputs <system-reminder> block with diff summary; >5 entries collapsed as "+N more"
 #
 # Protocol:
-#   - Reads TEEMAI_CHAT_ID / TEEMAI_INSTANCE_ID / EXPERT_API_BASE from env
+#   - Reads TEEMAI_CHAT_ID / TEEMAI_INSTANCE_ID / AGENT_API_BASE from env
 #   - Server GET /diff automatically advances cursor = latestSeq (idempotent)
 #   - All errors fail-open: log to stderr, stdout silent, never blocks agent
 #   - Feature flag WHITEBOARD_ON_DEMAND_CONTEXT=0 -> exit 0 immediately (silent degradation)
@@ -22,10 +22,10 @@ if [ "${WHITEBOARD_ON_DEMAND_CONTEXT:-1}" = "0" ]; then
 fi
 
 # Required env: if any missing, fail-open (no output -> no impact on tool result)
-: "${EXPERT_API_BASE:=}"
+: "${AGENT_API_BASE:=}"
 : "${TEEMAI_CHAT_ID:=}"
 : "${TEEMAI_INSTANCE_ID:=}"
-if [ -z "$EXPERT_API_BASE" ] || [ -z "$TEEMAI_CHAT_ID" ] || [ -z "$TEEMAI_INSTANCE_ID" ]; then
+if [ -z "$AGENT_API_BASE" ] || [ -z "$TEEMAI_CHAT_ID" ] || [ -z "$TEEMAI_INSTANCE_ID" ]; then
   exit 0
 fi
 
@@ -34,7 +34,7 @@ command -v curl >/dev/null 2>&1 || exit 0
 command -v jq   >/dev/null 2>&1 || exit 0
 
 # Read current cursor (failure treated as 0, triggers server-side fallback = push full list)
-CURSOR_URL="${EXPERT_API_BASE}/api/chats/${TEEMAI_CHAT_ID}/whiteboard/cursor?instanceId=${TEEMAI_INSTANCE_ID}"
+CURSOR_URL="${AGENT_API_BASE}/api/chats/${TEEMAI_CHAT_ID}/whiteboard/cursor?instanceId=${TEEMAI_INSTANCE_ID}"
 CURSOR_BODY=$(curl -sS --max-time 3 "$CURSOR_URL" 2>/dev/null || echo "")
 SINCE=$(echo "$CURSOR_BODY" | jq -r '.cursor.lastReadSeq // 0' 2>/dev/null)
 case "$SINCE" in
@@ -42,7 +42,7 @@ case "$SINCE" in
 esac
 
 # Pull diff (server also advances cursor = latestSeq)
-DIFF_URL="${EXPERT_API_BASE}/api/chats/${TEEMAI_CHAT_ID}/whiteboard/diff?since=${SINCE}&instanceId=${TEEMAI_INSTANCE_ID}"
+DIFF_URL="${AGENT_API_BASE}/api/chats/${TEEMAI_CHAT_ID}/whiteboard/diff?since=${SINCE}&instanceId=${TEEMAI_INSTANCE_ID}"
 DIFF_BODY=$(curl -sS --max-time 3 "$DIFF_URL" 2>/dev/null || echo "")
 if [ -z "$DIFF_BODY" ]; then
   exit 0

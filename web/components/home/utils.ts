@@ -1,4 +1,4 @@
-import type { AgentActivity, AgentPhase, ExpertActivitySnapshot } from '../../types/chat'
+import type { AgentActivity, AgentPhase, AgentActivitySnapshot } from '../../types/chat'
 import type { QuickItem } from './types'
 
 export const getQuickItemKey = (item: QuickItem) =>
@@ -6,9 +6,9 @@ export const getQuickItemKey = (item: QuickItem) =>
 
 export const POINTER_SENSOR_OPTIONS = { activationConstraint: { distance: 8 } }
 
-/**  ExpertActivitySnapshot[]  Record<string, AgentActivity> */
+/**  AgentActivitySnapshot[]  Record<string, AgentActivity> */
 export const toExpertActivitiesMap = (
-  experts?: ExpertActivitySnapshot[],
+  experts?: AgentActivitySnapshot[],
 ): Record<string, AgentActivity> => {
   if (!experts?.length) return {}
   const map: Record<string, AgentActivity> = {}

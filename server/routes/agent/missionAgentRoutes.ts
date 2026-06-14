@@ -7,7 +7,7 @@
 
 import { Router } from 'express'
 import { join } from 'path'
-import type { ExpertHandler } from '../../ws/ExpertHandler'
+import type { MissionAgentHandler } from '../../ws/MissionAgentHandler'
 import type { AgentRegistry } from '../../config/AgentRegistry'
 import type { ExecutionPlanManager } from '../../mailbox/ExecutionPlanManager'
 import type { WhiteboardManager } from '../../whiteboard/WhiteboardManager'
@@ -16,7 +16,7 @@ import { wrapTaskEnvelope, type TaskEnvelope } from '../../../shared/agent-messa
 import type { HandoffRequest } from '../../../shared/handoff-types'
 import { WHITEBOARD_SUMMARY_MAX } from '../../../shared/whiteboard-types'
 import { TERMINAL_PHASES, type ExpertEvent } from '../../../shared/expert-event-types'
-import { parseAgentId } from '../../ws/ExpertSessionStore'
+import { parseAgentId } from '../../ws/MissionAgentSessionStore'
 import { expandSlashCommand } from '../../runtime/SlashCommandResolver'
 import { cwdToCliProjectKey } from '../../../shared/projectKey'
 import { createLogger } from '../../lib/logger'
@@ -27,7 +27,7 @@ const log = createLogger('ExpertRoutes')
 const API_CONNECTION_ID = '__api__'
 
 interface ExpertRouteDeps {
-  expertHandler: ExpertHandler
+  expertHandler: MissionAgentHandler
   agentRegistry: AgentRegistry
   executionPlanManager?: ExecutionPlanManager
   whiteboardManager?: WhiteboardManager
@@ -35,11 +35,11 @@ interface ExpertRouteDeps {
   broadcastToChat?: (chatId: string, msg: Record<string, unknown>) => void
 }
 
-export const createExpertRoutes = (deps: ExpertRouteDeps): Router => {
+export const createMissionAgentRoutes = (deps: ExpertRouteDeps): Router => {
   const router = Router()
   const { expertHandler, agentRegistry, executionPlanManager, whiteboardManager, workflowRegistry, broadcastToChat } = deps
 
-  router.post('/api/expert/start', async (req, res) => {
+  router.post('/api/agent/start', async (req, res) => {
     const { agentId, task, taskEnvelope, instanceSuffix, connectionId, chatId: reqChatId } = req.body as {
       agentId: string
       task?: string
@@ -110,7 +110,7 @@ ${expandedTask}`
     const ws = realWs ?? {
       send: (data: string) => {
         const msg = JSON.parse(data)
-        if (msg.type === 'expert:error') errors.push(msg.payload)
+        if (msg.type === 'agent:error') errors.push(msg.payload)
       },
       readyState: 1,
     } as any
@@ -135,7 +135,7 @@ ${expandedTask}`
     })
   })
 
-  router.get('/api/expert/list', (req, res) => {
+  router.get('/api/agent/list', (req, res) => {
     const connectionId = (req.query.connectionId as string) || undefined
     if (connectionId) {
       res.json({ experts: expertHandler.getExpertListForConnection(connectionId) })
@@ -144,7 +144,7 @@ ${expandedTask}`
     }
   })
 
-  router.get('/api/expert/team-status', (req, res) => {
+  router.get('/api/agent/team-status', (req, res) => {
     const chatId = req.query.chatId as string
     if (!chatId) {
       return res.status(400).json({ error: 'chatId is required' })
@@ -157,7 +157,7 @@ ${expandedTask}`
     })
   })
 
-  router.post('/api/expert/stop', (req, res) => {
+  router.post('/api/agent/stop', (req, res) => {
     const { agentId, connectionId, chatId: reqChatId } = req.body
     if (!agentId) {
       return res.status(400).json({ error: 'agentId is required' })
@@ -174,7 +174,7 @@ ${expandedTask}`
     const mockWs = {
       send: (data: string) => {
         const msg = JSON.parse(data)
-        if (msg.type === 'expert:error') errors.push(msg.payload)
+        if (msg.type === 'agent:error') errors.push(msg.payload)
       },
       readyState: 1,
     } as any
@@ -185,7 +185,7 @@ ${expandedTask}`
     res.json({ success: true, agentId })
   })
 
-  router.post('/api/expert/input', (req, res) => {
+  router.post('/api/agent/input', (req, res) => {
     const { agentId, data, connectionId } = req.body
     if (!agentId || !data) {
       return res.status(400).json({ error: 'agentId and data are required' })
@@ -201,7 +201,7 @@ ${expandedTask}`
     res.json({ success: true, ready: expertHandler.isReady(agentId, connectionId) })
   })
 
-  router.post('/api/expert/stop-all', (req, res) => {
+  router.post('/api/agent/stop-all', (req, res) => {
     const { connectionId } = req.body || {}
     const resolvedConnectionId = connectionId || API_CONNECTION_ID
     const mockWs = { send: () => {}, readyState: 1 } as any
@@ -209,7 +209,7 @@ ${expandedTask}`
     res.json({ success: true })
   })
 
-  router.get('/api/expert/messages/:agentId', (req, res) => {
+  router.get('/api/agent/messages/:agentId', (req, res) => {
     const { agentId } = req.params
     const connectionId = (req.query.connectionId as string) || undefined
 
@@ -224,7 +224,7 @@ ${expandedTask}`
   })
 
   // FetchTaskResult（result.md）
-  router.get('/api/expert/result/:taskId', (req, res) => {
+  router.get('/api/agent/result/:taskId', (req, res) => {
     const { taskId } = req.params
 
     if (!executionPlanManager) {
@@ -241,7 +241,7 @@ ${expandedTask}`
     res.json({ status: 'ok', result, plan })
   })
 
-  router.get('/api/expert/events', (req, res) => {
+  router.get('/api/agent/events', (req, res) => {
     const chatId = req.query.chatId as string
     if (!chatId) {
       return res.status(400).json({ error: 'chatId is required' })
@@ -272,7 +272,7 @@ ${expandedTask}`
     })
   })
 
-  router.post('/api/expert/clear-completed', (req, res) => {
+  router.post('/api/agent/clear-completed', (req, res) => {
     const { connectionId } = req.body || {}
     const resolvedConnectionId = connectionId || API_CONNECTION_ID
     const clearedCount = expertHandler.clearCompleted(resolvedConnectionId)
@@ -281,7 +281,7 @@ ${expandedTask}`
 
   const MAX_HANDOFF_CHAIN_DEPTH = 2
 
-  router.post('/api/expert/handoff', async (req, res) => {
+  router.post('/api/agent/handoff', async (req, res) => {
     const { from, to, chatId, task, context, reason } = req.body as HandoffRequest & { reason?: string }
 
     if (!from || !to || !chatId || !task) {
@@ -380,7 +380,7 @@ ${expandedTask}`
 
       if (broadcastToChat) {
         broadcastToChat(chatId, {
-          type: 'expert:handoff',
+          type: 'agent:handoff',
           payload: {
             chatId,
             sourceAgentId: from,
@@ -416,7 +416,7 @@ ${expandedTask}`
 
       if (broadcastToChat) {
         broadcastToChat(chatId, {
-          type: 'expert:handoff-failed',
+          type: 'agent:handoff-failed',
           payload: { chatId, sourceAgentId: from, targetAgentId: to, error: errorMsg },
         })
       }

@@ -38,7 +38,7 @@ const ChatHeader = ({
     if (!newTitle || newTitle === chatTitle) { setIsEditingTitle(false); return }
     setChatTitle(newTitle); setIsEditingTitle(false)
     if (chatId) {
-      authFetch(`${API_BASE}/api/chats/${chatId}`, {
+      authFetch(`${API_BASE}/api/missions/${chatId}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: newTitle }),
       }).catch((err: unknown) => console.warn('title update failed', err))

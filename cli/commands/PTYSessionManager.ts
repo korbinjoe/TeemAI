@@ -1,7 +1,7 @@
 /**
  * PTYSessionManager — CLI PTY  Agent
  *
- * - stdin → WS → expert:input → Server → PTY → stdout
+ * - stdin → WS → agent:input → Server → PTY → stdout
  * -  ~  Agent
  * -  Agent lastMessage + jsonlPath
  */
@@ -37,7 +37,7 @@ export class PTYSessionManager {
   private switching = false
   private currentCliSessionId: string | null = null
   private lineBuffer = ''
-  /**  expert:exit  agentId  switchAgent  stop  */
+  /**  agent:exit  agentId  switchAgent  stop  */
   private stoppingAgents = new Set<string>()
   private startedResolve: (() => void) | null = null
   private handleResizeFn: (() => void) | null = null
@@ -54,7 +54,7 @@ export class PTYSessionManager {
 
   start(): void {
     this.ws.on('open', () => {
-      this.ws.send(JSON.stringify({ type: 'chat:set-context', payload: { chatId: this.params.chatId } }))
+      this.ws.send(JSON.stringify({ type: 'mission:set-context', payload: { chatId: this.params.chatId } }))
 
       sendTelemetry(this.ws, 'cli', 'cli.session.started', {
         workspaceId: this.params.workspaceId,
@@ -93,7 +93,7 @@ export class PTYSessionManager {
 
     this.handleResizeFn = () => {
       this.ws.send(JSON.stringify({
-        type: 'expert:resize',
+        type: 'agent:resize',
         payload: {
           agentId: this.currentAgentId,
           cols: process.stdout.columns || 80,
@@ -111,7 +111,7 @@ export class PTYSessionManager {
 
   private startAgent(agentId: string, initialMessage?: string, previousContext?: { agentName: string; lastMessage?: string; jsonlPath?: string }): void {
     this.ws.send(JSON.stringify({
-      type: 'expert:direct-input',
+      type: 'agent:direct-input',
       payload: {
         chatId: this.params.chatId,
         agentId,
@@ -129,7 +129,7 @@ export class PTYSessionManager {
 
   private handleMessage(msg: { type: string; payload: any }): void {
     switch (msg.type) {
-      case 'expert:started':
+      case 'agent:started':
         if (msg.payload.agentId !== this.currentAgentId) break
         this.currentCliSessionId = msg.payload.cliSessionId || null
         this.currentAgentName = msg.payload.agentName || this.currentAgentId
@@ -149,14 +149,14 @@ export class PTYSessionManager {
         this.attachStdin()
         break
 
-      case 'expert:data':
+      case 'agent:data':
         if (msg.payload.agentId !== this.currentAgentId) break
         if (!this.switching) {
           process.stdout.write(msg.payload.data)
         }
         break
 
-      case 'expert:exit':
+      case 'agent:exit':
         if (this.stoppingAgents.has(msg.payload.agentId)) {
           this.stoppingAgents.delete(msg.payload.agentId)
           break
@@ -174,7 +174,7 @@ export class PTYSessionManager {
         process.exit(msg.payload.exitCode ?? 0)
         break
 
-      case 'expert:error':
+      case 'agent:error':
         if (this.switching) {
           if (this.startedResolve) {
             this.startedResolve = null
@@ -240,7 +240,7 @@ export class PTYSessionManager {
       }
 
       this.ws.send(JSON.stringify({
-        type: 'expert:input',
+        type: 'agent:input',
         payload: { agentId: this.currentAgentId, data: str },
       }))
     }
@@ -314,7 +314,7 @@ export class PTYSessionManager {
     process.stdout.write(chalk.dim(`Switching: ${prevAgentName} → ${newAgentId}...\n`))
 
     this.stoppingAgents.add(prevAgentId)
-    this.ws.send(JSON.stringify({ type: 'expert:stop', payload: { agentId: prevAgentId } }))
+    this.ws.send(JSON.stringify({ type: 'agent:stop', payload: { agentId: prevAgentId } }))
 
     const jsonlPath = prevCliSessionId ? this.resolveJsonlPath(prevCliSessionId) : undefined
     const contextPromise = this.fetchLastAgentMessage(prevAgentId).catch(() => null)
@@ -358,7 +358,7 @@ export class PTYSessionManager {
 
   private async fetchLastAgentMessage(agentId: string): Promise<string | null> {
     try {
-      const res = await fetch(`http://localhost:${this.port}/api/expert/messages/${encodeURIComponent(agentId)}`)
+      const res = await fetch(`http://localhost:${this.port}/api/agent/messages/${encodeURIComponent(agentId)}`)
       if (!res.ok) return null
       const messages = await res.json() as Array<{ role: string; type: string; content: string }>
       for (let i = messages.length - 1; i >= 0; i--) {
@@ -405,12 +405,12 @@ export class PTYSessionManager {
     const cols = process.stdout.columns || 80
     const rows = process.stdout.rows || 30
     this.ws.send(JSON.stringify({
-      type: 'expert:resize',
+      type: 'agent:resize',
       payload: { agentId: this.currentAgentId, cols, rows: rows - 1 },
     }))
     setTimeout(() => {
       this.ws.send(JSON.stringify({
-        type: 'expert:resize',
+        type: 'agent:resize',
         payload: { agentId: this.currentAgentId, cols, rows },
       }))
     }, 30)

@@ -1,4 +1,4 @@
-export interface ExpertStartedPayload {
+export interface AgentStartedPayload {
   agentId: string
   chatId: string
   agentName: string
@@ -8,7 +8,7 @@ export interface ExpertStartedPayload {
   exitCode?: number
 }
 
-export interface ExpertDataPayload {
+export interface AgentDataPayload {
   agentId: string
   chatId: string
   sessionId?: string
@@ -18,13 +18,13 @@ export interface ExpertDataPayload {
   ptySize?: { cols: number; rows: number }
 }
 
-export interface ExpertExitPayload {
+export interface AgentExitPayload {
   agentId: string
   chatId: string
   exitCode?: number
 }
 
-export interface ExpertActivityPayload {
+export interface AgentActivityPayload {
   agentId: string
   chatId: string
   activity: {
@@ -36,7 +36,7 @@ export interface ExpertActivityPayload {
   }
 }
 
-export interface ExpertListItem {
+export interface AgentListItem {
   agentId: string
   sessionId: string
   agentName: string
@@ -46,24 +46,24 @@ export interface ExpertListItem {
   completedAt?: string
 }
 
-export interface ExpertListPayload {
-  experts: ExpertListItem[]
+export interface AgentListPayload {
+  agents: AgentListItem[]
 }
 
-export interface ExpertErrorPayload {
+export interface AgentErrorPayload {
   agentId: string
   chatId: string
   message: string
 }
 
-export interface ExpertStartFailedPayload {
+export interface AgentStartFailedPayload {
   agentId: string
   chatId: string
   exitCode?: number
   message?: string
 }
 
-export interface ExpertVersionBlockedPayload {
+export interface AgentVersionBlockedPayload {
   agentId: string
   chatId: string
   clientVersion: string
@@ -72,7 +72,7 @@ export interface ExpertVersionBlockedPayload {
   upgradeUrl?: string
 }
 
-export interface ExpertResumeFailedPayload {
+export interface AgentResumeFailedPayload {
   agentId: string
   chatId: string
   agentName: string
@@ -81,7 +81,7 @@ export interface ExpertResumeFailedPayload {
   message?: string
 }
 
-export interface ExpertSlashCommandsPayload {
+export interface AgentSlashCommandsPayload {
   agentId: string
   chatId: string
   commands: string[]
@@ -93,28 +93,28 @@ export interface PlanEntry {
   priority?: 'low' | 'medium' | 'high'
 }
 
-export interface ExpertPlanUpdatePayload {
+export interface AgentPlanUpdatePayload {
   agentId: string
   chatId: string
   sessionId: string
   plan: { entries: PlanEntry[] }
 }
 
-export interface ExpertModeChangePayload {
+export interface AgentModeChangePayload {
   agentId: string
   chatId: string
   sessionId: string
   currentModeId: string
 }
 
-export interface ExpertCommandsUpdatePayload {
+export interface AgentCommandsUpdatePayload {
   agentId: string
   chatId: string
   sessionId: string
   availableCommands: string[]
 }
 
-export interface ExpertSessionInfoPayload {
+export interface AgentSessionInfoPayload {
   agentId: string
   chatId: string
   sessionId: string

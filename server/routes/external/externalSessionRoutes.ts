@@ -407,8 +407,8 @@ const truncateTitle = (s: string, max: number = 80): string => {
   return single.length > max ? single.slice(0, max - 1) + '…' : single
 }
 
-// Scan chats.expert_sessions for any entry referencing this cliSessionId.
-// Done in JS rather than SQL JSON because expert_sessions is keyed by agentId
+// Scan missions.mission_agent_sessions for any entry referencing this cliSessionId.
+// Done in JS rather than SQL JSON because mission_agent_sessions is keyed by agentId
 // and the structure varies — small N, cheap to iterate.
 const findChatByCliSession = (
   db: ReturnType<typeof getDatabase>,
@@ -416,11 +416,11 @@ const findChatByCliSession = (
   provider: 'claude' | 'codex',
 ): string | null => {
   const rows = db
-    .prepare(`SELECT id, expert_sessions FROM chats WHERE expert_sessions IS NOT NULL`)
-    .all() as Array<{ id: string; expert_sessions: string }>
+    .prepare(`SELECT id, mission_agent_sessions FROM missions WHERE mission_agent_sessions IS NOT NULL`)
+    .all() as Array<{ id: string; mission_agent_sessions: string }>
   for (const row of rows) {
     let parsed: Record<string, { cliSessionId?: string; provider?: string }> | null
-    try { parsed = JSON.parse(row.expert_sessions) } catch { continue }
+    try { parsed = JSON.parse(row.mission_agent_sessions) } catch { continue }
     if (!parsed) continue
     for (const info of Object.values(parsed)) {
       if (info?.cliSessionId !== cliSessionId) continue

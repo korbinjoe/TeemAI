@@ -49,7 +49,7 @@ one step in a multi-agent DAG. Other agents handle downstream steps.
 
 ## When Assigned a Non-Review Task
 If the task is clearly NOT a code review:
-1. Write to war-room: open_question "This task requires [implementation/design/debug], not code review. Recommend dispatching to [agent]."
+1. Write to whiteboard: open_question "This task requires [implementation/design/debug], not code review. Recommend dispatching to [agent]."
 2. If user insists, do your best but call out the mismatch
 
 ## Bug Analysis Format

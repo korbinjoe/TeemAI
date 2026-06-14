@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
-  ExpertSessionStore,
+  MissionAgentSessionStore,
   compositeKey,
   parseAgentId,
   parseChatId,
   PENDING_TASK_TTL_MS,
-} from '../ws/ExpertSessionStore'
-import type { ExpertEntry, PendingTaskEntry, PendingTaskLossReason } from '../ws/ExpertSessionStore'
+} from '../ws/MissionAgentSessionStore'
+import type { MissionAgentEntry, PendingTaskEntry, PendingTaskLossReason } from '../ws/MissionAgentSessionStore'
 import type { ActivityState } from '../terminal/ActivityDeriver'
 
-function makeEntry(overrides: Partial<ExpertEntry> = {}): ExpertEntry {
+function makeEntry(overrides: Partial<MissionAgentEntry> = {}): MissionAgentEntry {
   return {
     sessionId: 'sess-1',
     acpClient: {} as any,
@@ -59,7 +59,7 @@ describe('compositeKey / parseAgentId / parseChatId', () => {
 
 describe('Starting Lock', () => {
   it('markStarting / isStarting / clearStarting', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = compositeKey('c', 'chat-1', 'a')
     expect(store.isStarting(key)).toBe(false)
     store.markStarting(key)
@@ -73,7 +73,7 @@ describe('Starting Lock', () => {
 
 describe('Running Map（set / get / has）', () => {
   it('get returns entry after set', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = compositeKey('c1', 'chat-1', 'a1')
     const entry = makeEntry()
     store.set(key, entry)
@@ -82,7 +82,7 @@ describe('Running Map（set / get / has）', () => {
   })
 
   it('get returns undefined when not set', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     expect(store.get('nonexistent')).toBeUndefined()
   })
 })
@@ -91,7 +91,7 @@ describe('Running Map（set / get / has）', () => {
 
 describe('Activity', () => {
   it('setActivity / getActivity', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = compositeKey('c', 'chat-1', 'a')
     const activity = makeActivity('tool_running')
     store.setActivity(key, activity)
@@ -103,7 +103,7 @@ describe('Activity', () => {
 
 describe('Completed Map', () => {
   it('setCompleted / getCompleted', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = compositeKey('c', 'chat-1', 'a')
     const entry = {
       sessionId: 'sess-1',
@@ -132,7 +132,7 @@ function makePending(task: string, overrides: Partial<PendingTaskEntry> = {}): P
 
 describe('Pending Task Queue', () => {
   it('enqueuePendingTask / hasPendingTask reflects queue state', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = 'k'
     expect(store.hasPendingTask(key)).toBe(false)
     store.enqueuePendingTask(key, makePending('run tests'))
@@ -140,7 +140,7 @@ describe('Pending Task Queue', () => {
   })
 
   it('drainPendingTasks returns entries in FIFO order and clears the queue', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = 'k'
     store.enqueuePendingTask(key, makePending('first'))
     store.enqueuePendingTask(key, makePending('second'))
@@ -152,12 +152,12 @@ describe('Pending Task Queue', () => {
   })
 
   it('drainPendingTasks returns empty array when no entries', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     expect(store.drainPendingTasks('no-key')).toEqual([])
   })
 
   it('drain does not fire loss listener', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = 'k'
     const losses: Array<{ reason: PendingTaskLossReason; task: string }> = []
     store.onPendingTaskLoss((entry, _key, reason) => losses.push({ reason, task: entry.task }))
@@ -168,7 +168,7 @@ describe('Pending Task Queue', () => {
   })
 
   it('forgetPendingTasks drops queue silently (no loss listener fire)', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = 'k'
     const losses: PendingTaskEntry[] = []
     store.onPendingTaskLoss((entry) => losses.push(entry))
@@ -182,7 +182,7 @@ describe('Pending Task Queue', () => {
   it('TTL expiry fires loss listener with reason="ttl"', () => {
     vi.useFakeTimers()
     try {
-      const store = new ExpertSessionStore()
+      const store = new MissionAgentSessionStore()
       const key = 'k'
       const losses: Array<{ reason: PendingTaskLossReason; task: string }> = []
       store.onPendingTaskLoss((entry, _key, reason) => losses.push({ reason, task: entry.task }))
@@ -207,7 +207,7 @@ describe('Pending Task Queue', () => {
   it('TTL timer is not refreshed by subsequent enqueues', () => {
     vi.useFakeTimers()
     try {
-      const store = new ExpertSessionStore()
+      const store = new MissionAgentSessionStore()
       const key = 'k'
       const losses: PendingTaskEntry[] = []
       store.onPendingTaskLoss((entry) => losses.push(entry))
@@ -224,7 +224,7 @@ describe('Pending Task Queue', () => {
   })
 
   it('cleanup fires loss listener with reason="cleanup"', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = compositeKey('c', 'chat-1', 'a')
     const losses: Array<{ reason: PendingTaskLossReason; task: string }> = []
     store.onPendingTaskLoss((entry, _key, reason) => losses.push({ reason, task: entry.task }))
@@ -237,7 +237,7 @@ describe('Pending Task Queue', () => {
   })
 
   it('cleanupWithStop fires loss listener with reason="stop"', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = compositeKey('conn-1', 'chat-1', 'agent-1')
     const losses: Array<{ reason: PendingTaskLossReason; task: string }> = []
     store.onPendingTaskLoss((entry, _key, reason) => losses.push({ reason, task: entry.task }))
@@ -250,7 +250,7 @@ describe('Pending Task Queue', () => {
   })
 
   it('onPendingTaskLoss returns unsubscribe function', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = 'k'
     const losses: PendingTaskEntry[] = []
     const unsubscribe = store.onPendingTaskLoss((entry) => losses.push(entry))
@@ -268,7 +268,7 @@ describe('Pending Task Queue', () => {
 
 describe('Meta', () => {
   it('setMeta / getMeta', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     store.setMeta('key1', 'executionLogId', 'log-123')
     expect(store.getMeta('key1', 'executionLogId')).toBe('log-123')
   })
@@ -278,7 +278,7 @@ describe('Meta', () => {
 
 describe('cleanup', () => {
   it('returns cleaned up entry and activity, clears all associated status', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = compositeKey('c', 'chat-1', 'a')
     const entry = makeEntry()
     const activity = makeActivity()
@@ -301,7 +301,7 @@ describe('cleanup', () => {
   })
 
   it('cleanup non-existent key does not error, returns empty entry', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const result = store.cleanup('nonexistent')
     expect(result.entry).toBeUndefined()
     expect(result.activity).toBeUndefined()
@@ -312,7 +312,7 @@ describe('cleanup', () => {
 
 describe('cleanupWithStop', () => {
   it('Back entry，Write completed', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = compositeKey('conn-1', 'chat-1', 'agent-1')
     const entry = makeEntry({ connectionId: 'conn-1', chatId: 'chat-1' })
     store.set(key, entry)
@@ -325,7 +325,7 @@ describe('cleanupWithStop', () => {
   })
 
   it('returns undefined when key does not exist', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     expect(store.cleanupWithStop('no-key', 'c')).toBeUndefined()
   })
 })
@@ -334,7 +334,7 @@ describe('cleanupWithStop', () => {
 
 describe('collectByConnection', () => {
   it('only returns entries for specified connectionId', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     store.set(compositeKey('conn-1', 'chat-1', 'agent-1'), makeEntry({ connectionId: 'conn-1' }))
     store.set(compositeKey('conn-1', 'chat-1', 'agent-2'), makeEntry({ connectionId: 'conn-1' }))
     store.set(compositeKey('conn-2', 'chat-1', 'agent-1'), makeEntry({ connectionId: 'conn-2' }))
@@ -349,7 +349,7 @@ describe('collectByConnection', () => {
 
 describe('findBySessionId', () => {
   it('exact lookup by sessionId', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = compositeKey('c', 'chat-1', 'a')
     store.set(key, makeEntry({ sessionId: 'sess-xyz' }))
     const found = store.findBySessionId('sess-xyz')
@@ -357,7 +357,7 @@ describe('findBySessionId', () => {
   })
 
   it('returns undefined when not found', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     expect(store.findBySessionId('no-session')).toBeUndefined()
   })
 })
@@ -366,7 +366,7 @@ describe('findBySessionId', () => {
 
 describe('findRunning', () => {
   it('with connectionId + chatId uses exact three-segment key lookup', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const entry = makeEntry({ connectionId: 'c1', chatId: 'chat-1' })
     store.set(compositeKey('c1', 'chat-1', 'a1'), entry)
     expect(store.findRunning('a1', 'c1', 'chat-1')).toBe(entry)
@@ -374,7 +374,7 @@ describe('findRunning', () => {
   })
 
   it('with connectionId without chatId uses fuzzy traversal', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const entry = makeEntry({ connectionId: 'c1', chatId: 'chat-1' })
     store.set(compositeKey('c1', 'chat-1', 'a1'), entry)
     expect(store.findRunning('a1', 'c1')).toBe(entry)
@@ -382,7 +382,7 @@ describe('findRunning', () => {
   })
 
   it('without connectionId uses global lookup', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const entry = makeEntry()
     store.set(compositeKey('c1', 'chat-1', 'a1'), entry)
     expect(store.findRunning('a1')).toBe(entry)
@@ -394,7 +394,7 @@ describe('findRunning', () => {
 
 describe('migrateKey', () => {
   it('migrates entry from oldKey to newKey', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const oldKey = compositeKey('old-conn', 'chat-1', 'agent-1')
     const newKey = compositeKey('new-conn', 'chat-1', 'agent-1')
     const entry = makeEntry({ connectionId: 'old-conn' })
@@ -408,7 +408,7 @@ describe('migrateKey', () => {
   })
 
   it('also migrates lastActivity', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const oldKey = compositeKey('o', 'chat-1', 'a')
     const newKey = compositeKey('n', 'chat-1', 'a')
     const activity = makeActivity()
@@ -424,7 +424,7 @@ describe('migrateKey', () => {
 
 describe('getExpertListForConnection', () => {
   it('filters running + completed by connectionId', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const k1 = compositeKey('c1', 'chat-1', 'agent-1')
     const k2 = compositeKey('c2', 'chat-1', 'agent-2')
     store.set(k1, makeEntry({ connectionId: 'c1', chatId: 'chat-1' }))
@@ -437,7 +437,7 @@ describe('getExpertListForConnection', () => {
   })
 
   it('filters by chatId (agents in different chats on same connection not visible to each other)', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     store.set(compositeKey('c1', 'chat-1', 'a1'), makeEntry({ connectionId: 'c1', chatId: 'chat-1' }))
     store.set(compositeKey('c1', 'chat-2', 'a2'), makeEntry({ connectionId: 'c1', chatId: 'chat-2' }))
 
@@ -451,7 +451,7 @@ describe('getExpertListForConnection', () => {
   })
 
   it('stopped entries shown as completed', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = compositeKey('c1', 'chat-1', 'a1')
     store.set(key, makeEntry({ connectionId: 'c1', chatId: 'chat-1' }))
     store.cleanupWithStop(key, 'c1')
@@ -467,7 +467,7 @@ describe('getExpertListForConnection', () => {
 
 describe('collectByChatId', () => {
   it('returns only entries matching the chatId', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     store.set(compositeKey('c1', 'chat-1', 'a'), makeEntry({ chatId: 'chat-1' }))
     store.set(compositeKey('c1', 'chat-2', 'b'), makeEntry({ chatId: 'chat-2' }))
     store.set(compositeKey('c2', 'chat-1', 'c'), makeEntry({ chatId: 'chat-1' }))
@@ -478,7 +478,7 @@ describe('collectByChatId', () => {
   })
 
   it('returns empty when no entries match', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     store.set(compositeKey('c1', 'chat-1', 'a'), makeEntry({ chatId: 'chat-1' }))
     expect(store.collectByChatId('chat-99')).toEqual([])
   })
@@ -488,7 +488,7 @@ describe('collectByChatId', () => {
 
 describe('cleanupConnection', () => {
   it('removes running and completed entries for a connectionId', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const k1 = compositeKey('conn-1', 'chat-1', 'a')
     const k2 = compositeKey('conn-1', 'chat-2', 'b')
     const k3 = compositeKey('conn-2', 'chat-1', 'c')
@@ -516,7 +516,7 @@ describe('cleanupConnection', () => {
 
 describe('findKeyByAgentId', () => {
   it('prioritizes running entry over completed', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const runKey = compositeKey('c1', 'chat-1', 'agent-a')
     store.set(runKey, makeEntry())
     store.setCompleted(compositeKey('c2', 'chat-1', 'agent-a'), {
@@ -529,7 +529,7 @@ describe('findKeyByAgentId', () => {
   })
 
   it('falls back to completed entry key when no running entry', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const compKey = compositeKey('c1', 'chat-1', 'agent-b')
     store.setCompleted(compKey, {
       sessionId: 'sess-1', agentName: 'B', agentIcon: 'B',
@@ -541,7 +541,7 @@ describe('findKeyByAgentId', () => {
   })
 
   it('returns undefined when agent not found anywhere', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     expect(store.findKeyByAgentId('ghost')).toBeUndefined()
   })
 })
@@ -550,7 +550,7 @@ describe('findKeyByAgentId', () => {
 
 describe('second set() overwrite behavior', () => {
   it('second set() on same key replaces entry without error', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = compositeKey('conn-1', 'chat-1', 'agent-a')
     const first = makeEntry({ sessionId: 'sess-first' })
     const second = makeEntry({ sessionId: 'sess-second' })
@@ -567,7 +567,7 @@ describe('second set() overwrite behavior', () => {
 
 describe('concurrency: markStarting lock prevents duplicate start', () => {
   it('two concurrent starts — second caller sees isStarting=true', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const key = compositeKey('conn-1', 'chat-1', 'agent-a')
 
     store.markStarting(key)
@@ -587,7 +587,7 @@ describe('concurrency: markStarting lock prevents duplicate start', () => {
 
 describe('clearCompleted', () => {
   it('deletes completed records by connectionId', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const k1 = compositeKey('c1', 'chat-1', 'a1')
     const k2 = compositeKey('c2', 'chat-1', 'a2')
     store.set(k1, makeEntry({ connectionId: 'c1', chatId: 'chat-1' }))
@@ -601,7 +601,7 @@ describe('clearCompleted', () => {
   })
 
   it('returns number of deleted records', () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     expect(store.clearCompleted('no-conn')).toBe(0)
   })
 })

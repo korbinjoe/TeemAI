@@ -2,7 +2,7 @@
  * ExpertEventWiring -  Expert Agent
  *
  *  ExpertLifecycle  StreamJsonManager  ACPClient
- *  FileOperationCollector + ExpertTokenTracker + Activity handler
+ *  FileOperationCollector + MissionAgentTokenTracker + Activity handler
  *  spawn / cleanup
  */
 
@@ -15,20 +15,20 @@ import type { TokenUsageStore } from '../stores/TokenUsageStore'
 import type { ACPClient } from '../acp/ACPClient'
 import { acpUpdateToWSMessage, type BridgeContext } from '../acp/ACPToFrontendBridge'
 import type { ACPSessionUpdateParams } from '../../shared/acp-types'
-import type { ExpertSessionStore } from './ExpertSessionStore'
-import { ExpertTokenTracker } from './ExpertTokenTracker'
-import { createActivityHandler } from './ExpertActivityHandler'
-import { flushPendingTasks } from './ExpertPendingTaskFlush'
+import type { MissionAgentSessionStore } from './MissionAgentSessionStore'
+import { MissionAgentTokenTracker } from './MissionAgentTokenTracker'
+import { createActivityHandler } from './MissionAgentActivityHandler'
+import { flushPendingTasks } from './MissionAgentPendingTaskFlush'
 import { createLogger } from '../lib/logger'
 import { scanPluginSlashCommands, scanProjectSlashCommands, scanUserSkills } from '../runtime/PluginCommandsScanner'
 
 const log = createLogger('ExpertEventWiring')
 
-export interface ExpertEventWiringDeps {
+export interface MissionAgentEventWiringDeps {
   streamManager: StreamJsonManager
   acpClient: ACPClient
   sessionRegistry: SessionRegistry
-  store: ExpertSessionStore
+  store: MissionAgentSessionStore
   chatStore: ChatStore
   tokenUsageStore: TokenUsageStore
   sessionId: string
@@ -41,19 +41,19 @@ export interface ExpertEventWiringDeps {
   persistExpertSession: (agentId: string, cliSessionId: string, cwd: string, connectionId: string, provider?: import('../config/types').CliProvider, chatId?: string) => void
   connectionId: string
   globalBroadcast?: (msg: Record<string, unknown>) => void
-  onExit: (exitCode: number, signal: number | undefined, ctx: { fileCollector: FileOperationCollector; tokenTracker: ExpertTokenTracker }) => void
+  onExit: (exitCode: number, signal: number | undefined, ctx: { fileCollector: FileOperationCollector; tokenTracker: MissionAgentTokenTracker }) => void
   ws: WebSocket
 }
 
-export interface WiredExpertHandles {
+export interface WiredMissionAgentHandles {
   fileCollector: FileOperationCollector
-  tokenTracker: ExpertTokenTracker
+  tokenTracker: MissionAgentTokenTracker
 }
 
 /**
  *  StreamManager + ACPClient  caller
  */
-export const wireExpertStreamHandlers = (deps: ExpertEventWiringDeps): WiredExpertHandles => {
+export const wireMissionAgentStreamHandlers = (deps: MissionAgentEventWiringDeps): WiredMissionAgentHandles => {
   const {
     streamManager, acpClient, sessionRegistry, store, chatStore, tokenUsageStore,
     sessionId, key, agentId, chatId, agentName, cwd, provider,
@@ -84,7 +84,7 @@ export const wireExpertStreamHandlers = (deps: ExpertEventWiringDeps): WiredExpe
     })
   })
 
-  const tokenTracker = new ExpertTokenTracker(chatId, agentId, tokenUsageStore, chatStore)
+  const tokenTracker = new MissionAgentTokenTracker(chatId, agentId, tokenUsageStore, chatStore)
 
   const handleActivity = createActivityHandler({
     store, sessionRegistry, sessionId, key, agentId, chatId,
@@ -95,7 +95,7 @@ export const wireExpertStreamHandlers = (deps: ExpertEventWiringDeps): WiredExpe
   acpClient.onUpdate((params: ACPSessionUpdateParams) => {
     const wsMsg = acpUpdateToWSMessage(params.update, bridgeCtx)
     if (wsMsg) {
-      if (wsMsg.type === 'expert:activity') {
+      if (wsMsg.type === 'agent:activity') {
         const session = sessionRegistry.get(sessionId)
         if (session?.createdAt) {
           (wsMsg.payload as Record<string, unknown>).startedAt = session.createdAt
@@ -117,11 +117,11 @@ export const wireExpertStreamHandlers = (deps: ExpertEventWiringDeps): WiredExpe
         options: params.options,
       }
       sessionRegistry.sendToSession(sessionId, {
-        type: 'expert:permission-request',
+        type: 'agent:permission-request',
         payload: permissionPayload,
       })
       globalBroadcast?.({
-        type: 'chat:permission-request',
+        type: 'mission.permission-request',
         payload: permissionPayload,
       })
     }
@@ -137,11 +137,11 @@ export const wireExpertStreamHandlers = (deps: ExpertEventWiringDeps): WiredExpe
       message: `Permission request "${info.toolTitle}" timed out after ${info.timeoutMs}ms`,
     }
     sessionRegistry.sendToSession(sessionId, {
-      type: 'expert:error',
+      type: 'agent:error',
       payload: errorPayload,
     })
     sessionRegistry.sendToSession(sessionId, {
-      type: 'expert:permission-timeout',
+      type: 'agent:permission-timeout',
       payload: {
         agentId,
         chatId,
@@ -155,7 +155,7 @@ export const wireExpertStreamHandlers = (deps: ExpertEventWiringDeps): WiredExpe
   streamManager.on('cli-init', (initData: { slashCommands: string[]; model?: string }) => {
     const sendCommands = (commands: string[]) => {
       sessionRegistry.sendToSession(sessionId, {
-        type: 'expert:slash-commands',
+        type: 'agent:slash-commands',
         payload: { agentId, chatId, commands },
       })
     }

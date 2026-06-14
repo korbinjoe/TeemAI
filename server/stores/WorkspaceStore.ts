@@ -41,7 +41,7 @@ export class WorkspaceStore extends SqliteBaseStore<Workspace> {
     try {
       this.db.transaction(() => {
         this.db.prepare("UPDATE workspaces SET id = ? WHERE id = 'default'").run(newId)
-        this.db.prepare("UPDATE chats SET workspace_id = ? WHERE workspace_id = 'default'").run(newId)
+        this.db.prepare("UPDATE missions SET workspace_id = ? WHERE workspace_id = 'default'").run(newId)
         this.db.prepare("UPDATE execution_logs SET workspace_id = ? WHERE workspace_id = 'default'").run(newId)
         this.db.prepare("UPDATE cron_jobs SET workspace_id = ? WHERE workspace_id = 'default'").run(newId)
         this.db.prepare("UPDATE workspaces SET name = ? WHERE id = ?").run(DEFAULT_WORKSPACE_NAME, newId)

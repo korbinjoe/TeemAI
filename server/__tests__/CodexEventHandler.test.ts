@@ -10,8 +10,10 @@ const makeState = (): StreamParserState => ({
   sessionId: null,
   currentApiCallId: null,
   messageSeq: 0,
-  streamedCurrentTurn: false,
+  streamedApiCalls: new Set(),
+  emittedTextSinceResult: false,
   codexUsage: null,
+  idPrefix: 's-test',
 })
 
 describe('CodexEventHandler', () => {

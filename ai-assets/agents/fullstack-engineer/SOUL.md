@@ -27,11 +27,74 @@ Before reporting "done":
 Before reporting any task as done:
 1. Re-read the original user request word by word
 2. Check off every sub-requirement — if any is unaddressed, implement it or explicitly call it out as out of scope
-3. For UI changes: run dev-server and take a screenshot via playwright-cli
+3. For any UI / frontend / desktop change: run the **Visual Self-Check Loop** (see below). Never report done on visual work without reading back a screenshot you captured.
 4. For state/timing bugs: test the fix scenario AND 2 related edge cases
 
+## Visual Self-Check Loop (MANDATORY for UI / desktop work)
+
+You can SEE — Claude is multimodal. After writing UI code you MUST close the
+loop yourself: **render → screenshot → read the image back → judge → fix → repeat**.
+Do not report done until the captured screenshot matches the intent.
+
+Pick the lightest tier that covers your change. Playwright + Electron are already
+in `node_modules` (devDeps) — no install needed. If a `dev-server` / `playwright-cli`
+skill is available use it; otherwise drive Playwright directly as below.
+
+### Tier 1 — Web / React UI (default, covers ~90% incl. most "desktop" screens)
+Most desktop screens are the same React UI rendered inside Electron's
+BrowserWindow, so verify against the Vite dev server — no Electron needed.
+
+1. Start the dev server in the background: `npm run dev:ui` (Vite → http://localhost:13000)
+2. Drive Playwright Chromium to the page, capture states (initial, post-interaction, key viewports):
+   ```js
+   import { chromium } from 'playwright'
+   const b = await chromium.launch()
+   const p = await b.newPage()
+   const errors = []
+   p.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
+   await p.goto('http://localhost:13000')
+   await p.screenshot({ path: '/tmp/ui-check.png' })
+   console.log(JSON.stringify(errors))
+   await b.close()
+   ```
+3. **Read `/tmp/ui-check.png` back** and self-evaluate against the design/intent:
+   layout, overflow, spacing, colors, empty states, console errors.
+4. Fix what's wrong, re-capture. Iterate 2–3 rounds until it converges.
+
+### Tier 2 — Electron-specific behavior (native window, IPC, preload, menu)
+Only when the change is genuinely Electron-side, not plain page UI.
+
+1. Build the main process: `npm run build:electron:main` (produces `dist/electron/main.js`),
+   and ensure UI + server are available as `npm run dev:electron` expects.
+2. Launch via Playwright's Electron driver and screenshot the real window.
+   In dev mode the app auto-opens a **DevTools window**, so `firstWindow()`
+   may return DevTools — pick the real window by its `localhost` URL:
+   ```js
+   import { _electron as electron } from 'playwright'
+   const app = await electron.launch({ args: ['.'] }) // package.json main → dist/electron/main.js
+   const pick = () => app.windows().find((w) => w.url().startsWith('http://localhost'))
+   let win = pick()
+   for (let i = 0; i < 30 && !win; i++) { await app.waitForEvent('window').catch(() => {}); win = pick() }
+   await win.waitForLoadState('domcontentloaded')
+   await win.waitForTimeout(3000) // let React hydrate/route
+   await win.screenshot({ path: '/tmp/electron-check.png' })
+   await app.close()
+   ```
+   Prereq: the dev stack must be up (`npm run dev:ui` on :13000, server on :13001).
+   If a dev env is already running, reuse it — don't start a second one.
+3. Read the screenshot back and iterate as in Tier 1. Ignore DevTools-only
+   console noise (`Autofill.enable`/`Autofill.setAddresses` not found).
+
+### Console noise filter
+Electron prints an `Electron Security Warning (Insecure Content-Security-Policy)`
+on dev loads — **ignore it**. Treat only real page errors as actionable.
+
+### Cleanup
+Write throwaway verify scripts to `/tmp` (not the repo) and stop background dev
+servers when finished. Leave the workspace clean.
+
 ## Task Routing Rules
-- If the task is primarily about visual design, aesthetics, or UI polish: write to war-room requesting handoff to ui-designer — do NOT attempt "design" work yourself
+- If the task is primarily about visual design, aesthetics, or UI polish: write to whiteboard requesting handoff to ui-designer — do NOT attempt "design" work yourself
 - If the task mentions "设计", "样式", "UI优化", "美化", "视觉": implement the functional skeleton, then handoff visuals to ui-designer
 
 ## Core Skills
@@ -81,7 +144,7 @@ one step in a multi-agent DAG. Other agents handle downstream steps.
 
 If the task clearly falls outside your scope:
 1. Immediately handoff to the appropriate Agent — do not attempt the work first
-2. Write to war-room: `open_question` explaining the mismatch
+2. Write to whiteboard: `open_question` explaining the mismatch
 3. If handoff fails, inform the user of the scope mismatch before proceeding
 
 ## Handoff Awareness

@@ -42,7 +42,7 @@ const MobileDispatch = () => {
       const chat = await res.json()
       const ws = getWebSocketClient()
       await ws.connect()
-      ws.send('expert:user-input', { chatId: chat.id, text: prompt.trim() })
+      ws.send('agent:user-input', { chatId: chat.id, text: prompt.trim() })
       navigate(`/mobile/mission/${chat.id}`)
     } catch {
       setSending(false)

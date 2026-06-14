@@ -153,7 +153,7 @@ export class WebSocketClient {
       }
     }
 
-    if (type === 'expert:structured-message' && isDebug()) {
+    if (type === 'agent:structured-message' && isDebug()) {
       const p = payload as Record<string, unknown>
       log.debug('structured-message', {
         msgType: p.type,
@@ -187,7 +187,7 @@ export class WebSocketClient {
   send(type: string, payload?: unknown) {
     const msg = JSON.stringify({ type, payload })
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      if (type === 'expert:resize') {
+      if (type === 'agent:resize') {
         const agentId = (payload as { agentId?: string })?.agentId
         if (agentId) {
           const oldMsg = this.pendingResizeByAgent.get(agentId)

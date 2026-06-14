@@ -209,7 +209,7 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
       stopAll: () => {
         if (!chatId) return
         experts.filter(e => e.status === 'running').forEach(e => {
-          wsClient.send('expert:stop', { chatId, agentId: e.agentId })
+          wsClient.send('agent:stop', { chatId, agentId: e.agentId })
         })
       },
 
@@ -269,7 +269,7 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
     // ── WS ListSync ──
     useEffect(() => {
       const fetchExpertList = () => {
-        if (wsClient.isConnected()) wsClient.send('expert:list', { chatId })
+        if (wsClient.isConnected()) wsClient.send('agent:list', { chatId })
       }
       const handleConnected = () => fetchExpertList()
       fetchExpertList()
@@ -285,13 +285,13 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
     // We attach for ANY agent with a persisted JSONL (running or not) — resume
     // is the whole point. The server falls back to ChatStore.expertSessions
     // when SessionRegistry has nothing live. Server then replies with
-    // `expert:view-attached` carrying the sessionId; useTerminalWsEvents uses
+    // `agent:view-attached` carrying the sessionId; useTerminalWsEvents uses
     // that to populate the ExpertInfo slot so xterm has a place to mount and
-    // the strict `expert:data` validator lets the first frame through.
+    // the strict `agent:data` validator lets the first frame through.
     //
     // Track attached agentIds in a ref so we only diff (attach new, detach
     // gone). Re-running on every `experts` change with attach/detach in cleanup
-    // would kill and respawn the resume-PTY on each `expert:view-attached`
+    // would kill and respawn the resume-PTY on each `agent:view-attached`
     // round-trip — terminal flickers, server thrashes node-pty.
     const attachedRef = useRef<Set<string>>(new Set())
     const attachedChatIdRef = useRef<string | undefined>(undefined)
@@ -305,7 +305,7 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
         if (attachedRef.current.size > 0) {
           for (const agentId of attachedRef.current) {
             if (!wsClient.isConnected()) break
-            wsClient.send('expert:cli-detach', { chatId, agentId })
+            wsClient.send('agent:cli-detach', { chatId, agentId })
           }
           attachedRef.current.clear()
         }
@@ -325,13 +325,13 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
         for (const agentId of desired) {
           if (!attachedRef.current.has(agentId)) {
             const est = estimateSize(terminalAreaRef.current)
-            wsClient.send('expert:cli-attach', { chatId, agentId, cols: est.cols, rows: est.rows })
+            wsClient.send('agent:cli-attach', { chatId, agentId, cols: est.cols, rows: est.rows })
             attachedRef.current.add(agentId)
           }
         }
         for (const agentId of attachedRef.current) {
           if (!desired.has(agentId)) {
-            wsClient.send('expert:cli-detach', { chatId, agentId })
+            wsClient.send('agent:cli-detach', { chatId, agentId })
             attachedRef.current.delete(agentId)
           }
         }
@@ -346,7 +346,7 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
       const cid = attachedChatIdRef.current
       for (const agentId of attachedRef.current) {
         if (!wsClient.isConnected() || !cid) break
-        wsClient.send('expert:cli-detach', { chatId: cid, agentId })
+        wsClient.send('agent:cli-detach', { chatId: cid, agentId })
       }
       attachedRef.current.clear()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -388,7 +388,7 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
     }
 
     const handleRefreshExperts = () => {
-      wsClient.send('expert:list', { chatId })
+      wsClient.send('agent:list', { chatId })
     }
 
     const handleToggleLayout = () => {

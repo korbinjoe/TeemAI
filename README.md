@@ -19,6 +19,12 @@ You:    "Build the auth module, add tests, and update the docs."
 
 📦 [Releases](https://github.com/korbinjoe/openteam/releases)
 
+> **Brand vs code naming.** "OpenTeam" is the public-facing product brand. The
+> runtime and code truth is **TeemAI / teemai** — everything on disk and in the
+> code uses this name: `~/.teemai/`, `teemai.json`, `teemai.db`, and the
+> `TEEMAI_HOME` environment variable. Do **not** use `OpenTeam` as a code
+> identifier, path, filename, or env var; reserve it for marketing copy only.
+
 ---
 
 ## Why TeemAI?

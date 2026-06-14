@@ -16,7 +16,7 @@
 set -uo pipefail
 
 # -- Environment check (non-Agent sessions exit silently) --
-API_BASE="${EXPERT_API_BASE:-}"
+API_BASE="${AGENT_API_BASE:-}"
 CHAT_ID="${TEEMAI_CHAT_ID:-}"
 INSTANCE_ID="${TEEMAI_INSTANCE_ID:-}"
 

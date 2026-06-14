@@ -1,6 +1,6 @@
 
 import type { WebSocket } from 'ws'
-import { ExpertHandler } from './ExpertHandler'
+import { MissionAgentHandler } from './MissionAgentHandler'
 import { ShellHandler } from './ShellHandler'
 import { GitWatchHandler } from './GitWatchHandler'
 import { ShellManager } from '../terminal/ShellManager'
@@ -18,7 +18,7 @@ import { trackEvent } from '../lib/eventTracker'
 const log = createLogger('WSRouter')
 
 export class WSRouter {
-  private expertHandler: ExpertHandler
+  private expertHandler: MissionAgentHandler
   private shellHandler: ShellHandler
   private gitWatchHandler?: GitWatchHandler
   private terminalViewManager?: TerminalViewManager
@@ -30,7 +30,7 @@ export class WSRouter {
   private executionModeRouter?: ExecutionModeRouter
 
   constructor(deps: {
-    expertHandler: ExpertHandler
+    expertHandler: MissionAgentHandler
     gitWatchManager?: GitWatchManager
     terminalViewManager?: TerminalViewManager
     senseiUpgradeService?: SenseiUpgradeService
@@ -58,9 +58,10 @@ export class WSRouter {
   }
 
   handle(ws: WebSocket, message: { type: string; payload: any }, connectionId: string): void {
-    const { type, payload } = message
+    const type = message.type
+    const { payload } = message
 
-    if (type === 'expert:start') {
+    if (type === 'agent:start') {
       if (this.executionModeRouter && payload.agentId === 'lead' && payload.task) {
         const decision = this.executionModeRouter.classify(payload.task)
         if (decision.tier === 'single-expert' && decision.agentId) {
@@ -72,59 +73,59 @@ export class WSRouter {
       this.expertHandler.handleStart(ws, payload, connectionId)
       return
     }
-    if (type === 'expert:cli-attach') {
+    if (type === 'agent:cli-attach') {
       this.terminalViewManager?.handleAttach(ws, payload, connectionId).catch((err) => {
-        log.error('expert:cli-attach error', { error: err instanceof Error ? err.message : String(err) })
+        log.error('agent:cli-attach error', { error: err instanceof Error ? err.message : String(err) })
       })
       return
     }
-    if (type === 'expert:cli-detach') {
+    if (type === 'agent:cli-detach') {
       this.terminalViewManager?.handleDetach(payload, connectionId)
       return
     }
-    if (type === 'expert:input') {
+    if (type === 'agent:input') {
       if (this.terminalViewManager?.forwardInput(payload, connectionId)) return
       this.expertHandler.handleInput(ws, payload, connectionId)
       return
     }
-    if (type === 'expert:resize') {
+    if (type === 'agent:resize') {
       if (this.terminalViewManager?.forwardResize(payload, connectionId)) return
       this.expertHandler.handleResize(ws, payload, connectionId)
       return
     }
-    if (type === 'expert:direct-input') {
+    if (type === 'agent:direct-input') {
       this.expertHandler.handleDirectInput(ws, payload, connectionId).catch((err) => {
-        log.error('expert:direct-input error', { error: err instanceof Error ? err.message : String(err) })
+        log.error('agent:direct-input error', { error: err instanceof Error ? err.message : String(err) })
         ws.send(JSON.stringify({
-          type: 'expert:error',
+          type: 'agent:error',
           payload: { chatId: payload.chatId, agentId: payload.agentId, message: err instanceof Error ? err.message : 'Failed to send direct input' },
         }))
       })
       return
     }
-    if (type === 'expert:stop') {
+    if (type === 'agent:stop') {
       this.expertHandler.handleStop(ws, payload, connectionId)
       return
     }
-    if (type === 'expert:stop-all') {
+    if (type === 'agent:stop-all') {
       this.expertHandler.handleStopAll(ws, connectionId)
       return
     }
-    if (type === 'expert:list') {
+    if (type === 'agent:list') {
       this.expertHandler.handleList(ws, connectionId, payload?.chatId)
       return
     }
-    if (type === 'expert:clear-completed') {
+    if (type === 'agent:clear-completed') {
       this.expertHandler.clearCompleted(connectionId, payload?.chatId)
       return
     }
-    if (type === 'expert:permission-response') {
+    if (type === 'agent:permission-response') {
       this.expertHandler.handlePermissionResponse(ws, payload, connectionId)
       return
     }
-    if (type === 'expert:user-input') {
+    if (type === 'agent:user-input') {
       this.expertHandler.handleUserInput(ws, payload, connectionId).catch((err) => {
-        log.error('expert:user-input error', { error: err instanceof Error ? err.message : String(err) })
+        log.error('agent:user-input error', { error: err instanceof Error ? err.message : String(err) })
       })
       return
     }
@@ -159,14 +160,14 @@ export class WSRouter {
       return
     }
 
-    if (type === 'chat:set-context') {
+    if (type === 'mission:set-context') {
       if (payload.chatId) {
         this.expertHandler.setChatId(connectionId, payload.chatId)
         this.pushAvailableCommands(ws, payload.chatId)
       }
       return
     }
-    if (type === 'chat:resume-experts') {
+    if (type === 'mission:resume-agents') {
       if (payload.chatId) {
         this.expertHandler.resumeFromChat(ws, payload.chatId, connectionId).catch((err) => {
           log.error('resumeFromChat error', { error: err instanceof Error ? err.message : String(err) })
@@ -253,7 +254,7 @@ export class WSRouter {
         if (commands.length === 0) return
         if (ws.readyState !== ws.OPEN) return
         ws.send(JSON.stringify({
-          type: 'chat:available-commands',
+          type: 'mission.available-commands',
           payload: { chatId, commands },
         }))
       })

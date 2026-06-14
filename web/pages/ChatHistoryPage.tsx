@@ -101,7 +101,7 @@ const ChatHistoryPage = () => {
     setLoading(true)
     try {
       const [chatsRes, wsRes] = await Promise.all([
-        authFetch(`${API_BASE}/api/chats/recent?limit=100`),
+        authFetch(`${API_BASE}/api/missions/recent?limit=100`),
         authFetch(`${API_BASE}/api/workspaces`),
       ])
       if (chatsRes.ok) setChats(await chatsRes.json())

@@ -13,7 +13,7 @@ const EMPTY_CHATS: Chat[] = []
 import { API_BASE, authFetch } from '@/config/api'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { useDialog } from '../../contexts/DialogContext'
-import { useAllChats } from '../../hooks/useAllChats'
+import { useAllMissions } from '../../hooks/useAllMissions'
 import { useAgents } from '../../hooks/useAgents'
 import { useMissionPinArchive } from '../../hooks/useMissionPinArchive'
 import { useExternalCwds, type UnmatchedExternalDir } from '../../hooks/useExternalCwds'
@@ -33,7 +33,7 @@ interface MissionSessionListProps {
 const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
   const { workspaceId, activeChatId, selectedAgentId } = useWorkspace()
   const { openAddAgent, openNewMission } = useDialog()
-  const { chats, workspaces, loading } = useAllChats()
+  const { chats, workspaces, loading } = useAllMissions()
   const { unmatchedDirs } = useExternalCwds()
   const { agentNames } = useAgents()
 

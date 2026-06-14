@@ -1,5 +1,5 @@
 /**
- * useAllChats — Cross-workspace mission list for the V2 sidebar.
+ * useAllMissions — Cross-workspace mission list for the V2 sidebar.
  *
  * Aggregates chats from every workspace and tags each with its workspace meta
  * (id + name) so the sidebar can group missions by workspace. Stays live via the
@@ -12,7 +12,7 @@ import { API_BASE, authFetch } from '@/config/api'
 import { getWebSocketClient } from '@/services/WebSocketClient'
 import type { ChatActivityPayload } from '@/types/chat'
 import type { Chat, Workspace } from '@/components/workspace/types'
-import { ACTIVE_PHASES, reconcileMembersFromActivity } from '@/lib/memberStatus'
+import { ACTIVE_PHASES, reconcileAgentsFromActivity } from '@/lib/agentStatus'
 
 export interface WorkspaceLite {
   id: string
@@ -27,7 +27,7 @@ export interface V2AllChatsResult {
   refresh: () => Promise<void>
 }
 
-export const useAllChats = (): V2AllChatsResult => {
+export const useAllMissions = (): V2AllChatsResult => {
   const [chats, setChats] = useState<Chat[]>([])
   const [workspaces, setWorkspaces] = useState<WorkspaceLite[]>([])
   const [loading, setLoading] = useState(false)
@@ -88,7 +88,7 @@ export const useAllChats = (): V2AllChatsResult => {
             updated.waitingReason = payload.latestMessage?.text
           }
           else if (ACTIVE_PHASES.has(phase)) { updated.status = 'running'; updated.missionStatus = 'running'; updated.waitingReason = undefined }
-          updated.members = reconcileMembersFromActivity(c.members, payload)
+          updated.members = reconcileAgentsFromActivity(c.members, payload)
           if (updated.status === c.status
             && updated.missionStatus === (c as any).missionStatus
             && updated.waitingReason === c.waitingReason
@@ -128,10 +128,10 @@ export const useAllChats = (): V2AllChatsResult => {
       })
     }
 
-    wsClient.on('chat:status-changed', handleStatusChanged)
-    wsClient.on('chat:activity', handleActivity)
-    wsClient.on('chat:title-updated', handleTitleUpdated)
-    wsClient.on('chat:meta-updated', handleMetaUpdated)
+    wsClient.on('mission.status-changed', handleStatusChanged)
+    wsClient.on('mission.activity', handleActivity)
+    wsClient.on('mission.title-updated', handleTitleUpdated)
+    wsClient.on('mission.meta-updated', handleMetaUpdated)
 
     const handleVisibility = () => { if (!document.hidden) void refresh() }
     document.addEventListener('visibilitychange', handleVisibility)
@@ -143,10 +143,10 @@ export const useAllChats = (): V2AllChatsResult => {
     window.addEventListener('teemai:chat-updated', handleChatMutated)
 
     return () => {
-      wsClient.off('chat:status-changed', handleStatusChanged)
-      wsClient.off('chat:activity', handleActivity)
-      wsClient.off('chat:title-updated', handleTitleUpdated)
-      wsClient.off('chat:meta-updated', handleMetaUpdated)
+      wsClient.off('mission.status-changed', handleStatusChanged)
+      wsClient.off('mission.activity', handleActivity)
+      wsClient.off('mission.title-updated', handleTitleUpdated)
+      wsClient.off('mission.meta-updated', handleMetaUpdated)
       document.removeEventListener('visibilitychange', handleVisibility)
       window.removeEventListener('teemai:chat-created', handleChatMutated)
       window.removeEventListener('teemai:chat-updated', handleChatMutated)

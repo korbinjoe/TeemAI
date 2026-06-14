@@ -5,7 +5,7 @@ import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { History, Handshake, Zap, Repeat, FolderGit, Moon, Sun, Bell, Settings } from './icons'
 import { API_BASE, authFetch } from '@/config/api'
 import { useAgents } from '../../hooks/useAgents'
-import { useWorkspaceChats } from '../../hooks/useWorkspaceChats'
+import { useWorkspaceMissions } from '../../hooks/useWorkspaceMissions'
 import AgentAvatar from '../ui/agent-avatar'
 
 const useResourceCounts = () => {
@@ -43,7 +43,7 @@ export const ResourcesSection = () => {
   const counts = useResourceCounts()
   const { hiredAgents } = useAgents()
   const { workspaceId } = useWorkspace()
-  const { running } = useWorkspaceChats(workspaceId)
+  const { running } = useWorkspaceMissions(workspaceId)
   const runningCount = running.length
 
   const previewAgents = useMemo(() => hiredAgents.slice(0, 3), [hiredAgents])

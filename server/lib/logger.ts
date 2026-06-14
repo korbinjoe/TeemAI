@@ -78,7 +78,8 @@ const consoleTransport = new transports.Console({
     logFormat,
   ),
 })
-consoleTransport.setMaxListeners(100)
+// Each module calls createLogger() and attaches to this shared transport.
+consoleTransport.setMaxListeners(0)
 
 // ── Logger Cache ──
 

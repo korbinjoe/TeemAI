@@ -1,46 +1,31 @@
 /**
  * electron-builder afterPack hook
  *
- * `extraResources` copies symlinks verbatim. Bundled `ai-assets/skills/*` are
- * symlinks into a sibling repo (browser-agent-plugin) that does not exist inside
- * the app bundle, so they land as dangling links and crash boot. Replace every
- * symlink under Resources/ai-assets with a real, dereferenced copy of its target.
+ * `extraResources` copies `ai-assets` verbatim, preserving the `skills/*`
+ * symlinks that point into a sibling repo (browser-agent-plugin). Those links
+ * are relative (`../../../browser-agent-plugin/...`) and resolve against their
+ * SOURCE location, not their location inside the bundle — so once copied into
+ * `Resources/ai-assets/skills/` they dangle, and a per-link `realpath()` in the
+ * bundle silently drops every skill (the app then ships with skills missing).
+ *
+ * Fix: discard whatever electron-builder copied and re-copy `ai-assets` from the
+ * project source tree with `dereference: true`. Relative symlinks resolve from
+ * their real source location, so the bundle gets real skill content. A genuinely
+ * broken link makes `fs.cp` throw and fails the build loudly instead of shipping
+ * an app that is missing skills.
  */
 
 const { promises: fs } = require('fs')
 const path = require('path')
 
-const dereferenceSymlinks = async (dir) => {
-  let entries
-  try {
-    entries = await fs.readdir(dir, { withFileTypes: true })
-  } catch {
-    return
-  }
-
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name)
-
-    if (entry.isSymbolicLink()) {
-      let realPath
-      try {
-        realPath = await fs.realpath(full)
-      } catch (err) {
-        // Genuinely broken link with no resolvable target — drop it.
-        await fs.rm(full, { force: true })
-        console.warn(`[afterPack] dropped broken symlink: ${full} (${err})`)
-        continue
-      }
-      await fs.rm(full, { recursive: true, force: true })
-      await fs.cp(realPath, full, { recursive: true, dereference: true })
-      console.log(`[afterPack] dereferenced ${full} -> ${realPath}`)
-    } else if (entry.isDirectory()) {
-      await dereferenceSymlinks(full)
-    }
-  }
-}
-
 exports.default = async function afterPack(context) {
   const resourcesDir = context.packager.getResourcesDir(context.appOutDir)
-  await dereferenceSymlinks(path.join(resourcesDir, 'ai-assets'))
+  const projectDir = context.packager.projectDir || process.cwd()
+
+  const srcAiAssets = path.join(projectDir, 'ai-assets')
+  const destAiAssets = path.join(resourcesDir, 'ai-assets')
+
+  await fs.rm(destAiAssets, { recursive: true, force: true })
+  await fs.cp(srcAiAssets, destAiAssets, { recursive: true, dereference: true })
+  console.log(`[afterPack] materialized ai-assets (dereferenced) ${srcAiAssets} -> ${destAiAssets}`)
 }

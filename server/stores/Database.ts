@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS agents (
   hooks              TEXT,
   sub_agent_names    TEXT,
   provider           TEXT,
+  transport          TEXT,
+  surface            TEXT,
   tags               TEXT NOT NULL DEFAULT '[]',
   source             TEXT NOT NULL CHECK (source IN ('builtin', 'user')),
   created_at         TEXT NOT NULL,

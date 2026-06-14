@@ -1,5 +1,49 @@
 # Changelog
 
+## [0.1.0-beta.7] - 2026-06-15
+
+### Features
+
+- **Qoder CLI provider**: add Qoder CLI as a first-class provider alongside Claude and Codex, with `qodercli` as a standalone provider option separate from `qoder`
+- **DAG task delivery hardening**: file manifest validation (create/modify/forbid), per-attempt incremental diff, reject-time git cleanup, DAG fallback when retries are exhausted, and per-task worktree isolation for parallel tasks
+- **Evolution pipeline**: fix MSS scoring, add `EvolutionTrigger`, deprecate `GrowthStore`
+- **DevPanel**: browse JSONL file contents inline
+- **Mission message stream**: surface time dividers between message groups
+- **Fullstack Engineer agent**: add visual self-check loop for UI and desktop work
+
+### Bug Fixes
+
+- Clear stale agent messages on re-dispatch to prevent dedup collision
+- Prevent re-dispatched agent messages from merging into an earlier group
+- Prevent message area unmount when switching between single and split layout
+- Correct chat status dot for stopped/merged chats with stale member status
+- Reconcile stuck message-area progress cards to terminal phase
+- Pass chat ID as Mission ID in DevPanel pipeline snapshot
+- Fix agent schema v29, ai-assets bundle copy, and logger listener leaks
+
+### Improvements
+
+- **Mission runtime performance**: optimize chats, events, and terminal handling; cut mission-switch render cost in workspace sidebar
+- **Launch readiness**: fix broken links, add CI workflow, security policy, and PR template
+- **README**: reframe around CLI GUI, sessions, agents, and orchestration
+- Bundle Doubao and Reddit browser-agent skills (`doubao`, `reddit-auth`, `reddit-explore`, `reddit-interact`) in `ai-assets`
+
+### Refactoring
+
+- Complete naming remediation: rename Chat/Task → Mission and Expert/Member → Agent across WS-0..WS-8; fold `cwdToQoderProjectKey` into `cwdToCliProjectKey`; delete deprecated `AgentMessage` mailbox types
+- Extract browser social skills to external plugin via symlinks in `ai-assets/skills`
+
+## [0.1.0-beta.6] - 2026-06-10
+
+### Features
+
+- **Twitter/X platform skills**: add Twitter auth, explore, interact, publish, and engage skills; migrate browser-agent execution to `skill-cli`
+- **Social Operator**: add browse pacing rules to reduce platform detection risk
+
+### Bug Fixes
+
+- Vendor `social-operator` and `browser-agent` in `ai-assets` so bundled skills resolve without external repo paths
+
 ## [0.1.0-beta.5] - 2026-06-09
 
 ### Features

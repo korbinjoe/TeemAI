@@ -298,18 +298,18 @@ export class SessionPager {
   }
 
   /**
-   * Build a map of cliSessionId → chatId by scanning chats.expert_sessions.
+   * Build a map of cliSessionId → chatId by scanning missions.mission_agent_sessions.
    * Used both by the per-cwd link pass and the one-shot backfill on boot.
    */
   private collectChatSessionLinks(): Array<{ chatId: string; cliSessionId: string; provider?: string }> {
     const rows = this.db
-      .prepare(`SELECT id, expert_sessions FROM chats WHERE expert_sessions IS NOT NULL`)
-      .all() as Array<{ id: string; expert_sessions: string }>
+      .prepare(`SELECT id, mission_agent_sessions FROM missions WHERE mission_agent_sessions IS NOT NULL`)
+      .all() as Array<{ id: string; mission_agent_sessions: string }>
     const out: Array<{ chatId: string; cliSessionId: string; provider?: string }> = []
     for (const row of rows) {
       let parsed: Record<string, { cliSessionId?: string; provider?: string }> | null
       try {
-        parsed = JSON.parse(row.expert_sessions) as Record<string, { cliSessionId?: string; provider?: string }>
+        parsed = JSON.parse(row.mission_agent_sessions) as Record<string, { cliSessionId?: string; provider?: string }>
       } catch {
         continue
       }

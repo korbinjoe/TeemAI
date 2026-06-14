@@ -471,7 +471,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   const handleModelChange = useCallback((newModel: string) => {
     setChatModel(newModel)
     if (chatId) {
-      authFetch(`${API_BASE}/api/chats/${chatId}`, {
+      authFetch(`${API_BASE}/api/missions/${chatId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: newModel }),

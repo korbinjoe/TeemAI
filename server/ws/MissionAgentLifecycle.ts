@@ -10,7 +10,7 @@
  */
 
 import type { WebSocket } from 'ws'
-import { sendFrame } from './wireCompat'
+import { sendFrame } from './wsFrame'
 import { StreamJsonManager } from '../terminal/StreamJsonManager'
 import { ConfigCompiler } from '../runtime/ConfigCompiler'
 import type { AgentRegistry } from '../config/AgentRegistry'
@@ -91,10 +91,10 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
       const executionMode = payload.executionMode
       const chatId = payload.chatId
       if (!chatId) {
-        log.error('expert:start missing chatId', { connectionId, agentId })
+        log.error('agent:start missing chatId', { connectionId, agentId })
         sendFrame(ws, {
-          type: 'expert:error',
-          payload: { agentId, chatId: '', error: 'missing_chat_id', message: 'expert:start payload must carry chatId' },
+          type: 'agent:error',
+          payload: { agentId, chatId: '', error: 'missing_chat_id', message: 'agent:start payload must carry chatId' },
         })
         return { started: false }
       }
@@ -110,7 +110,7 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
           minClientVersion: policy?.minClientVersion,
         })
         sendFrame(ws, {
-          type: 'expert:version-blocked',
+          type: 'agent:version-blocked',
           payload: {
             agentId,
             chatId,
@@ -148,7 +148,7 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
         if (existing.acpClient.isAlive()) {
           log.info('Agent already running, sending task via prompt', { agentId, sessionId: existing.sessionId })
           sendFrame(ws, {
-            type: 'expert:already-running',
+            type: 'agent:already-running',
             payload: {
               agentId,
               chatId,
@@ -168,7 +168,7 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
               const errorMsg = err instanceof Error ? err.message : String(err)
               log.warn('ACP prompt to already-running agent failed', { agentId, chatId, error: errorMsg })
               sendTo(connectionId, {
-                type: 'expert:error',
+                type: 'agent:error',
                 payload: { agentId, chatId, error: 'acp_prompt_failed', message: `Failed to send task to running agent: ${errorMsg}` },
               })
             })
@@ -207,7 +207,7 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
       const storedAgent = !agentDef ? agentStore.get(agentId) : undefined
       if (!agentDef && !storedAgent) {
         sendFrame(ws, {
-          type: 'expert:error',
+          type: 'agent:error',
           payload: { agentId, chatId, message: `Expert ${agentId} not found` },
         })
         store.clearStarting(key)
@@ -243,7 +243,7 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
       if (!isAllowedCwd(cwd)) {
         log.warn('Expert start rejected: cwd outside allowed roots', { agentId, cwd, connectionId })
         sendFrame(ws, {
-          type: 'expert:start-failed',
+          type: 'agent:start-failed',
           payload: { agentId, chatId, message: `Refused: cwd "${cwd}" is outside allowed workspace` },
         })
         return { started: false }
@@ -296,7 +296,7 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
         log.warn('ACP initialize failed', { agentId, sessionId, error: errorMsg })
         trackEvent('agent', 'agent.acp_initialize_failed', { agentId, sessionId, error: errorMsg })
         sendTo(connectionId, {
-          type: 'expert:error',
+          type: 'agent:error',
           payload: { agentId, chatId, error: 'acp_initialize_failed', message: errorMsg },
         })
       })
@@ -373,13 +373,13 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
       store.clearStarting(key)
 
       sendTo(connectionId, {
-        type: 'expert:started',
+        type: 'agent:started',
         payload: { agentId, chatId, sessionId, agentName: agent.name, agentIcon: agent.icon, status: 'running', cwd, ...(executionMode && { executionMode }) },
       })
 
       sendTo(connectionId, {
-        type: 'expert:list-updated',
-        payload: { experts: store.getExpertListForConnection(connectionId, chatId), chatId },
+        type: 'agent:list-updated',
+        payload: { agents: store.getExpertListForConnection(connectionId, chatId), chatId },
       })
 
       startedSent = true
@@ -399,7 +399,7 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
           const errorMsg = err instanceof Error ? err.message : String(err)
           log.warn('ACP initial prompt failed', { agentId, error: errorMsg })
           sendTo(connectionId, {
-            type: 'expert:error',
+            type: 'agent:error',
             payload: { agentId, chatId, error: 'prompt_failed', message: errorMsg },
           })
         })
@@ -446,7 +446,7 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
         displayMsg = 'Qoder CLI not found. Install it with: curl -fsSL https://qoder.com/install | bash'
       }
       sendFrame(ws, {
-        type: 'expert:error',
+        type: 'agent:error',
         payload: {
           agentId: payload.agentId,
           chatId: chatId || 'unknown',
@@ -456,8 +456,8 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
       })
 
       sendTo(connectionId, {
-        type: 'expert:list-updated',
-        payload: { experts: store.getExpertListForConnection(connectionId, chatId), chatId },
+        type: 'agent:list-updated',
+        payload: { agents: store.getExpertListForConnection(connectionId, chatId), chatId },
       })
 
       return { started: false }

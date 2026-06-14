@@ -51,7 +51,7 @@ export const flushPendingTasks = (deps: FlushDeps): void => {
         const errorMsg = err instanceof Error ? err.message : String(err)
         log.warn('Pending-task prompt failed', { agentId, chatId, error: errorMsg })
         sessionRegistry.sendToSession(sessionId, {
-          type: 'expert:error',
+          type: 'agent:error',
           payload: {
             agentId,
             chatId,

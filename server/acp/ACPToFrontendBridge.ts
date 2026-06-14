@@ -34,7 +34,7 @@ export const acpUpdateToWSMessage = (
 
     case 'agent_message_chunk':
       return {
-        type: 'expert:partial-text',
+        type: 'agent:partial-text',
         payload: {
           agentId, sessionId, chatId,
           blockIndex: (update.content._meta as any)?.blockIndex ?? 0,
@@ -44,13 +44,13 @@ export const acpUpdateToWSMessage = (
 
     case '_teemai/activity':
       return {
-        type: 'expert:activity',
+        type: 'agent:activity',
         payload: { agentId, sessionId, chatId, activity: update.activity },
       }
 
     case '_teemai/messages_batch':
       return {
-        type: 'expert:structured-message',
+        type: 'agent:structured-message',
         payload: {
           agentId, sessionId, chatId,
           type: update.batchType ?? 'delta',
@@ -61,19 +61,19 @@ export const acpUpdateToWSMessage = (
 
     case 'plan':
       return {
-        type: 'expert:plan-update',
+        type: 'agent:plan-update',
         payload: { agentId, sessionId, chatId, plan: { entries: update.entries } },
       }
 
     case 'current_mode_update':
       return {
-        type: 'expert:mode-change',
+        type: 'agent:mode-change',
         payload: { agentId, sessionId, chatId, currentModeId: update.modeId },
       }
 
     case 'available_commands_update':
       return {
-        type: 'expert:commands-update',
+        type: 'agent:commands-update',
         payload: {
           agentId, sessionId, chatId,
           availableCommands: update.availableCommands.map((cmd: ACPAvailableCommand) => cmd.name),
@@ -82,7 +82,7 @@ export const acpUpdateToWSMessage = (
 
     case 'session_info_update':
       return {
-        type: 'expert:session-info',
+        type: 'agent:session-info',
         payload: { agentId, sessionId, chatId, title: update.title, updatedAt: update.updatedAt },
       }
 

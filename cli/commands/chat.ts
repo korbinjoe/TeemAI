@@ -226,7 +226,7 @@ const getVersion = (): string => {
 
 const updateChatModel = async (port: number, chatId: string, model: string): Promise<void> => {
   try {
-    await fetch(`http://127.0.0.1:${port}/api/chats/${chatId}`, {
+    await fetch(`http://127.0.0.1:${port}/api/missions/${chatId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model }),

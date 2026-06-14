@@ -47,10 +47,7 @@ export interface AgentListItem {
 }
 
 export interface AgentListPayload {
-  /** Canonical field (PR-D). Legacy consumers read `experts`; both are emitted during the compat window. */
   agents: AgentListItem[]
-  /** @deprecated wire-compat mirror of `agents`; dropped in PR-F. */
-  experts?: AgentListItem[]
 }
 
 export interface AgentErrorPayload {
@@ -123,43 +120,4 @@ export interface AgentSessionInfoPayload {
   sessionId: string
   title?: string
   updatedAt?: string
-}
-
-// ── Deprecated Expert* aliases (PR-D compat window; removed in PR-F) ──────────
-/** @deprecated use {@link AgentStartedPayload} */
-export type ExpertStartedPayload = AgentStartedPayload
-/** @deprecated use {@link AgentDataPayload} */
-export type ExpertDataPayload = AgentDataPayload
-/** @deprecated use {@link AgentExitPayload} */
-export type ExpertExitPayload = AgentExitPayload
-/** @deprecated use {@link AgentActivityPayload} */
-export type ExpertActivityPayload = AgentActivityPayload
-/** @deprecated use {@link AgentListItem} */
-export type ExpertListItem = AgentListItem
-/** @deprecated use {@link AgentErrorPayload} */
-export type ExpertErrorPayload = AgentErrorPayload
-/** @deprecated use {@link AgentStartFailedPayload} */
-export type ExpertStartFailedPayload = AgentStartFailedPayload
-/** @deprecated use {@link AgentVersionBlockedPayload} */
-export type ExpertVersionBlockedPayload = AgentVersionBlockedPayload
-/** @deprecated use {@link AgentResumeFailedPayload} */
-export type ExpertResumeFailedPayload = AgentResumeFailedPayload
-/** @deprecated use {@link AgentSlashCommandsPayload} */
-export type ExpertSlashCommandsPayload = AgentSlashCommandsPayload
-/** @deprecated use {@link AgentPlanUpdatePayload} */
-export type ExpertPlanUpdatePayload = AgentPlanUpdatePayload
-/** @deprecated use {@link AgentModeChangePayload} */
-export type ExpertModeChangePayload = AgentModeChangePayload
-/** @deprecated use {@link AgentCommandsUpdatePayload} */
-export type ExpertCommandsUpdatePayload = AgentCommandsUpdatePayload
-/** @deprecated use {@link AgentSessionInfoPayload} */
-export type ExpertSessionInfoPayload = AgentSessionInfoPayload
-
-/**
- * @deprecated use {@link AgentListPayload}. The legacy shape required `experts`;
- * the canonical {@link AgentListPayload} uses `agents` and mirrors `experts`.
- */
-export interface ExpertListPayload {
-  experts: AgentListItem[]
-  agents?: AgentListItem[]
 }

@@ -147,7 +147,7 @@ export const runCommand = new Command('run')
     const repoPaths = workspace.repositories?.map((r: any) => r.path) ?? [cwd]
 
     if (model) {
-      await fetch(`http://127.0.0.1:${port}/api/chats/${chatId}`, {
+      await fetch(`http://127.0.0.1:${port}/api/missions/${chatId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model }),

@@ -24,7 +24,7 @@ import { ConfigCompiler } from './runtime/ConfigCompiler'
 import { HooksConfigManager } from './runtime/HooksConfigManager'
 
 import { WSRouter, MissionAgentHandler } from './ws'
-import { outboundFrames, sendFrame } from './ws/wireCompat'
+import { outboundFrames, sendFrame } from './ws/wsFrame'
 import { SemanticLogBroadcaster } from './ws/SemanticLogBroadcaster'
 
 import {
@@ -149,20 +149,20 @@ const updateMonitor = new UpdateMonitor(updateManager, broadcast)
 const sessionRegistry = new SessionRegistry(hooksConfigManager, chatStore)
 sessionRegistry.onChatStatusChanged((chatId, status) => {
   const chat = chatStore.get(chatId)
-  broadcast({ type: 'chat:status-changed', payload: { chatId, status, taskStatus: chat?.taskStatus } })
+  broadcast({ type: 'mission.status-changed', payload: { chatId, status, taskStatus: chat?.taskStatus } })
 })
 sessionRegistry.onActivityChanged((payload) => {
   if (!payload.latestMessage) {
     const latest = expertHandler.getLatestMessage(payload.chatId)
     if (latest) payload.latestMessage = latest
   }
-  broadcast({ type: 'chat:activity', payload })
+  broadcast({ type: 'mission.activity', payload })
   semanticLogBroadcaster.handle(payload)
   workflowScheduler.onActivityChanged(payload)
   const sessions = sessionRegistry.findAllByChat(payload.chatId)
   for (const s of sessions) {
     if (s.connectionType === 'virtual') {
-      sessionRegistry.sendToSession(s.sessionId, { type: 'chat:activity', payload })
+      sessionRegistry.sendToSession(s.sessionId, { type: 'mission.activity', payload })
     }
   }
 })

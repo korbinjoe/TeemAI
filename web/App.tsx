@@ -75,7 +75,6 @@ const App = () => (
         <Route path="/missions" element={<ChatHistoryPage />} />
         {/* "chat" is the storage primitive; "mission" is the user-facing name (ADR-2). */}
         <Route path="/tasks" element={<Navigate to="/missions" replace />} />
-        <Route path="/chats" element={<Navigate to="/missions" replace />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/updates" element={<UpdateManagerPage />} />
@@ -88,14 +87,11 @@ const App = () => (
       <Route path="/workspace/:workspaceId/agents/:id/edit" element={<LegacyAgentEditorRedirect />} />
       <Route path="/workspace/:workspaceId/skills" element={<Navigate to="/skills" replace />} />
       <Route path="/workspace/:workspaceId/cron-jobs" element={<Navigate to="/cron-jobs" replace />} />
-      <Route path="/workspace/:workspaceId/chats" element={<Navigate to="/missions" replace />} />
       <Route path="/workspace/:workspaceId/tasks" element={<Navigate to="/missions" replace />} />
       <Route path="/workspace/:workspaceId/missions" element={<Navigate to="/missions" replace />} />
       <Route path="/workspace/:workspaceId/settings" element={<Navigate to="/settings" replace />} />
       <Route path="/workspace/:workspaceId/admin" element={<Navigate to="/admin" replace />} />
       <Route path="/workspace/:workspaceId/updates" element={<Navigate to="/updates" replace />} />
-      {/* Legacy per-task URL → preserve id under the new mission URL. */}
-      <Route path="/workspace/:workspaceId/task/:taskId" element={<LegacyMissionRedirect />} />
     </Routes>
     </WorkspaceChatsProvider>
   </Suspense>
@@ -105,13 +101,6 @@ const App = () => (
 const LegacyAgentEditorRedirect = () => {
   const { id } = useParams<{ id: string }>()
   return <Navigate to={id ? `/agents/${id}/edit` : '/agents'} replace />
-}
-
-/** /workspace/:wsId/task/:taskId → /workspace/:wsId/mission/:taskId. */
-const LegacyMissionRedirect = () => {
-  const { workspaceId, taskId } = useParams<{ workspaceId: string; taskId: string }>()
-  if (!workspaceId || !taskId) return <Navigate to="/" replace />
-  return <Navigate to={`/workspace/${workspaceId}/mission/${taskId}`} replace />
 }
 
 export default App

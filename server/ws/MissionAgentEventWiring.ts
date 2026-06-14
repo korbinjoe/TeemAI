@@ -95,7 +95,7 @@ export const wireMissionAgentStreamHandlers = (deps: MissionAgentEventWiringDeps
   acpClient.onUpdate((params: ACPSessionUpdateParams) => {
     const wsMsg = acpUpdateToWSMessage(params.update, bridgeCtx)
     if (wsMsg) {
-      if (wsMsg.type === 'expert:activity') {
+      if (wsMsg.type === 'agent:activity') {
         const session = sessionRegistry.get(sessionId)
         if (session?.createdAt) {
           (wsMsg.payload as Record<string, unknown>).startedAt = session.createdAt
@@ -117,11 +117,11 @@ export const wireMissionAgentStreamHandlers = (deps: MissionAgentEventWiringDeps
         options: params.options,
       }
       sessionRegistry.sendToSession(sessionId, {
-        type: 'expert:permission-request',
+        type: 'agent:permission-request',
         payload: permissionPayload,
       })
       globalBroadcast?.({
-        type: 'chat:permission-request',
+        type: 'mission.permission-request',
         payload: permissionPayload,
       })
     }
@@ -137,11 +137,11 @@ export const wireMissionAgentStreamHandlers = (deps: MissionAgentEventWiringDeps
       message: `Permission request "${info.toolTitle}" timed out after ${info.timeoutMs}ms`,
     }
     sessionRegistry.sendToSession(sessionId, {
-      type: 'expert:error',
+      type: 'agent:error',
       payload: errorPayload,
     })
     sessionRegistry.sendToSession(sessionId, {
-      type: 'expert:permission-timeout',
+      type: 'agent:permission-timeout',
       payload: {
         agentId,
         chatId,
@@ -155,7 +155,7 @@ export const wireMissionAgentStreamHandlers = (deps: MissionAgentEventWiringDeps
   streamManager.on('cli-init', (initData: { slashCommands: string[]; model?: string }) => {
     const sendCommands = (commands: string[]) => {
       sessionRegistry.sendToSession(sessionId, {
-        type: 'expert:slash-commands',
+        type: 'agent:slash-commands',
         payload: { agentId, chatId, commands },
       })
     }

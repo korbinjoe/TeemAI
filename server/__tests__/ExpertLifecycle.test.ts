@@ -336,7 +336,7 @@ describe('ExpertLifecycle', () => {
       } as any, 'conn-1')
 
       expect(result.started).toBe(false)
-      expect(sent.some(m => m.type === 'expert:error' && m.payload.error === 'missing_chat_id')).toBe(true)
+      expect(sent.some(m => m.type === 'agent:error' && m.payload.error === 'missing_chat_id')).toBe(true)
     })
   })
 
@@ -359,7 +359,7 @@ describe('ExpertLifecycle', () => {
       }, 'conn-1')
 
       expect(result.started).toBe(false)
-      expect(sent.some(m => m.type === 'expert:error')).toBe(true)
+      expect(sent.some(m => m.type === 'agent:error')).toBe(true)
     })
   })
 

@@ -17,7 +17,7 @@ import * as pty from 'node-pty'
 import type { WebSocket } from 'ws'
 import { existsSync } from 'fs'
 import type { SessionRegistry } from './SessionRegistry'
-import { sendFrame } from '../ws/wireCompat'
+import { sendFrame } from '../ws/wsFrame'
 import type { ChatStore } from '../stores/ChatStore'
 import { resolveCliCommandAsync, resolveInterpreter } from '../lib/resolveCliCommand'
 import { isQoderVendor } from '../config/types'
@@ -96,7 +96,7 @@ export class TerminalViewManager {
     const provider = persisted?.provider ?? 'claude'
 
     if (!cliSessionId) {
-      this.send(ws, 'expert:error', {
+      this.send(ws, 'agent:error', {
         agentId,
         chatId,
         error: 'terminal_view_unavailable',
@@ -105,7 +105,7 @@ export class TerminalViewManager {
       return
     }
     if (!cwd || !existsSync(cwd)) {
-      this.send(ws, 'expert:error', {
+      this.send(ws, 'agent:error', {
         agentId,
         chatId,
         error: 'terminal_view_unavailable',
@@ -120,7 +120,7 @@ export class TerminalViewManager {
       command = isQoderVendor(provider) ? 'qodercli' : 'claude'
       args = ['--resume', cliSessionId]
     } else {
-      this.send(ws, 'expert:error', {
+      this.send(ws, 'agent:error', {
         agentId,
         chatId,
         error: 'terminal_view_unsupported_provider',
@@ -131,7 +131,7 @@ export class TerminalViewManager {
 
     const resolved = await resolveCliCommandAsync(command)
     if (!resolved) {
-      this.send(ws, 'expert:error', {
+      this.send(ws, 'agent:error', {
         agentId,
         chatId,
         error: 'terminal_view_cli_not_found',
@@ -159,7 +159,7 @@ export class TerminalViewManager {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       log.error('Failed to spawn view-PTY', { key, command, message })
-      this.send(ws, 'expert:error', {
+      this.send(ws, 'agent:error', {
         agentId,
         chatId,
         error: 'terminal_view_spawn_failed',
@@ -184,10 +184,10 @@ export class TerminalViewManager {
     // Tell the web client the view-PTY is ready and which agent / cliSessionId
     // it is bound to. Web uses this to pre-populate the ExpertInfo entry (so
     // xterm has a slot to mount) before the first `expert:data` frame arrives.
-    this.send(ws, 'expert:view-attached', { agentId, chatId, sessionId: cliSessionId, cwd })
+    this.send(ws, 'agent:view-attached', { agentId, chatId, sessionId: cliSessionId, cwd })
 
     ptyProcess.onData((data) => {
-      this.send(ws, 'expert:data', {
+      this.send(ws, 'agent:data', {
         agentId,
         chatId,
         sessionId: cliSessionId,
@@ -201,7 +201,7 @@ export class TerminalViewManager {
     ptyProcess.onExit(({ exitCode }) => {
       log.info('View-PTY exited', { key, exitCode })
       this.views.delete(key)
-      this.send(ws, 'expert:exit', { agentId, chatId, exitCode: exitCode ?? 0 })
+      this.send(ws, 'agent:exit', { agentId, chatId, exitCode: exitCode ?? 0 })
     })
   }
 

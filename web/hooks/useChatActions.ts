@@ -130,7 +130,7 @@ export const useChatActions = ({
     }
 
     if (finalAgentId && chatId) {
-      authFetch(`${API_BASE}/api/chats/${chatId}`, {
+      authFetch(`${API_BASE}/api/missions/${chatId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lastAgentId: finalAgentId }),

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { createExpertRoutes } from '../routes/agent/missionAgentRoutes'
+import { createMissionAgentRoutes } from '../routes/agent/missionAgentRoutes'
 import { MissionAgentSessionStore, compositeKey, type MissionAgentEntry } from '../ws/MissionAgentSessionStore'
 import type { Router } from 'express'
 
@@ -90,7 +90,7 @@ function createMockDeps(): MockDeps {
 
 function findHandoffHandler(router: Router): (req: any, res: any) => Promise<void> {
   const layer = (router as any).stack.find(
-    (l: any) => l.route?.path === '/api/expert/handoff' && l.route?.methods?.post,
+    (l: any) => l.route?.path === '/api/agent/handoff' && l.route?.methods?.post,
   )
   return layer.route.stack[0].handle
 }
@@ -109,13 +109,13 @@ function mockRes() {
   return res
 }
 
-describe('ExpertHandoff (/api/expert/handoff)', () => {
+describe('ExpertHandoff (/api/agent/handoff)', () => {
   let deps: MockDeps
   let handler: (req: any, res: any) => Promise<void>
 
   beforeEach(() => {
     deps = createMockDeps()
-    const router = createExpertRoutes({
+    const router = createMissionAgentRoutes({
       expertHandler: deps.expertHandler,
       agentRegistry: deps.agentRegistry,
       whiteboardManager: deps.whiteboardManager,
@@ -184,7 +184,7 @@ describe('ExpertHandoff (/api/expert/handoff)', () => {
       expect(deps.broadcastToChat).toHaveBeenCalledWith(
         'chat-1',
         expect.objectContaining({
-          type: 'expert:handoff',
+          type: 'agent:handoff',
           payload: expect.objectContaining({
             sourceAgentId: 'source-agent',
             targetAgentId: 'target-agent',
@@ -343,7 +343,7 @@ describe('ExpertHandoff (/api/expert/handoff)', () => {
 
       expect(deps.broadcastToChat).toHaveBeenCalledWith(
         'chat-1',
-        expect.objectContaining({ type: 'expert:handoff-failed' }),
+        expect.objectContaining({ type: 'agent:handoff-failed' }),
       )
     })
   })

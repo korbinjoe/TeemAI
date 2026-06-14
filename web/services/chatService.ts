@@ -27,11 +27,11 @@ export interface RemoveAgentSessionResult {
 }
 
 export const deleteChatWithJsonl = (chatId: string): Promise<DeleteChatResult> =>
-  api.delete<DeleteChatResult>(`${API_BASE}/api/chats/${encodeURIComponent(chatId)}?purgeJsonl=1`)
+  api.delete<DeleteChatResult>(`${API_BASE}/api/missions/${encodeURIComponent(chatId)}?purgeJsonl=1`)
 
 export const removeAgentFromChat = (chatId: string, agentId: string): Promise<RemoveAgentSessionResult> =>
   api.delete<RemoveAgentSessionResult>(
-    `${API_BASE}/api/chats/${encodeURIComponent(chatId)}/sessions/${encodeURIComponent(agentId)}`,
+    `${API_BASE}/api/missions/${encodeURIComponent(chatId)}/sessions/${encodeURIComponent(agentId)}`,
   )
 
 export const formatPurgeFailures = (purged: PurgeResult[]): string[] =>

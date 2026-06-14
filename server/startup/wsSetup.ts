@@ -108,7 +108,7 @@ export const setupWebSocket = (d: WsDeps) => {
         const latest = d.expertHandler.getLatestMessage(payload.chatId)
         if (latest) payload.latestMessage = latest
       }
-      ws.send(JSON.stringify({ type: 'chat:activity', payload }))
+      ws.send(JSON.stringify({ type: 'mission.activity', payload }))
     }
   })
 

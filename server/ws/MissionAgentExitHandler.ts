@@ -196,13 +196,13 @@ export const createMissionAgentExitHandler = (deps: ExitHandlerDeps) => {
     if (!ctx.startedSent) {
       log.warn('Agent exited before started was sent', { agentId, exitCode, sessionId })
       sendTo(currentConnectionId, {
-        type: 'expert:start-failed',
+        type: 'agent:start-failed',
         payload: { agentId, chatId, exitCode, message: `Agent exited immediately (code ${exitCode})` },
       })
       store.cleanup(currentKey)
       sendTo(currentConnectionId, {
-        type: 'expert:list-updated',
-        payload: { experts: store.getExpertListForConnection(currentConnectionId, chatId), chatId },
+        type: 'agent:list-updated',
+        payload: { agents: store.getExpertListForConnection(currentConnectionId, chatId), chatId },
       })
       notifyExited(chatId, agentId, exitCode, false)
       return
@@ -240,7 +240,7 @@ export const createMissionAgentExitHandler = (deps: ExitHandlerDeps) => {
         if (messages.length > 0) {
           const agent = agentStore?.get(agentId)
           sessionRegistry.sendToSession(sessionId, {
-            type: 'expert:started',
+            type: 'agent:started',
             payload: { agentId, chatId, sessionId, agentName: agent?.name || agentName, agentIcon: agent?.icon || '', status: 'completed' },
           })
           const wsMsg = acpUpdateToWSMessage({
@@ -253,7 +253,7 @@ export const createMissionAgentExitHandler = (deps: ExitHandlerDeps) => {
             sessionRegistry.sendToSession(sessionId, wsMsg as Record<string, unknown>)
           }
           sessionRegistry.sendToSession(sessionId, {
-            type: 'expert:exit',
+            type: 'agent:exit',
             payload: { agentId, chatId, exitCode: 0 },
           })
           replayed = true
@@ -263,15 +263,15 @@ export const createMissionAgentExitHandler = (deps: ExitHandlerDeps) => {
 
       if (!replayed) {
         sessionRegistry.sendToSession(sessionId, {
-          type: 'expert:resume-failed',
+          type: 'agent:resume-failed',
           payload: { agentId, chatId, agentName, sessionId, reason: 'session_expired' },
         })
       }
 
       store.cleanup(currentKey)
       sessionRegistry.sendToSession(sessionId, {
-        type: 'expert:list-updated',
-        payload: { experts: store.getExpertListForConnection(currentConnectionId, chatId), chatId },
+        type: 'agent:list-updated',
+        payload: { agents: store.getExpertListForConnection(currentConnectionId, chatId), chatId },
       })
       notifyExited(chatId, agentId, exitCode, false)
       return
@@ -383,15 +383,15 @@ export const createMissionAgentExitHandler = (deps: ExitHandlerDeps) => {
     }
 
     sessionRegistry.sendToSession(sessionId, {
-      type: 'expert:exit',
+      type: 'agent:exit',
       payload: { agentId, chatId, sessionId, exitCode, signal, finalActivity },
     })
 
     store.cleanup(currentKey)
 
     sendTo(currentConnectionId, {
-      type: 'expert:list-updated',
-      payload: { experts: store.getExpertListForConnection(currentConnectionId, chatId), chatId },
+      type: 'agent:list-updated',
+      payload: { agents: store.getExpertListForConnection(currentConnectionId, chatId), chatId },
     })
 
     notifyExited(chatId, agentId, exitCode, taskCompleted)

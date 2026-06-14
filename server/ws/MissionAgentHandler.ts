@@ -14,7 +14,7 @@
  */
 
 import type { WebSocket } from 'ws'
-import { sendFrame } from './wireCompat'
+import { sendFrame } from './wsFrame'
 import type { ConfigCompiler } from '../runtime/ConfigCompiler'
 import type { AgentRegistry } from '../config/AgentRegistry'
 import type { ChatStore } from '../stores/ChatStore'
@@ -97,7 +97,7 @@ export class MissionAgentHandler {
           ? 'Agent was stopped before queued message could be delivered.'
           : 'Agent state was cleared before queued message could be delivered.'
       this.sendTo(entry.connectionId, {
-        type: 'expert:error',
+        type: 'agent:error',
         payload: {
           agentId,
           chatId,
@@ -227,17 +227,17 @@ export class MissionAgentHandler {
   handleInput(ws: WebSocket, payload: { chatId?: string; agentId: string; data: string }, connectionId?: string): void {
     const chatId = payload.chatId
     if (!chatId) {
-      log.error('expert:input missing chatId', { connectionId, agentId: payload.agentId })
+      log.error('agent:input missing chatId', { connectionId, agentId: payload.agentId })
       sendFrame(ws, {
-        type: 'expert:error',
-        payload: { agentId: payload.agentId, chatId: '', error: 'missing_chat_id', message: 'expert:input payload must carry chatId' },
+        type: 'agent:error',
+        payload: { agentId: payload.agentId, chatId: '', error: 'missing_chat_id', message: 'agent:input payload must carry chatId' },
       })
       return
     }
     const expert = this.store.findRunning(payload.agentId, connectionId, chatId)
     if (!expert) {
       sendFrame(ws, {
-        type: 'expert:error',
+        type: 'agent:error',
         payload: { agentId: payload.agentId, chatId, message: `Expert ${payload.agentId} is not running` },
       })
       return
@@ -248,10 +248,10 @@ export class MissionAgentHandler {
   handleStop(ws: WebSocket, payload: { agentId: string; chatId?: string }, connectionId: string): void {
     const chatId = payload.chatId
     if (!chatId) {
-      log.error('expert:stop missing chatId', { connectionId, agentId: payload.agentId })
+      log.error('agent:stop missing chatId', { connectionId, agentId: payload.agentId })
       sendFrame(ws, {
-        type: 'expert:error',
-        payload: { agentId: payload.agentId, chatId: '', error: 'missing_chat_id', message: 'expert:stop payload must carry chatId' },
+        type: 'agent:error',
+        payload: { agentId: payload.agentId, chatId: '', error: 'missing_chat_id', message: 'agent:stop payload must carry chatId' },
       })
       return
     }
@@ -259,7 +259,7 @@ export class MissionAgentHandler {
     const expert = this.store.cleanupWithStop(key, connectionId)
     if (!expert) {
       sendFrame(ws, {
-        type: 'expert:error',
+        type: 'agent:error',
         payload: { agentId: payload.agentId, chatId, message: `Expert ${payload.agentId} is not running` },
       })
       return
@@ -270,15 +270,15 @@ export class MissionAgentHandler {
     expert.acpClient.kill()
     trackEvent('agent', 'agent.stopped', { agentId: payload.agentId, connectionId })
 
-    this.sendTo(connectionId, { type: 'expert:stopped', payload: { agentId: payload.agentId, chatId: expert.chatId, exitCode: -1, exitReason: 'user_stop' } })
-    this.sendTo(connectionId, { type: 'expert:list-updated', payload: { experts: this.store.getExpertListForConnection(connectionId, expert.chatId), chatId: expert.chatId } })
+    this.sendTo(connectionId, { type: 'agent:stopped', payload: { agentId: payload.agentId, chatId: expert.chatId, exitCode: -1, exitReason: 'user_stop' } })
+    this.sendTo(connectionId, { type: 'agent:list-updated', payload: { agents: this.store.getExpertListForConnection(connectionId, expert.chatId), chatId: expert.chatId } })
   }
 
   handleStopAll(_ws: WebSocket, connectionId: string): void {
     const activeChatId = this.connectionActiveChatId.get(connectionId)
     if (!activeChatId) {
       log.warn('handleStopAll rejected: no active chatId for connection', { connectionId })
-      this.sendTo(connectionId, { type: 'expert:all-stopped', payload: { stoppedExperts: [] } })
+      this.sendTo(connectionId, { type: 'agent:all-stopped', payload: { stoppedExperts: [] } })
       return
     }
     const toStop = this.store.collectByConnection(connectionId)
@@ -292,25 +292,25 @@ export class MissionAgentHandler {
       if (session) session.killReason = 'user_stop'
       expert.acpClient.kill()
       stoppedAgentIds.push(agentId)
-      this.sendTo(connectionId, { type: 'expert:stopped', payload: { agentId, chatId: expert.chatId, exitCode: -1, exitReason: 'user_stop' } })
+      this.sendTo(connectionId, { type: 'agent:stopped', payload: { agentId, chatId: expert.chatId, exitCode: -1, exitReason: 'user_stop' } })
     }
-    this.sendTo(connectionId, { type: 'expert:all-stopped', payload: { stoppedExperts: stoppedAgentIds } })
-    this.sendTo(connectionId, { type: 'expert:list-updated', payload: { experts: this.store.getExpertListForConnection(connectionId, activeChatId), chatId: activeChatId } })
+    this.sendTo(connectionId, { type: 'agent:all-stopped', payload: { stoppedExperts: stoppedAgentIds } })
+    this.sendTo(connectionId, { type: 'agent:list-updated', payload: { agents: this.store.getExpertListForConnection(connectionId, activeChatId), chatId: activeChatId } })
   }
 
   handleList(ws: WebSocket, connectionId: string, chatId?: string): void {
     const activeChatId = chatId || this.connectionActiveChatId.get(connectionId)
     const expertList = this.store.getExpertListForConnection(connectionId, activeChatId)
     sendFrame(ws, {
-      type: 'expert:list',
-      payload: { experts: expertList, chatId: activeChatId },
+      type: 'agent:list',
+      payload: { agents: expertList, chatId: activeChatId },
     })
   }
 
   clearCompleted(connectionId: string, chatId?: string): number {
     const activeChatId = chatId || this.connectionActiveChatId.get(connectionId)
     const count = this.store.clearCompleted(connectionId, activeChatId)
-    this.sendTo(connectionId, { type: 'expert:list-updated', payload: { experts: this.store.getExpertListForConnection(connectionId, activeChatId), chatId: activeChatId } })
+    this.sendTo(connectionId, { type: 'agent:list-updated', payload: { agents: this.store.getExpertListForConnection(connectionId, activeChatId), chatId: activeChatId } })
     return count
   }
 
@@ -335,31 +335,31 @@ export class MissionAgentHandler {
   ): void {
     const chatId = payload.chatId
     if (!chatId) {
-      log.error('expert:permission-response missing chatId', { connectionId, agentId: payload.agentId })
+      log.error('agent:permission-response missing chatId', { connectionId, agentId: payload.agentId })
       sendFrame(ws, {
-        type: 'expert:error',
-        payload: { agentId: payload.agentId, chatId: '', error: 'missing_chat_id', message: 'expert:permission-response payload must carry chatId' },
+        type: 'agent:error',
+        payload: { agentId: payload.agentId, chatId: '', error: 'missing_chat_id', message: 'agent:permission-response payload must carry chatId' },
       })
       return
     }
     const expert = this.store.findRunning(payload.agentId, connectionId, chatId)
     if (!expert) {
       sendFrame(ws, {
-        type: 'expert:error',
+        type: 'agent:error',
         payload: { agentId: payload.agentId, chatId, error: 'not_running', message: `Expert ${payload.agentId} is not running` },
       })
       return
     }
     if (expert.sessionId !== payload.sessionId) {
       sendFrame(ws, {
-        type: 'expert:error',
+        type: 'agent:error',
         payload: { agentId: payload.agentId, chatId, error: 'session_mismatch', message: 'Permission session mismatch' },
       })
       return
     }
     expert.acpClient.handleClientResponse(payload.requestId, payload.outcome)
     this.globalBroadcast({
-      type: 'chat:permission-resolved',
+      type: 'mission.permission-resolved',
       payload: { chatId, requestId: payload.requestId },
     })
   }
@@ -371,8 +371,8 @@ export class MissionAgentHandler {
     const { chatId, text } = payload || ({} as typeof payload)
     if (!chatId || typeof text !== 'string' || text.length === 0) {
       sendFrame(ws, {
-        type: 'expert:error',
-        payload: { agentId: '', chatId: chatId || '', error: 'invalid_payload', message: 'expert:user-input requires { chatId, text }' },
+        type: 'agent:error',
+        payload: { agentId: '', chatId: chatId || '', error: 'invalid_payload', message: 'agent:user-input requires { chatId, text }' },
       })
       return
     }
@@ -387,7 +387,7 @@ export class MissionAgentHandler {
     const agent = target ?? fallback
     if (!agent) {
       sendFrame(ws, {
-        type: 'expert:error',
+        type: 'agent:error',
         payload: { agentId: '', chatId, error: 'no_running_agent', message: `No running agent for chat ${chatId}` },
       })
       return
@@ -396,7 +396,7 @@ export class MissionAgentHandler {
       ? await expandSlashCommand(text, agent.cwd)
       : text
     agent.acpClient.write(expandedText)
-    log.debug('expert:user-input forwarded', { chatId, connectionId, sessionId: agent.sessionId, len: expandedText.length, expanded: expandedText !== text })
+    log.debug('agent:user-input forwarded', { chatId, connectionId, sessionId: agent.sessionId, len: expandedText.length, expanded: expandedText !== text })
   }
 
   /**

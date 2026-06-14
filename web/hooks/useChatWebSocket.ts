@@ -202,7 +202,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
 
         const [wsRes, chatRes, agentsRes] = await Promise.all([
           hasCachedWs ? Promise.resolve(null) : authFetch(`${API_BASE}/api/workspaces/${workspaceId}`),
-          chatId ? authFetch(`${API_BASE}/api/chats/${chatId}`) : Promise.resolve(null),
+          chatId ? authFetch(`${API_BASE}/api/missions/${chatId}`) : Promise.resolve(null),
           hasCachedWs ? Promise.resolve(null) : authFetch(`${API_BASE}/api/agents`),
         ])
 

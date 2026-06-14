@@ -54,7 +54,7 @@ const MobileMissionDetail = () => {
     if (!missionId) return
     try {
       const [chatRes, agentsRes] = await Promise.all([
-        authFetch(`${API_BASE}/api/chats/${missionId}`),
+        authFetch(`${API_BASE}/api/missions/${missionId}`),
         authFetch(`${API_BASE}/api/agents`),
       ])
       if (chatRes.ok) setChat(await chatRes.json())

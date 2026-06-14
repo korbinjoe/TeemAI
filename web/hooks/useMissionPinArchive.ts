@@ -143,7 +143,7 @@ const computeAutoArchived = (chats: Chat[], now: number): Set<string> => {
 
 const putChat = async (chatId: string, body: Record<string, unknown>): Promise<void> => {
   try {
-    await authFetch(`${API_BASE}/api/chats/${chatId}`, {
+    await authFetch(`${API_BASE}/api/missions/${chatId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

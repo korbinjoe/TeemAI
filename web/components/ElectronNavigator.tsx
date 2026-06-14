@@ -20,7 +20,7 @@ export const ElectronNavigator = () => {
 
     const unsubscribe = bridge.onNavigateToChat(async ({ chatId }) => {
       try {
-        const res = await authFetch(`${API_BASE}/api/chats/${chatId}`)
+        const res = await authFetch(`${API_BASE}/api/missions/${chatId}`)
         if (!res.ok) return
         const chat = await res.json() as { id: string; workspaceId: string; title: string }
         getChatTabActions()?.openTab(chat.id, chat.workspaceId, chat.title)

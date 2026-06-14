@@ -246,7 +246,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
     const agentIcon = agent?.icon || ''
 
     sendTo(connectionId, {
-      type: 'expert:started',
+      type: 'agent:started',
       payload: { agentId, chatId, sessionId: cliSessionId, agentName, agentIcon, status: 'completed' },
     })
 
@@ -259,7 +259,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
     )
 
     sendTo(connectionId, {
-      type: 'expert:exit',
+      type: 'agent:exit',
       payload: { agentId, chatId, exitCode: exitCode ?? 0 },
     })
 
@@ -321,7 +321,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
       commandsPromise.then((commands) => {
         if (commands.length === 0) return
         sendTo(connectionId, {
-          type: 'expert:slash-commands',
+          type: 'agent:slash-commands',
           payload: { agentId, chatId, commands },
         })
       })
@@ -342,7 +342,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
       if (!existingSession || !existingSession.streamManager.isAlive()) continue
 
       sendTo(connectionId, {
-        type: 'expert:started',
+        type: 'agent:started',
         payload: {
           agentId,
           chatId,
@@ -382,7 +382,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
 
       const lastActivity = store.getActivity(compositeKey(connectionId, chatId, agentId))
       sendTo(connectionId, {
-        type: 'expert:activity',
+        type: 'agent:activity',
         payload: {
           agentId, chatId, sessionId: existingSession.sessionId,
           startedAt: existingSession.createdAt,
@@ -438,7 +438,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
 
         log.debug('Re-attach sendTo check', { connectionId, oldKey: oldKey ?? 'none', newKey })
         sendTo(connectionId, {
-          type: 'expert:started',
+          type: 'agent:started',
           payload: {
             agentId,
             chatId,
@@ -454,7 +454,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
 
         const lastActivity = store.getActivity(compositeKey(connectionId, chatId, agentId))
         sendTo(connectionId, {
-          type: 'expert:activity',
+          type: 'agent:activity',
           payload: {
             agentId, chatId, sessionId: existingSession.sessionId,
             startedAt: existingSession.createdAt,
@@ -500,7 +500,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
       if (!existsSync(cwd)) {
         log.warn('Resume skipped: original CWD no longer exists', { agentId, cwd })
         sendTo(connectionId, {
-          type: 'expert:resume-failed',
+          type: 'agent:resume-failed',
           payload: {
             agentId,
             chatId,
@@ -521,7 +521,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
       if (provider === 'codex') {
         log.info('Codex resume skipped: rollout not found', { agentId, cliSessionId })
         sendTo(connectionId, {
-          type: 'expert:resume-failed',
+          type: 'agent:resume-failed',
           payload: {
             agentId,
             chatId,
@@ -539,7 +539,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
         if (Date.now() - failRecord.lastFailedAt < SPAWN_FAILURE_COOLDOWN_MS) {
           log.info('Skip resume: spawn failure cooldown', { agentId, failCount: failRecord.count })
           sendTo(connectionId, {
-            type: 'expert:resume-failed',
+            type: 'agent:resume-failed',
             payload: {
               agentId,
               chatId,
@@ -579,7 +579,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
 
           if (isCommandNotFound) {
             sendTo(connectionId, {
-              type: 'expert:resume-failed',
+              type: 'agent:resume-failed',
               payload: {
                 agentId,
                 chatId,
@@ -596,7 +596,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
           const replayed = replayHistoryForDeadSession(connectionId, agentId, chatId, cliSessionId, cwd, failedProvider)
           if (!replayed) {
             sendTo(connectionId, {
-              type: 'expert:resume-failed',
+              type: 'agent:resume-failed',
               payload: {
                 agentId,
                 chatId,

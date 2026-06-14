@@ -1,5 +1,5 @@
 import type { WebSocket } from 'ws'
-import { sendFrame } from './wireCompat'
+import { sendFrame } from './wsFrame'
 import { existsSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
@@ -51,10 +51,10 @@ export const createMissionAgentDirectInput = (deps: MissionAgentDirectInputDeps)
     const { agentId, message, images, autoStart = true } = payload
     const chatId = payload.chatId
     if (!chatId) {
-      log.error('expert:direct-input missing chatId', { connectionId, agentId })
+      log.error('agent:direct-input missing chatId', { connectionId, agentId })
       sendFrame(ws, {
-        type: 'expert:error',
-        payload: { agentId, chatId: '', error: 'missing_chat_id', message: 'expert:direct-input payload must carry chatId' },
+        type: 'agent:error',
+        payload: { agentId, chatId: '', error: 'missing_chat_id', message: 'agent:direct-input payload must carry chatId' },
       })
       return
     }
@@ -69,13 +69,13 @@ export const createMissionAgentDirectInput = (deps: MissionAgentDirectInputDeps)
         titleInProgress.add(chatId)
         const truncated = cleanMessage.length > 50 ? cleanMessage.slice(0, 50) + '…' : cleanMessage
         silentlyIgnore(() => chatStore.update(chatId, { title: truncated }), 'auto-title truncated update')
-        broadcastToChat(chatId, { type: 'chat:title-updated', payload: { chatId, title: truncated } })
+        broadcastToChat(chatId, { type: 'mission.title-updated', payload: { chatId, title: truncated } })
         silentlyIgnore(async () => {
           try {
             const semantic = await titleService.generate(cleanMessage)
             if (semantic) {
               await silentlyIgnore(() => chatStore.update(chatId, { title: semantic }), 'auto-title semantic update')
-              broadcastToChat(chatId, { type: 'chat:title-updated', payload: { chatId, title: semantic } })
+              broadcastToChat(chatId, { type: 'mission.title-updated', payload: { chatId, title: semantic } })
             }
           } finally {
             titleInProgress.delete(chatId)
@@ -114,7 +114,7 @@ export const createMissionAgentDirectInput = (deps: MissionAgentDirectInputDeps)
           log.warn('ACP prompt failed', { agentId, chatId, error: errorMsg })
           trackEvent('agent', 'agent.acp_prompt_failed', { agentId, chatId, error: errorMsg })
           broadcastToChat(chatId, {
-            type: 'expert:error',
+            type: 'agent:error',
             payload: { agentId, chatId, error: 'acp_prompt_failed', message: `Failed to send message: ${errorMsg}` },
           })
         })
@@ -139,7 +139,7 @@ export const createMissionAgentDirectInput = (deps: MissionAgentDirectInputDeps)
 
     if (!autoStart) {
       sendFrame(ws, {
-        type: 'expert:error',
+        type: 'agent:error',
         payload: { agentId, chatId, message: `Expert ${agentId} is not running` },
       })
       return

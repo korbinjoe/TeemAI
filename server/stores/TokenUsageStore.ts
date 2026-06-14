@@ -62,9 +62,9 @@ export class TokenUsageStore extends SqliteBaseStore<TokenUsage> {
     costUsd: number
   }): void {
     this.db.prepare(`
-      INSERT INTO token_usage (id, chat_id, workspace_id, agent_id, model, input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens, cost_usd, turn_count, updated_at)
+      INSERT INTO token_usage (id, mission_id, workspace_id, agent_id, model, input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens, cost_usd, turn_count, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
-      ON CONFLICT(chat_id, agent_id, model) DO UPDATE SET
+      ON CONFLICT(mission_id, agent_id, model) DO UPDATE SET
         input_tokens = excluded.input_tokens,
         output_tokens = excluded.output_tokens,
         cache_read_input_tokens = excluded.cache_read_input_tokens,
@@ -89,15 +89,15 @@ export class TokenUsageStore extends SqliteBaseStore<TokenUsage> {
 
   listByChat(chatId: string): TokenUsage[] {
     const rows = this.db.prepare(
-      'SELECT * FROM token_usage WHERE chat_id = ?'
+      'SELECT * FROM token_usage WHERE mission_id = ?'
     ).all(chatId)
     return rows.map((row) => this.rowToEntity(row as Record<string, unknown>))
   }
 
   summaryByWorkspace(workspaceId: string, since?: string): ModelSummary[] {
     const query = since
-      ? 'SELECT model, SUM(input_tokens) as total_input, SUM(output_tokens) as total_output, SUM(cache_read_input_tokens) as total_cache_read, SUM(cache_creation_input_tokens) as total_cache_creation, SUM(cost_usd) as total_cost, COUNT(DISTINCT chat_id) as chat_count FROM token_usage WHERE workspace_id = ? AND updated_at >= ? GROUP BY model'
-      : 'SELECT model, SUM(input_tokens) as total_input, SUM(output_tokens) as total_output, SUM(cache_read_input_tokens) as total_cache_read, SUM(cache_creation_input_tokens) as total_cache_creation, SUM(cost_usd) as total_cost, COUNT(DISTINCT chat_id) as chat_count FROM token_usage WHERE workspace_id = ? GROUP BY model'
+      ? 'SELECT model, SUM(input_tokens) as total_input, SUM(output_tokens) as total_output, SUM(cache_read_input_tokens) as total_cache_read, SUM(cache_creation_input_tokens) as total_cache_creation, SUM(cost_usd) as total_cost, COUNT(DISTINCT mission_id) as chat_count FROM token_usage WHERE workspace_id = ? AND updated_at >= ? GROUP BY model'
+      : 'SELECT model, SUM(input_tokens) as total_input, SUM(output_tokens) as total_output, SUM(cache_read_input_tokens) as total_cache_read, SUM(cache_creation_input_tokens) as total_cache_creation, SUM(cost_usd) as total_cost, COUNT(DISTINCT mission_id) as chat_count FROM token_usage WHERE workspace_id = ? GROUP BY model'
     const params = since ? [workspaceId, since] : [workspaceId]
     const rows = this.db.prepare(query).all(...params) as Array<Record<string, unknown>>
     return rows.map((r) => ({
@@ -141,7 +141,7 @@ export class TokenUsageStore extends SqliteBaseStore<TokenUsage> {
 
     const placeholders = chatIds.map(() => '?').join(',')
     const rows = this.db.prepare(`
-      SELECT chat_id,
+      SELECT mission_id,
         SUM(input_tokens) as total_input,
         SUM(output_tokens) as total_output,
         SUM(cache_read_input_tokens) as total_cache_read,
@@ -149,12 +149,12 @@ export class TokenUsageStore extends SqliteBaseStore<TokenUsage> {
         SUM(cost_usd) as total_cost,
         GROUP_CONCAT(DISTINCT model) as models
       FROM token_usage
-      WHERE chat_id IN (${placeholders})
-      GROUP BY chat_id
+      WHERE mission_id IN (${placeholders})
+      GROUP BY mission_id
     `).all(...chatIds) as Array<Record<string, unknown>>
 
     for (const r of rows) {
-      result.set(r.chat_id as string, {
+      result.set(r.mission_id as string, {
         totalInput: r.total_input as number,
         totalOutput: r.total_output as number,
         totalCacheRead: (r.total_cache_read as number) || 0,
@@ -168,7 +168,7 @@ export class TokenUsageStore extends SqliteBaseStore<TokenUsage> {
 
   listUnsyncedByChat(chatId: string): TokenUsage[] {
     const rows = this.db.prepare(
-      'SELECT * FROM token_usage WHERE chat_id = ? AND (synced_at IS NULL OR updated_at > synced_at)'
+      'SELECT * FROM token_usage WHERE mission_id = ? AND (synced_at IS NULL OR updated_at > synced_at)'
     ).all(chatId)
     const records = rows.map((row) => this.rowToEntity(row as Record<string, unknown>))
     log.debug('listUnsyncedByChat', { chatId, count: records.length })
@@ -177,16 +177,16 @@ export class TokenUsageStore extends SqliteBaseStore<TokenUsage> {
 
   listUnsyncedChatIds(): string[] {
     const rows = this.db.prepare(
-      'SELECT DISTINCT chat_id FROM token_usage WHERE synced_at IS NULL OR updated_at > synced_at'
-    ).all() as Array<{ chat_id: string }>
-    const ids = rows.map((r) => r.chat_id)
+      'SELECT DISTINCT mission_id FROM token_usage WHERE synced_at IS NULL OR updated_at > synced_at'
+    ).all() as Array<{ mission_id: string }>
+    const ids = rows.map((r) => r.mission_id)
     log.debug('listUnsyncedChatIds', { count: ids.length, chatIds: ids.slice(0, 10) })
     return ids
   }
 
   markSynced(chatId: string): void {
     const result = this.db.prepare(
-      'UPDATE token_usage SET synced_at = ? WHERE chat_id = ?'
+      'UPDATE token_usage SET synced_at = ? WHERE mission_id = ?'
     ).run(new Date().toISOString(), chatId)
     log.debug('markSynced', { chatId, rowsAffected: result.changes })
   }
@@ -194,7 +194,7 @@ export class TokenUsageStore extends SqliteBaseStore<TokenUsage> {
   protected rowToEntity(row: Record<string, unknown>): TokenUsage {
     return {
       id: row.id as string,
-      chatId: row.chat_id as string,
+      chatId: row.mission_id as string,
       workspaceId: row.workspace_id as string,
       agentId: row.agent_id as string,
       model: row.model as string,
@@ -212,7 +212,7 @@ export class TokenUsageStore extends SqliteBaseStore<TokenUsage> {
   protected entityToRow(entity: TokenUsage): Record<string, unknown> {
     return {
       id: entity.id,
-      chat_id: entity.chatId,
+      mission_id: entity.chatId,
       workspace_id: entity.workspaceId,
       agent_id: entity.agentId,
       model: entity.model,

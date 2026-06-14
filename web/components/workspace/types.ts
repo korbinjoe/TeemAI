@@ -3,14 +3,9 @@ import type {
   MissionAgent,
   MissionAgentStatus,
   MissionAgentRole,
-  ChatMember,
-  ChatMemberStatus,
-  ChatMemberRole,
 } from '@shared/chat-types'
 
 export type { MissionAgent, MissionAgentStatus, MissionAgentRole }
-/** @deprecated use MissionAgent* — kept one release for cross-boundary callers */
-export type { ChatMember, ChatMemberStatus, ChatMemberRole }
 
 export interface Repository {
   id: string

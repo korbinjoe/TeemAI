@@ -96,7 +96,7 @@ export const createMissionAgentAttacher = (deps: MissionAgentAttacherDeps) => {
     }
 
     sendTo(connectionId, {
-      type: 'expert:started',
+      type: 'agent:started',
       payload: {
         agentId,
         chatId,
@@ -108,8 +108,8 @@ export const createMissionAgentAttacher = (deps: MissionAgentAttacherDeps) => {
       },
     })
     sendTo(connectionId, {
-      type: 'expert:list-updated',
-      payload: { experts: store.getExpertListForConnection(connectionId, chatId), chatId },
+      type: 'agent:list-updated',
+      payload: { agents: store.getExpertListForConnection(connectionId, chatId), chatId },
     })
 
     const replayMessages = existingSession.acpClient.getCurrentMessages()
@@ -135,7 +135,7 @@ export const createMissionAgentAttacher = (deps: MissionAgentAttacherDeps) => {
 
     const lastActivity = store.getActivity(compositeKey(connectionId, chatId, agentId))
     sendTo(connectionId, {
-      type: 'expert:activity',
+      type: 'agent:activity',
       payload: {
         agentId, chatId, sessionId: existingSession.sessionId,
         startedAt: existingSession.createdAt,

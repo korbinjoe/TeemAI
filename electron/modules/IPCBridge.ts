@@ -128,7 +128,7 @@ export class IPCBridge {
 
   private handleServerMessage(msg: { type: string; payload: unknown }): void {
     switch (msg.type) {
-      case 'chat:activity':
+      case 'mission.activity':
         this.windowManager.sendToAll(IPC_CHANNELS.AGENT_STATUS_UPDATE, msg.payload)
         this.updateTrayFromActivity(msg.payload)
         break
@@ -228,7 +228,7 @@ export class IPCBridge {
 
     if (chatId) {
       try {
-        const res = await fetch(`http://localhost:${this.serverPort}/api/chats/${chatId}`)
+        const res = await fetch(`http://localhost:${this.serverPort}/api/missions/${chatId}`)
         if (res.ok) {
           const chat = await res.json() as { title?: string }
           if (chat.title) label = chat.title

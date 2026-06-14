@@ -66,7 +66,7 @@ Status: **DONE** (per known final state; migration smoke-tested on a real DB cop
 
 ### WS-7 — `chats` table → `missions` consolidation (v27)
 - [x] C7.1 `server/stores/migrations/v27.ts` renames table `chats` → `missions`
-- [ ] C7.2 FK column `chat_id` → `mission_id` rename across tables (`execution_logs`, `cron_job_executions`, etc.) — **DEFERRED**: rollback-unsafe (table-rebuild + FK cascade across multiple tables cannot be cleanly reversed within the v27 compat window); tracked for a later isolated migration
+- [x] C7.2 FK column `chat_id` → `mission_id` rename across tables (`execution_logs`, `cron_job_executions`, `agent_memories`, `token_usage`) — done in `server/stores/migrations/v28.ts` (isolated `RENAME COLUMN`, guarded for re-run / fresh DBs)
 - [x] C7.3 Column `primary_agent_id` → `lead_agent_id` renamed
 - [x] C7.4 Column `expert_sessions` → `mission_agent_sessions` renamed
 - [x] C7.5 Rollback `CREATE VIEW chats AS SELECT … FROM missions` with `INSTEAD OF` triggers added for one-release rollback safety
@@ -127,16 +127,16 @@ Status: **DONE** (verified; tsc clean, exit 0 per known final state).
 
 ## PR-F — Cleanup, next release (🔴) — drop all aliases
 
-Status: **DEFERRED to next release (intentional).**
+Status: **MOSTLY DONE** — F1–F5 dropped this epoch. The single-bundled app
+(Electron ships server+web+CLI together) has no client/server version skew, so the
+release-boundary rationale below no longer applies and the shims were removed.
+F6 is partially done (see note); the value-level `CliProvider`/`qodercli` cascade
+remains deferred (separate item below).
 
-Rationale: every item below removes a compatibility shim that must survive a release
-boundary to avoid version skew between the desktop app, CLI, shell hooks, and the
-server. Dropping them now would break in-flight clients still speaking the old
-contract. Tracked for the next release.
-
-- [ ] F1 Drop `expert:*` WS channels (stop dual-emit/accept in `server/ws/wireCompat.ts`) — **DEFERRED**
-- [ ] F2 Drop legacy `EXPERT_API_BASE` env injection from `ConfigCompiler` (and the shell `${AGENT_API_BASE:-$EXPERT_API_BASE}` fallbacks) — **DEFERRED**
-- [ ] F3 Drop the `chats` rollback view + `INSTEAD OF` triggers from the schema — **DEFERRED**
-- [ ] F4 Drop HTTP route aliases (`/api/chats/*`, `/api/expert*`) once the rewrite alias is no longer needed — **DEFERRED**
-- [ ] F5 Drop the singular `/task/:taskId` → `/mission/:missionId` redirect — **DEFERRED**
-- [ ] F6 Remove deprecated type aliases (`ChatMember*`, `Chat*Payload`, `ChatService`, `ExpertUserInputPayload`) — **DEFERRED**
+- [x] F1 Drop `expert:*` WS channels (stop dual-emit/accept) — verified: zero `'expert:'` channel literals in code
+- [x] F2 Drop legacy `EXPERT_API_BASE` env injection from `ConfigCompiler` (and the shell `${AGENT_API_BASE:-$EXPERT_API_BASE}` fallbacks) — verified: zero `EXPERT_API_BASE` in code (`.ts`/`.tsx`/`.sh`); only docs/specs mention it
+- [x] F3 Drop the `chats` rollback view + `INSTEAD OF` triggers from the schema — done in `v28.ts`; `CREATE VIEW chats` now exists only in v27 (create) + v28 (drop) migration history
+- [x] F4 Drop HTTP route aliases (`/api/chats/*`, `/api/expert*`) — canonical handlers are now `/api/missions/*` and `/api/agent/*`; rewrite-middleware shims removed; all mission-resource clients migrated. (Note: `/api/all-chats`, `/api/workspaces/:id/chats`, and the whiteboard/token-usage routers legitimately keep `/api/chats` — workspace-scoped, not the mission resource.)
+- [x] F5 Drop the singular `/task/:taskId` → `/mission/:missionId` redirect — `LegacyMissionRedirect` + legacy `/chats` redirects removed from `web/App.tsx`
+- [ ] F6 Remove deprecated type aliases — **PARTIAL**: `ChatMember*` removed (`shared/chat-types.ts`). Still **DEFERRED**: `ChatActivityPayload` (`shared/ws/chat.ts`, ~20 importers), `ChatService` (`server/services/chat/ChatService.ts`, used by `index.ts`/`CronScheduler`/routes), `ExpertUserInputPayload` — same class of wide value/type cascade as the `CliProvider` item below; tracked for a follow-up.
+- [ ] F7 Drop the `@deprecated` `CliProvider` union + legacy `qodercli` provider value (collapse to `CliVendor`/`CliTransport`) — **DEFERRED**: `qodercli` is the literal qoder CLI binary + npm package name (`CliAutoInstaller`, `TerminalViewManager`, `ConfigCompiler`, `SessionDiscovery`), so a "zero `qodercli`" sweep is not literally satisfiable; the value-level cascade spans ~13 files incl. web radio/filter values and i18n keys. This is the ~20-file change the spec author deferred via the `@deprecated` comment.

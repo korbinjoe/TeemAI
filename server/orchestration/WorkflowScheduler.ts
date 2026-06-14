@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws'
 import type { WorkflowEngine } from './WorkflowEngine'
 import type { WorkflowRegistry } from './WorkflowRegistry'
-import type { ExpertHandler } from '../ws/ExpertHandler'
+import type { MissionAgentHandler } from '../ws/MissionAgentHandler'
 import type { ChatStore } from '../stores/ChatStore'
 import type { WorkspaceStore } from '../stores/WorkspaceStore'
 import type { SessionRegistry } from '../terminal/SessionRegistry'
@@ -31,7 +31,7 @@ const WATCHDOG_STALE_THRESHOLD_MS = 180_000
 
 export interface WorkflowSchedulerDeps {
   workflowRegistry: WorkflowRegistry
-  expertHandler: ExpertHandler
+  expertHandler: MissionAgentHandler
   chatStore: ChatStore
   workspaceStore: WorkspaceStore
   sessionRegistry: SessionRegistry

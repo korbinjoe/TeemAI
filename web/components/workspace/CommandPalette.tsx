@@ -2,12 +2,12 @@ import { useRef, useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { useDialog } from '../../contexts/DialogContext'
-import { useWorkspaceChats } from '../../hooks/useWorkspaceChats'
+import { useWorkspaceMissions } from '../../hooks/useWorkspaceMissions'
 import { useAgents } from '../../hooks/useAgents'
 import { Search } from './icons'
 import { buildMissionUrl } from './urls'
 import { buildMissionOpenUrl } from './MissionSessionRows'
-import type { Chat, ChatMember } from '../workspace/types'
+import type { Chat, MissionAgent } from '../workspace/types'
 
 interface PaletteEntry {
   type: 'mission' | 'member' | 'action'
@@ -49,7 +49,7 @@ const chatStatusLabel = (chat: Chat): { status: string; time: string } => {
   return { status: String(status), time: formatTimeAgo(chat.lastMessageAt) }
 }
 
-const memberStatusToString = (s: ChatMember['status']): string => {
+const memberStatusToString = (s: MissionAgent['status']): string => {
   if (s === 'idle' || s === 'done') return s
   return s
 }
@@ -61,7 +61,7 @@ const CommandPalette = () => {
     ideCollapsed,
   } = useWorkspace()
   const { commandPaletteOpen, closeCommandPalette, openNewMission } = useDialog()
-  const { chats } = useWorkspaceChats(workspaceId)
+  const { chats } = useWorkspaceMissions(workspaceId)
   const { agentNames } = useAgents()
   const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)

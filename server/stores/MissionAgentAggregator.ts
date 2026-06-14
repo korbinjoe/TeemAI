@@ -1,8 +1,8 @@
 /**
- * MemberAggregator - derive Chat.members[] from live session state.
+ * MissionAgentAggregator - derive Chat.members[] from live session state.
  *
  * Pure read-side enrichment: takes the persisted Chat plus the in-memory
- * SessionRegistry and produces one ChatMember per agent (lead first, then
+ * SessionRegistry and produces one MissionAgent per agent (lead first, then
  * teamAgentIds in order). Status is derived from:
  *   1. active session activity phase (running / waiting / error / done)
  *   2. expertSessions[agentId].exitCode (post-exit done/error)
@@ -14,13 +14,13 @@
  * available.
  */
 
-import type { Chat, ChatMember, ChatMemberRole, ChatMemberStatus } from '../config/types'
+import type { Chat, MissionAgent, MissionAgentRole, MissionAgentStatus } from '../config/types'
 import type { SessionRegistry } from '../terminal/SessionRegistry'
 import type { AgentActivitySnapshot } from '../terminal/ActivityAggregator'
 
 // `waiting` = real block needing user attention (AskUserQuestion / ExitPlanMode).
 // `waiting_input` = agent finished its turn, waiting for user's next message.
-const PHASE_TO_STATUS: Record<string, ChatMemberStatus> = {
+const PHASE_TO_STATUS: Record<string, MissionAgentStatus> = {
   thinking: 'running',
   responding: 'running',
   tool_running: 'running',
@@ -31,7 +31,7 @@ const PHASE_TO_STATUS: Record<string, ChatMemberStatus> = {
   completed: 'done',
 }
 
-const phaseToStatus = (phase: string | undefined): ChatMemberStatus | undefined => {
+const phaseToStatus = (phase: string | undefined): MissionAgentStatus | undefined => {
   if (!phase) return undefined
   return PHASE_TO_STATUS[phase]
 }
@@ -67,10 +67,10 @@ const previewFromActivity = (agentAct: AgentActivitySnapshot | undefined): strin
   return undefined
 }
 
-export class MemberAggregator {
+export class MissionAgentAggregator {
   constructor(private sessionRegistry?: SessionRegistry) {}
 
-  enrich(chat: Chat): ChatMember[] {
+  enrich(chat: Chat): MissionAgent[] {
     const ids = orderedAgentIds(chat)
     const liveByAgent = new Map<string, { cliSessionId?: string }>()
     if (this.sessionRegistry) {
@@ -84,13 +84,13 @@ export class MemberAggregator {
       actByAgent.set(a.agentId, a)
     }
 
-    return ids.map<ChatMember>((agentId) => {
-      const role: ChatMemberRole = agentId === chat.primaryAgentId ? 'lead' : 'worker'
+    return ids.map<MissionAgent>((agentId) => {
+      const role: MissionAgentRole = agentId === chat.primaryAgentId ? 'lead' : 'worker'
       const live = liveByAgent.get(agentId)
       const expert = chat.expertSessions?.[agentId]
       const agentAct = actByAgent.get(agentId)
 
-      let status: ChatMemberStatus = 'idle'
+      let status: MissionAgentStatus = 'idle'
       if (live) {
         status = phaseToStatus(agentAct?.phase) ?? 'running'
       } else if (expert?.exitCode !== undefined) {
@@ -117,8 +117,8 @@ export class MemberAggregator {
    * Running beats waiting so a mission with any active agent shows "running",
    * not "waiting". Yellow only surfaces when every agent has stopped.
    */
-  rollupStatus(members: ChatMember[]): ChatMemberStatus {
-    const priority: ChatMemberStatus[] = ['error', 'running', 'waiting', 'waiting_input', 'done', 'idle']
+  rollupStatus(members: MissionAgent[]): MissionAgentStatus {
+    const priority: MissionAgentStatus[] = ['error', 'running', 'waiting', 'waiting_input', 'done', 'idle']
     for (const p of priority) {
       if (members.some((m) => m.status === p)) return p
     }

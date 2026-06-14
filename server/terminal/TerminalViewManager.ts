@@ -17,8 +17,10 @@ import * as pty from 'node-pty'
 import type { WebSocket } from 'ws'
 import { existsSync } from 'fs'
 import type { SessionRegistry } from './SessionRegistry'
+import { sendFrame } from '../ws/wireCompat'
 import type { ChatStore } from '../stores/ChatStore'
 import { resolveCliCommandAsync, resolveInterpreter } from '../lib/resolveCliCommand'
+import { isQoderVendor } from '../config/types'
 import { createLogger } from '../lib/logger'
 
 const log = createLogger('TerminalViewManager')
@@ -114,8 +116,8 @@ export class TerminalViewManager {
 
     let command: string
     let args: string[]
-    if (provider === 'claude' || provider === 'qoder' || provider === 'qodercli') {
-      command = (provider === 'qoder' || provider === 'qodercli') ? 'qodercli' : 'claude'
+    if (provider === 'claude' || isQoderVendor(provider)) {
+      command = isQoderVendor(provider) ? 'qodercli' : 'claude'
       args = ['--resume', cliSessionId]
     } else {
       this.send(ws, 'expert:error', {
@@ -276,7 +278,7 @@ export class TerminalViewManager {
 
   private send(ws: WebSocket, type: string, payload: Record<string, unknown>): void {
     if (ws.readyState !== 1 /* OPEN */) return
-    try { ws.send(JSON.stringify({ type, payload })) } catch (err) {
+    try { sendFrame(ws, { type, payload }) } catch (err) {
       log.warn('ws.send failed', { type, error: err instanceof Error ? err.message : String(err) })
     }
   }

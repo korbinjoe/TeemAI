@@ -5,7 +5,7 @@ import { cn } from '../../lib/utils'
 import { buildMissionUrl } from './urls'
 import { buildMissionOpenUrl } from './MissionSessionRows'
 import { Maximize } from './icons'
-import type { Chat, ChatMember } from '../workspace/types'
+import type { Chat, MissionAgent } from '../workspace/types'
 
 type AgentStatus = 'running' | 'waiting' | 'waiting_input' | 'error' | 'done' | 'idle'
 
@@ -13,7 +13,7 @@ interface MiniAgentPaneProps {
   /** Real chat — when supplied, the pane derives all display from it (chat-quad mode). */
   chat?: Chat
   /** Member-quad mode: pane represents a single agent within `parentChat`. */
-  member?: ChatMember
+  member?: MissionAgent
   parentChat?: Chat
   /** Fallback display when no real chat is available (used by empty quad slots). */
   agentId?: string
@@ -24,7 +24,7 @@ interface MiniAgentPaneProps {
   messages?: { type: string; text: string; meta?: string }[]
 }
 
-const memberStatusToAgent = (s: ChatMember['status']): AgentStatus => {
+const memberStatusToAgent = (s: MissionAgent['status']): AgentStatus => {
   if (s === 'idle') return 'idle'
   return s
 }
@@ -226,7 +226,7 @@ const ChatBackedPane = ({ chat, isActive, shortcutKey, onSelect, onZoom }: {
 }
 
 const MemberBackedPane = ({ member, parentChat, isActive, shortcutKey }: {
-  member: ChatMember
+  member: MissionAgent
   parentChat: Chat
   isActive: boolean
   shortcutKey?: string

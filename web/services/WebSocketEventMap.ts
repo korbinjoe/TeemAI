@@ -20,7 +20,7 @@ export interface WsReceiveEventMap {
 
   'error': { message?: string }
 
-  'expert:structured-message': {
+  'agent:structured-message': {
     agentId: string
     sessionId: string
     chatId: string
@@ -30,29 +30,29 @@ export interface WsReceiveEventMap {
   }
 
   // Expert Agent
-  'expert:activity': { agentId: string; chatId: string; startedAt?: number; activity: AgentActivity }
-  'expert:started': { agentId: string; chatId: string; agentName: string; sessionId: string; agentIcon: string; status: 'running' | 'completed'; exitCode?: number }
-  'expert:exit': { agentId: string; chatId: string; exitCode?: number }
-  'expert:stopped': { agentId: string; chatId: string; exitCode?: number; exitReason?: 'user_stop' | 'timeout' | 'model_switch' }
-  'expert:data': { agentId: string; chatId: string; sessionId?: string; seq?: number; snapshot?: boolean; data: string; ptySize?: { cols: number; rows: number } }
-  'expert:partial-text': { agentId: string; chatId: string; sessionId?: string; blockIndex: number; text: string }
-  'expert:resume-failed': { agentId: string; chatId: string; agentName: string; reason: string; sessionId?: string; message?: string }
-  'expert:list': { chatId?: string; experts: Array<{ agentId: string; sessionId: string; agentName: string; agentIcon: string; status: 'running' | 'completed'; exitCode?: number; completedAt?: string }> }
-  'expert:list-updated': { chatId?: string; experts: Array<{ agentId: string; sessionId: string; agentName: string; agentIcon: string; status: 'running' | 'completed'; exitCode?: number; completedAt?: string }> }
-  'expert:already-running': { agentId: string; agentName: string; sessionId: string }
-  'expert:start-failed': { agentId: string; chatId: string; exitCode?: number; message?: string }
-  'expert:slash-commands': { agentId: string; chatId: string; commands: string[] }
+  'agent:activity': { agentId: string; chatId: string; startedAt?: number; activity: AgentActivity }
+  'agent:started': { agentId: string; chatId: string; agentName: string; sessionId: string; agentIcon: string; status: 'running' | 'completed'; exitCode?: number }
+  'agent:exit': { agentId: string; chatId: string; exitCode?: number }
+  'agent:stopped': { agentId: string; chatId: string; exitCode?: number; exitReason?: 'user_stop' | 'timeout' | 'model_switch' }
+  'agent:data': { agentId: string; chatId: string; sessionId?: string; seq?: number; snapshot?: boolean; data: string; ptySize?: { cols: number; rows: number } }
+  'agent:partial-text': { agentId: string; chatId: string; sessionId?: string; blockIndex: number; text: string }
+  'agent:resume-failed': { agentId: string; chatId: string; agentName: string; reason: string; sessionId?: string; message?: string }
+  'agent:list': { chatId?: string; agents: Array<{ agentId: string; sessionId: string; agentName: string; agentIcon: string; status: 'running' | 'completed'; exitCode?: number; completedAt?: string }> }
+  'agent:list-updated': { chatId?: string; agents: Array<{ agentId: string; sessionId: string; agentName: string; agentIcon: string; status: 'running' | 'completed'; exitCode?: number; completedAt?: string }> }
+  'agent:already-running': { agentId: string; agentName: string; sessionId: string }
+  'agent:start-failed': { agentId: string; chatId: string; exitCode?: number; message?: string }
+  'agent:slash-commands': { agentId: string; chatId: string; commands: string[] }
 
-  'expert:plan-update': {
+  'agent:plan-update': {
     agentId: string
     chatId: string
     sessionId: string
     plan: { entries: Array<{ content: string; status: 'pending' | 'in_progress' | 'completed'; priority?: 'low' | 'medium' | 'high' }> }
   }
-  'expert:mode-change': { agentId: string; chatId: string; sessionId: string; currentModeId: string }
-  'expert:commands-update': { agentId: string; chatId: string; sessionId: string; availableCommands: string[] }
-  'expert:session-info': { agentId: string; chatId: string; sessionId: string; title?: string; updatedAt?: string }
-  'expert:permission-request': {
+  'agent:mode-change': { agentId: string; chatId: string; sessionId: string; currentModeId: string }
+  'agent:commands-update': { agentId: string; chatId: string; sessionId: string; availableCommands: string[] }
+  'agent:session-info': { agentId: string; chatId: string; sessionId: string; title?: string; updatedAt?: string }
+  'agent:permission-request': {
     agentId: string
     chatId: string
     sessionId: string
@@ -61,11 +61,11 @@ export interface WsReceiveEventMap {
     options: Array<{ optionId: string; name: string; kind: 'allow_once' | 'allow_always' | 'reject_once' | 'reject_always' }>
   }
   // Chat
-  'chat:title-updated': { chatId: string; title: string }
-  'chat:available-commands': { chatId: string; commands: string[] }
-  'chat:meta-updated': { chatId: string; archivedAt: number | null; pinnedAt: number | null }
-  'chat:status-changed': { chatId: string; status: string; taskStatus?: string | null }
-  'chat:activity': {
+  'mission.title-updated': { chatId: string; title: string }
+  'mission.available-commands': { chatId: string; commands: string[] }
+  'mission.meta-updated': { chatId: string; archivedAt: number | null; pinnedAt: number | null }
+  'mission.status-changed': { chatId: string; status: string; taskStatus?: string | null }
+  'mission.activity': {
     chatId: string
     phase: string
     currentTool?: string
@@ -73,13 +73,10 @@ export interface WsReceiveEventMap {
     toolCompleted: number
     cost?: number
     logLine?: string
-    expertActivities?: Array<{ agentId: string; agentName: string; phase: string; currentTool?: string; toolCount: number; toolCompleted: number; cost?: number }>
-    /** Server's actual key for per-agent activity. Prefer over `expertActivities`
-     *  (which is a legacy alias the server never populates). */
     agentActivities?: Array<{ agentId: string; agentName: string; phase: string; currentTool?: string; toolCount: number; toolCompleted: number; cost?: number }>
     latestMessage?: { role: 'user' | 'agent' | 'assistant'; text: string; at: number }
   }
-  'chat:permission-request': {
+  'mission.permission-request': {
     agentId: string
     chatId: string
     sessionId: string
@@ -88,7 +85,7 @@ export interface WsReceiveEventMap {
     options: Array<{ optionId: string; name: string; kind: 'allow_once' | 'allow_always' | 'reject_once' | 'reject_always' }>
   }
   /** sidebar  Tab  PermissionModal  */
-  'chat:permission-resolved': { chatId: string; requestId: string }
+  'mission.permission-resolved': { chatId: string; requestId: string }
 
   // Whiteboard（chat War room）
   'whiteboard:entry-added': {
@@ -184,14 +181,14 @@ export interface WsReceiveEventMap {
 }
 
 export interface WsSendEventMap {
-  'chat:set-context': { chatId: string | undefined }
-  'chat:resume-experts': { chatId: string | undefined }
-  'expert:direct-input': { chatId: string; agentId: string; message: string; images?: Array<{ data: string; mediaType: string }>; autoStart?: boolean; cwd?: string; cols?: number; rows?: number }
-  'expert:input': { chatId: string; agentId: string; data: string }
-  'expert:stop': { chatId: string; agentId: string }
-  'expert:resize': { chatId: string; agentId: string; cols: number; rows: number }
-  'expert:list': { chatId: string | undefined }
-  'expert:clear-completed': { chatId: string | undefined }
+  'mission:set-context': { chatId: string | undefined }
+  'mission:resume-agents': { chatId: string | undefined }
+  'agent:direct-input': { chatId: string; agentId: string; message: string; images?: Array<{ data: string; mediaType: string }>; autoStart?: boolean; cwd?: string; cols?: number; rows?: number }
+  'agent:input': { chatId: string; agentId: string; data: string }
+  'agent:stop': { chatId: string; agentId: string }
+  'agent:resize': { chatId: string; agentId: string; cols: number; rows: number }
+  'agent:list': { chatId: string | undefined }
+  'agent:clear-completed': { chatId: string | undefined }
   'sensei:upgrade': { agentId: string; markdown: string }
   'sensei:cancel': { agentId: string }
   'sensei:generate': { agentId: string; description: string }
@@ -204,7 +201,7 @@ export interface WsSendEventMap {
   'shell:input': { shellId: string; data: string }
   'shell:resize': { shellId: string; cols: number; rows: number }
   'shell:destroy': { shellId: string }
-  'expert:permission-response': {
+  'agent:permission-response': {
     agentId: string
     chatId: string
     sessionId: string
@@ -212,7 +209,7 @@ export interface WsSendEventMap {
     outcome: { outcome: 'selected'; optionId: string } | { outcome: 'cancelled' }
   }
   /** sidebar  chatId + text chat  waiting_input  agent */
-  'expert:user-input': { chatId: string; text: string }
+  'agent:user-input': { chatId: string; text: string }
   'git:subscribe': { chatId: string; path: string }
   'git:unsubscribe': { chatId: string; path: string }
 }

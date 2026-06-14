@@ -7,7 +7,7 @@ import type { ChatService } from '../../services/chat/ChatService'
 import type { TokenUsageStore } from '../../stores/TokenUsageStore'
 import type { Chat } from '../../config/types'
 import type { SessionRegistry } from '../../terminal/SessionRegistry'
-import { MemberAggregator } from '../../stores/MemberAggregator'
+import { MissionAgentAggregator } from '../../stores/MissionAgentAggregator'
 import { WorktreeManager } from '../../git/WorktreeManager'
 import { createLogger } from '../../lib/logger'
 import { cwdToCliProjectKey } from '../../../shared/projectKey'
@@ -49,9 +49,20 @@ const pickUpdatableFields = (body: Record<string, unknown>): Partial<Chat> => {
   return updates as Partial<Chat>
 }
 
-export const createChatRoutes = ({ chatStore, chatService, tokenUsageStore, sessionRegistry, broadcast }: ChatRouteDeps): Router => {
+export const createMissionRoutes = ({ chatStore, chatService, tokenUsageStore, sessionRegistry, broadcast }: ChatRouteDeps): Router => {
   const router = Router()
-  const memberAggregator = new MemberAggregator(sessionRegistry)
+  const memberAggregator = new MissionAgentAggregator(sessionRegistry)
+
+  // PR-D alias: canonical prefix is /api/missions/*; rewrite to legacy /api/chats/*
+  // handlers (kept internal until PR-F). /api/chats/* continues to work directly.
+  router.use((req, _res, next) => {
+    if (req.url.startsWith('/api/missions/')) {
+      req.url = '/api/chats/' + req.url.slice('/api/missions/'.length)
+    } else if (req.url === '/api/missions') {
+      req.url = '/api/chats'
+    }
+    next()
+  })
 
   const enrichWithMembers = <T extends Chat>(chats: T[]): T[] => {
     return chats.map((chat) => ({ ...chat, members: memberAggregator.enrich(chat) }))
@@ -269,3 +280,6 @@ export const createChatRoutes = ({ chatStore, chatService, tokenUsageStore, sess
 
   return router
 }
+
+/** @deprecated PR-D: use createMissionRoutes (mounts /api/missions* + /api/chats* alias). */
+export const createChatRoutes = createMissionRoutes

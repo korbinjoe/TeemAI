@@ -3,7 +3,7 @@ import { API_BASE, authFetch } from '@/config/api'
 import { getWebSocketClient } from '@/services/WebSocketClient'
 import type { ChatActivityPayload } from '@/types/chat'
 import type { Chat } from '@/components/workspace/types'
-import { ACTIVE_PHASES, reconcileMembersFromActivity } from '@/lib/memberStatus'
+import { ACTIVE_PHASES, reconcileAgentsFromActivity } from '@/lib/agentStatus'
 
 export const useMobileMissions = () => {
   const [missions, setMissions] = useState<Chat[]>([])
@@ -74,7 +74,7 @@ export const useMobileMissions = () => {
             updated.status = 'running'
             updated.waitingReason = undefined
           }
-          updated.members = reconcileMembersFromActivity(c.members, payload)
+          updated.members = reconcileAgentsFromActivity(c.members, payload)
           return updated
         }),
       )
@@ -86,17 +86,17 @@ export const useMobileMissions = () => {
       )
     }
 
-    ws.on('chat:status-changed', handleStatusChanged)
-    ws.on('chat:activity', handleActivity)
-    ws.on('chat:title-updated', handleTitleUpdated)
+    ws.on('mission.status-changed', handleStatusChanged)
+    ws.on('mission.activity', handleActivity)
+    ws.on('mission.title-updated', handleTitleUpdated)
 
     const handleVisibility = () => { if (!document.hidden) void refresh() }
     document.addEventListener('visibilitychange', handleVisibility)
 
     return () => {
-      ws.off('chat:status-changed', handleStatusChanged)
-      ws.off('chat:activity', handleActivity)
-      ws.off('chat:title-updated', handleTitleUpdated)
+      ws.off('mission.status-changed', handleStatusChanged)
+      ws.off('mission.activity', handleActivity)
+      ws.off('mission.title-updated', handleTitleUpdated)
       document.removeEventListener('visibilitychange', handleVisibility)
     }
   }, [refresh])

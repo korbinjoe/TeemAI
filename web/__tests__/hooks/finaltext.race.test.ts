@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createExpertEventHandlers } from '../../hooks/useExpertEvents'
+import { createAgentEventHandlers } from '../../hooks/useAgentEvents'
 import type { AgentActivity, Message } from '../../types/chat'
 import type { AgentMessagesMap } from '../../hooks/useAgentMessages'
 
@@ -44,7 +44,7 @@ describe('final-text end-of-turn race', () => {
 
   it('A: partial chunks → committed text delta → stats delta (committed present)', () => {
     const ctx = createMockCtx()
-    const h = createExpertEventHandlers(ctx)
+    const h = createAgentEventHandlers(ctx)
     // partial-text streams
     for (const c of ['已提交', '并推送', '。`86f6464']) {
       h.handleExpertPartialText({ agentId: A, chatId: 'chat-1', blockIndex: 0, text: c })
@@ -60,7 +60,7 @@ describe('final-text end-of-turn race', () => {
 
   it('B: partial chunks flush FIRST, then committed text + stats', () => {
     const ctx = createMockCtx()
-    const h = createExpertEventHandlers(ctx)
+    const h = createAgentEventHandlers(ctx)
     for (const c of ['已提交', '并推送', '。`86f6464']) {
       h.handleExpertPartialText({ agentId: A, chatId: 'chat-1', blockIndex: 0, text: c })
     }
@@ -73,7 +73,7 @@ describe('final-text end-of-turn race', () => {
 
   it('C: partial chunks buffered, then ONLY stats delta arrives (no committed text delta)', () => {
     const ctx = createMockCtx()
-    const h = createExpertEventHandlers(ctx)
+    const h = createAgentEventHandlers(ctx)
     // user watched the FULL final reply stream in via partial chunks
     for (let i = 0; i < FINAL.length; i += 20) {
       h.handleExpertPartialText({ agentId: A, chatId: 'chat-1', blockIndex: 0, text: FINAL.slice(i, i + 20) })

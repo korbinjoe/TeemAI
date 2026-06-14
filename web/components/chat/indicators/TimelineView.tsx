@@ -14,7 +14,7 @@ import {
 import type { Message } from '@/types/chat'
 import { formatTokens } from '@/utils/format'
 import ImageMessage, { extractGeneratedImages, stripImageMarkers } from '../messages/ImageMessage'
-import ExpertProgressBlock from './ExpertProgressView'
+import ExpertProgressBlock from './AgentProgressView'
 import AskUserQuestionCard from '../messages/AskUserQuestionCard'
 import PlanApprovalCard from '../messages/PlanApprovalCard'
 import TodoWriteCard from '../messages/TodoWriteCard'

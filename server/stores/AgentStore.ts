@@ -1,5 +1,5 @@
 import { SqliteBaseStore } from './SqliteBaseStore'
-import type { Agent, CliProvider } from '../config/types'
+import type { Agent, CliProvider, CliTransport, CliSurface } from '../config/types'
 import { randomUUID } from 'crypto'
 import { createLogger } from '../lib/logger'
 
@@ -24,6 +24,23 @@ export const slugify = (name: string): string => {
 
 export const generateAgentId = (): string => {
   return randomUUID().replace(/-/g, '').slice(0, 8)
+}
+
+/**
+ * Normalize a stored provider triple onto the WS-3 axes. The v27 migration
+ * already rewrites persisted rows, but a rolled-back prior binary may still write
+ * legacy `acp`/`qodercli` values during the alias window — this keeps reads
+ * consistent regardless of which binary last wrote the row.
+ */
+const normalizeProviderAxes = (
+  provider: CliProvider | undefined,
+  transport: CliTransport | undefined,
+  surface: CliSurface | undefined
+): { provider?: CliProvider; transport?: CliTransport; surface?: CliSurface } => {
+  if (provider === 'acp') return { provider: 'claude', transport: transport ?? 'acp', surface }
+  if (provider === 'qodercli') return { provider: 'qoder', transport, surface: surface ?? 'cli' }
+  if (provider === 'qoder') return { provider, transport, surface: surface ?? 'cli' }
+  return { provider, transport, surface }
 }
 
 export class AgentStore extends SqliteBaseStore<Agent> {
@@ -110,7 +127,11 @@ export class AgentStore extends SqliteBaseStore<Agent> {
       hooks: row.hooks ? JSON.parse(row.hooks as string) : undefined,
       subAgentNames: row.sub_agent_names ? JSON.parse(row.sub_agent_names as string) : undefined,
       personality: row.personality ? JSON.parse(row.personality as string) : undefined,
-      provider: row.provider as CliProvider | undefined,
+      ...normalizeProviderAxes(
+        row.provider as CliProvider | undefined,
+        row.transport as CliTransport | undefined,
+        row.surface as CliSurface | undefined
+      ),
       tags: JSON.parse(row.tags as string),
       source: row.source as 'builtin' | 'user',
       createdAt: row.created_at as string,
@@ -135,6 +156,8 @@ export class AgentStore extends SqliteBaseStore<Agent> {
       sub_agent_names: entity.subAgentNames ? JSON.stringify(entity.subAgentNames) : null,
       personality: entity.personality ? JSON.stringify(entity.personality) : null,
       provider: entity.provider ?? null,
+      transport: entity.transport ?? null,
+      surface: entity.surface ?? null,
       tags: JSON.stringify(entity.tags ?? []),
       source: entity.source,
       created_at: entity.createdAt,

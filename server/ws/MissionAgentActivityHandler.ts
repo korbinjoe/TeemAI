@@ -1,22 +1,22 @@
 import type { ActivityState } from '../terminal/ActivityDeriver'
-import type { ExpertSessionStore } from './ExpertSessionStore'
+import type { MissionAgentSessionStore } from './MissionAgentSessionStore'
 import type { SessionRegistry } from '../terminal/SessionRegistry'
 import type { FileOperationCollector } from '../terminal/FileOperationCollector'
-import type { ExpertTokenTracker } from './ExpertTokenTracker'
+import type { MissionAgentTokenTracker } from './MissionAgentTokenTracker'
 import { getGitWatchManager } from '../git/GitWatchManager'
 import { createLogger } from '../lib/logger'
 
 const log = createLogger('Expert')
 
 export interface ActivityHandlerContext {
-  store: ExpertSessionStore
+  store: MissionAgentSessionStore
   sessionRegistry: SessionRegistry
   sessionId: string
   key: string
   agentId: string
   chatId: string
   fileCollector: FileOperationCollector
-  tokenTracker: ExpertTokenTracker
+  tokenTracker: MissionAgentTokenTracker
 }
 
 export const createActivityHandler = (ctx: ActivityHandlerContext) => {

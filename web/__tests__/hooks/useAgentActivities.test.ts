@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useExpertActivities } from '../../hooks/useExpertActivities'
+import { useAgentActivities } from '../../hooks/useAgentActivities'
 import type { AgentActivity } from '../../types/chat'
 
 const activity = (overrides: Partial<AgentActivity> = {}): AgentActivity => ({
@@ -14,18 +14,18 @@ const activity = (overrides: Partial<AgentActivity> = {}): AgentActivity => ({
   ...overrides,
 })
 
-describe('useExpertActivities', () => {
+describe('useAgentActivities', () => {
   beforeEach(() => { vi.useFakeTimers() })
   afterEach(() => { vi.useRealTimers() })
 
   it('initial status is empty', () => {
-    const { result } = renderHook(() => useExpertActivities())
+    const { result } = renderHook(() => useAgentActivities())
     expect(result.current.expertActivities).toEqual({})
     expect(result.current.currentMergedActivity).toBeNull()
   })
 
   it('single expert activity → merged reflects directly', () => {
-    const { result } = renderHook(() => useExpertActivities())
+    const { result } = renderHook(() => useAgentActivities())
     act(() => {
       result.current.setExpertActivities({ agent1: activity({ phase: 'tool_running', toolCount: 3, toolCompleted: 1 }) })
     })
@@ -34,7 +34,7 @@ describe('useExpertActivities', () => {
   })
 
   it('multiple experts → phase merged by priority', () => {
-    const { result } = renderHook(() => useExpertActivities())
+    const { result } = renderHook(() => useAgentActivities())
     act(() => {
       result.current.setExpertActivities({
         agent1: activity({ phase: 'completed' }),
@@ -46,7 +46,7 @@ describe('useExpertActivities', () => {
   })
 
   it('multiple experts → toolCount / cost accumulated', () => {
-    const { result } = renderHook(() => useExpertActivities())
+    const { result } = renderHook(() => useAgentActivities())
     act(() => {
       result.current.setExpertActivities({
         a1: activity({ toolCount: 5, toolCompleted: 3, cost: 0.01 }),
@@ -59,7 +59,7 @@ describe('useExpertActivities', () => {
   })
 
   it('All completed + toolCompleted > 0 → Trigger showCompletion', () => {
-    const { result } = renderHook(() => useExpertActivities())
+    const { result } = renderHook(() => useAgentActivities())
     act(() => {
       result.current.setExpertActivities({
         a1: activity({ phase: 'completed', toolCompleted: 5 }),
@@ -69,7 +69,7 @@ describe('useExpertActivities', () => {
   })
 
   it('cleaned up 30s after completed', () => {
-    const { result } = renderHook(() => useExpertActivities())
+    const { result } = renderHook(() => useAgentActivities())
     act(() => {
       result.current.setExpertActivities({
         a1: activity({ phase: 'completed', toolCompleted: 1 }),

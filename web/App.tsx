@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { ElectronNavigator } from './components/ElectronNavigator'
 import WorkspaceRedirect from './components/workspace/WorkspaceRedirect'
-import { WorkspaceChatsProvider } from './hooks/useWorkspaceChats'
+import { WorkspaceChatsProvider } from './hooks/useWorkspaceMissions'
 
 const WorkspaceLayout = lazy(() => import('./layouts/WorkspaceLayout'))
 const ResourceLayout = lazy(() => import('./layouts/ResourceLayout'))

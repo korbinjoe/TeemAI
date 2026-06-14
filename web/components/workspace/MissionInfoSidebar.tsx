@@ -6,7 +6,7 @@ import { useWhiteboard } from '../../hooks/useWhiteboard'
 import { useWorkspaceMeta } from '../../hooks/useWorkspaceMeta'
 import { Plus } from './icons'
 import { cn } from '../../lib/utils'
-import { memberStatusDot } from './MissionSessionRows'
+import { agentStatusDot } from './MissionSessionRows'
 
 const MissionInfoSidebar = () => {
   const { workspaceId, activeChatId, selectAgent } = useWorkspace()
@@ -49,7 +49,7 @@ const MissionInfoSidebar = () => {
             className="w-full flex items-center gap-1.5 mb-1.5 p-1 px-1.5 rounded-[5px] bg-accent-purple/[0.04] hover:bg-accent-purple/[0.08] text-left"
             onClick={() => selectAgent(lead.agentId)}
           >
-            <span className={cn('w-[7px] h-[7px] rounded-full', memberStatusDot(lead.status))} />
+            <span className={cn('w-[7px] h-[7px] rounded-full', agentStatusDot(lead.status))} />
             <span className="text-[12px] font-medium text-text-primary flex-1 truncate">
               {agentNames[lead.agentId] ?? lead.agentId}
             </span>
@@ -65,7 +65,7 @@ const MissionInfoSidebar = () => {
           >
             <span className="absolute left-[6px] top-0 bottom-0 w-px bg-border" />
             <span className="text-[10px] text-text-muted">↳</span>
-            <span className={cn('w-1.5 h-1.5 rounded-full', memberStatusDot(m.status))} />
+            <span className={cn('w-1.5 h-1.5 rounded-full', agentStatusDot(m.status))} />
             <span className="text-[12px] text-text-secondary flex-1 truncate">
               {agentNames[m.agentId] ?? m.agentId}
             </span>

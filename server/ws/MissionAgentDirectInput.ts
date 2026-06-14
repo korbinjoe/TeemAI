@@ -1,9 +1,10 @@
 import type { WebSocket } from 'ws'
+import { sendFrame } from './wireCompat'
 import { existsSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
-import type { ExpertSessionStore, ExpertEntry } from './ExpertSessionStore'
-import { compositeKey } from './ExpertSessionStore'
+import type { MissionAgentSessionStore, MissionAgentEntry } from './MissionAgentSessionStore'
+import { compositeKey } from './MissionAgentSessionStore'
 import type { ChatStore } from '../stores/ChatStore'
 import type { SessionRegistry } from '../terminal/SessionRegistry'
 import type { ChatTitleService } from '../services/chat/ChatTitleService'
@@ -26,18 +27,18 @@ type StartPayload = {
   previousContext?: { agentName: string; lastMessage?: string; jsonlPath?: string }
 }
 
-export interface ExpertDirectInputDeps {
-  store: ExpertSessionStore
+export interface MissionAgentDirectInputDeps {
+  store: MissionAgentSessionStore
   chatStore: ChatStore
   sessionRegistry: SessionRegistry
   titleService: ChatTitleService
   broadcastToChat: (chatId: string, msg: Record<string, unknown>) => void
-  ensureAttachedRunning: (ws: WebSocket, chatId: string, agentId: string, connectionId: string) => ExpertEntry | undefined
+  ensureAttachedRunning: (ws: WebSocket, chatId: string, agentId: string, connectionId: string) => MissionAgentEntry | undefined
   trackParticipant: (agentId: string, connectionId: string, chatId: string) => void
   handleStart: (ws: WebSocket, payload: StartPayload, connectionId: string) => Promise<{ started: boolean; sessionId?: string; method?: string }>
 }
 
-export const createExpertDirectInput = (deps: ExpertDirectInputDeps) => {
+export const createMissionAgentDirectInput = (deps: MissionAgentDirectInputDeps) => {
   const { store, chatStore, titleService, broadcastToChat, ensureAttachedRunning, trackParticipant, handleStart } = deps
 
   const titleInProgress = new Set<string>()
@@ -51,10 +52,10 @@ export const createExpertDirectInput = (deps: ExpertDirectInputDeps) => {
     const chatId = payload.chatId
     if (!chatId) {
       log.error('expert:direct-input missing chatId', { connectionId, agentId })
-      ws.send(JSON.stringify({
+      sendFrame(ws, {
         type: 'expert:error',
         payload: { agentId, chatId: '', error: 'missing_chat_id', message: 'expert:direct-input payload must carry chatId' },
-      }))
+      })
       return
     }
     const key = compositeKey(connectionId, chatId, agentId)
@@ -137,10 +138,10 @@ export const createExpertDirectInput = (deps: ExpertDirectInputDeps) => {
     }
 
     if (!autoStart) {
-      ws.send(JSON.stringify({
+      sendFrame(ws, {
         type: 'expert:error',
         payload: { agentId, chatId, message: `Expert ${agentId} is not running` },
-      }))
+      })
       return
     }
 

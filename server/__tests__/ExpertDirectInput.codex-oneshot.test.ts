@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createExpertDirectInput } from '../ws/ExpertDirectInput'
-import { ExpertSessionStore, compositeKey } from '../ws/ExpertSessionStore'
+import { createMissionAgentDirectInput } from '../ws/MissionAgentDirectInput'
+import { MissionAgentSessionStore, compositeKey } from '../ws/MissionAgentSessionStore'
 
 const makeWs = () => ({ send: vi.fn(), readyState: 1 }) as any
 
 describe('ExpertDirectInput codex session reuse', () => {
   it('sends message to alive codex session via prompt (same as claude)', async () => {
-    const store = new ExpertSessionStore()
+    const store = new MissionAgentSessionStore()
     const connId = 'conn-1'
     const chatId = 'chat-1'
     const agentId = 'agent-1'
@@ -39,7 +39,7 @@ describe('ExpertDirectInput codex session reuse', () => {
 
     const handleStart = vi.fn(async () => ({ started: true, method: 'spawned' }))
 
-    const { handleDirectInput } = createExpertDirectInput({
+    const { handleDirectInput } = createMissionAgentDirectInput({
       store,
       chatStore: {
         get: vi.fn(() => ({ id: chatId, title: 'Existing Title' })),

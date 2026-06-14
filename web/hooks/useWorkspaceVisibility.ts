@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { API_BASE, authFetch } from '@/config/api'
-import type { WorkspaceLite } from './useAllChats'
+import type { WorkspaceLite } from './useAllMissions'
 
 const LEGACY_STORAGE_KEY = 'teemai:v2:hiddenWorkspaces'
 const MIGRATION_FLAG_KEY = 'teemai:v2:hiddenWorkspaces:serverMigrated'

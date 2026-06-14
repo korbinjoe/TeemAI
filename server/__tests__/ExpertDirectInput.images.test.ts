@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createExpertDirectInput } from '../ws/ExpertDirectInput'
-import { ExpertSessionStore, compositeKey } from '../ws/ExpertSessionStore'
-import type { ExpertDirectInputDeps } from '../ws/ExpertDirectInput'
+import { createMissionAgentDirectInput } from '../ws/MissionAgentDirectInput'
+import { MissionAgentSessionStore, compositeKey } from '../ws/MissionAgentSessionStore'
+import type { MissionAgentDirectInputDeps } from '../ws/MissionAgentDirectInput'
 
 const makeWs = () => ({ send: vi.fn(), readyState: 1 }) as any
 
@@ -22,7 +22,7 @@ const makeAliveAcpClient = () => ({
 })
 
 describe('ExpertDirectInput images transit', () => {
-  let store: ExpertSessionStore
+  let store: MissionAgentSessionStore
   let handleStart: ReturnType<typeof vi.fn>
   let broadcastToChat: ReturnType<typeof vi.fn>
   let trackParticipant: ReturnType<typeof vi.fn>
@@ -37,14 +37,14 @@ describe('ExpertDirectInput images transit', () => {
   ]
 
   beforeEach(() => {
-    store = new ExpertSessionStore()
+    store = new MissionAgentSessionStore()
     handleStart = vi.fn(async () => {})
     broadcastToChat = vi.fn()
     trackParticipant = vi.fn()
     ensureAttachedRunning = vi.fn(() => undefined)
   })
 
-  const buildDeps = (overrides: Partial<ExpertDirectInputDeps> = {}): ExpertDirectInputDeps => ({
+  const buildDeps = (overrides: Partial<MissionAgentDirectInputDeps> = {}): MissionAgentDirectInputDeps => ({
     store,
     chatStore: makeChatStore(),
     sessionRegistry: { get: vi.fn(), remove: vi.fn(), findByChat: vi.fn() } as any,
@@ -57,7 +57,7 @@ describe('ExpertDirectInput images transit', () => {
   })
 
   it('cold start forwards images to handleStart', async () => {
-    const { handleDirectInput } = createExpertDirectInput(buildDeps())
+    const { handleDirectInput } = createMissionAgentDirectInput(buildDeps())
 
     await handleDirectInput(makeWs(), {
       chatId, agentId, message: 'look at this',
@@ -81,7 +81,7 @@ describe('ExpertDirectInput images transit', () => {
     })
     ensureAttachedRunning.mockReturnValue(store.get(key))
 
-    const { handleDirectInput } = createExpertDirectInput(buildDeps())
+    const { handleDirectInput } = createMissionAgentDirectInput(buildDeps())
     await handleDirectInput(makeWs(), {
       chatId, agentId, message: 'second message',
       images: sampleImages, autoStart: true,
@@ -98,7 +98,7 @@ describe('ExpertDirectInput images transit', () => {
   })
 
   it('cold start without images leaves field undefined', async () => {
-    const { handleDirectInput } = createExpertDirectInput(buildDeps())
+    const { handleDirectInput } = createMissionAgentDirectInput(buildDeps())
 
     await handleDirectInput(makeWs(), {
       chatId, agentId, message: 'plain text', autoStart: true,

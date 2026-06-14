@@ -25,8 +25,8 @@ OpenTeam is **the operating system for AI super-individuals** — enabling one p
 |------|-------------|
 | `@/` | Vite path alias, points to `web/` |
 | `~/.teemai/` | Runtime data root (DB, Agent workspace, temp files) |
-| `~/.teemai/openteam.db` | SQLite database, schema versioned via `server/stores/migrations/` |
-| `openteam.json` | Project-level Agent team config (Agent list, default model, Provider) |
+| `~/.teemai/teemai.db` | SQLite database, schema versioned via `server/stores/migrations/` |
+| `teemai.json` | Project-level Agent team config (Agent list, default model, Provider) |
 | `ai-assets/` | Bundled resources: Agent definition MDs, MCP servers, Skills, Hook scripts |
 | `shared/` | Shared types between frontend and backend (`ws-types.ts`, `ports.ts`) |
 

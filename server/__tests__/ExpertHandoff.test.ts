@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { createExpertRoutes } from '../routes/agent/expertRoutes'
-import { ExpertSessionStore, compositeKey, type ExpertEntry } from '../ws/ExpertSessionStore'
+import { createExpertRoutes } from '../routes/agent/missionAgentRoutes'
+import { MissionAgentSessionStore, compositeKey, type MissionAgentEntry } from '../ws/MissionAgentSessionStore'
 import type { Router } from 'express'
 
 vi.mock('../lib/logger', () => ({
@@ -16,7 +16,7 @@ vi.mock('../runtime/SlashCommandResolver', () => ({
   expandSlashCommand: vi.fn().mockImplementation((task: string) => Promise.resolve(task)),
 }))
 
-function makeExpertEntry(agentId: string, connectionId: string, chatId: string): ExpertEntry {
+function makeExpertEntry(agentId: string, connectionId: string, chatId: string): MissionAgentEntry {
   return {
     sessionId: `sess-${agentId}`,
     acpClient: {
@@ -40,11 +40,11 @@ interface MockDeps {
   whiteboardManager: any
   workflowRegistry: any
   broadcastToChat: any
-  store: ExpertSessionStore
+  store: MissionAgentSessionStore
 }
 
 function createMockDeps(): MockDeps {
-  const store = new ExpertSessionStore()
+  const store = new MissionAgentSessionStore()
 
   const expertHandler = {
     getExpertStore: () => store,

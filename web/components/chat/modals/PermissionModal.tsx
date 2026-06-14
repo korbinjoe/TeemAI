@@ -69,7 +69,7 @@ const PermissionModal = ({ request, onResolved }: Props) => {
   const sendResponse = (outcome: { outcome: 'selected'; optionId: string } | { outcome: 'cancelled' }) => {
     if (submitting) return
     setSubmitting(true)
-    getWebSocketClient().send('expert:permission-response', {
+    getWebSocketClient().send('agent:permission-response', {
       agentId: request.agentId,
       chatId: request.chatId,
       sessionId: request.sessionId,

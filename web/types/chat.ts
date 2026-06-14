@@ -131,33 +131,7 @@ export interface WorktreeSession {
   createdAt: string
 }
 
-export interface ExpertActivitySnapshot {
-  agentId: string
-  agentName: string
-  phase: string
-  currentTool?: string
-  toolCount: number
-  toolCompleted: number
-  cost?: number
-}
-
-/** Dashboard /  Chat Lead + Experts  */
-export interface ChatActivityPayload {
-  chatId: string
-  phase: string
-  currentTool?: string
-  toolCount: number
-  toolCompleted: number
-  cost?: number
-  logLine?: string
-  exitReason?: 'user_stop' | 'timeout' | 'model_switch'
-  expertActivities?: ExpertActivitySnapshot[]
-  /** Server's actual field name for per-agent activity (see ActivityAggregator).
-   *  `expertActivities` above is a legacy alias that the server never populates;
-   *  consumers should prefer `agentActivities`. */
-  agentActivities?: ExpertActivitySnapshot[]
-  latestMessage?: { role: 'user' | 'agent' | 'assistant'; text: string; at: number }
-}
+export type { AgentActivitySnapshot, ChatActivityPayload } from '@shared/ws/chat'
 /** localStorage  messages/groupActivities */
 export interface HistoryMetadata {
   sessionId: string

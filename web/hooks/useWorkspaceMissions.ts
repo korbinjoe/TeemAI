@@ -1,5 +1,5 @@
 /**
- * useWorkspaceChats — Live list of chats belonging to a workspace, used as
+ * useWorkspaceMissions — Live list of chats belonging to a workspace, used as
  * the "missions" data source in workspace sidebar/cards.
  *
  * Backed by a single shared provider (WorkspaceChatsProvider) that owns one
@@ -27,7 +27,7 @@ import { API_BASE, authFetch } from '@/config/api'
 import { getWebSocketClient } from '@/services/WebSocketClient'
 import type { ChatActivityPayload } from '@/types/chat'
 import type { Chat } from '@/components/workspace/types'
-import { ACTIVE_PHASES, reconcileMembersFromActivity } from '@/lib/memberStatus'
+import { ACTIVE_PHASES, reconcileAgentsFromActivity } from '@/lib/agentStatus'
 
 const WAITING_TASK_STATUSES = new Set(['waiting_input', 'waiting_confirm'])
 
@@ -156,7 +156,7 @@ export const WorkspaceChatsProvider = ({ children }: { children: ReactNode }) =>
             updated.waitingReason = payload.latestMessage?.text
           }
           else if (ACTIVE_PHASES.has(phase)) { updated.status = 'running'; updated.missionStatus = 'running'; updated.waitingReason = undefined }
-          updated.members = reconcileMembersFromActivity(c.members, payload)
+          updated.members = reconcileAgentsFromActivity(c.members, payload)
           if (updated.status === c.status
             && updated.missionStatus === (c as Chat & { missionStatus?: string }).missionStatus
             && updated.waitingReason === c.waitingReason
@@ -183,9 +183,9 @@ export const WorkspaceChatsProvider = ({ children }: { children: ReactNode }) =>
       })
     }
 
-    wsClient.on('chat:status-changed', handleStatusChanged)
-    wsClient.on('chat:activity', handleActivity)
-    wsClient.on('chat:title-updated', handleTitleUpdated)
+    wsClient.on('mission.status-changed', handleStatusChanged)
+    wsClient.on('mission.activity', handleActivity)
+    wsClient.on('mission.title-updated', handleTitleUpdated)
 
     // Refresh every registered workspace on tab re-focus to catch new/deleted
     // chats (no dedicated WS event for create/delete).
@@ -212,9 +212,9 @@ export const WorkspaceChatsProvider = ({ children }: { children: ReactNode }) =>
     window.addEventListener('teemai:chat-updated', handleChatMutated)
 
     return () => {
-      wsClient.off('chat:status-changed', handleStatusChanged)
-      wsClient.off('chat:activity', handleActivity)
-      wsClient.off('chat:title-updated', handleTitleUpdated)
+      wsClient.off('mission.status-changed', handleStatusChanged)
+      wsClient.off('mission.activity', handleActivity)
+      wsClient.off('mission.title-updated', handleTitleUpdated)
       document.removeEventListener('visibilitychange', handleVisibility)
       window.removeEventListener('teemai:chat-created', handleChatMutated)
       window.removeEventListener('teemai:chat-updated', handleChatMutated)
@@ -226,10 +226,10 @@ export const WorkspaceChatsProvider = ({ children }: { children: ReactNode }) =>
   return createElement(WorkspaceChatsContext.Provider, { value: store }, children)
 }
 
-export const useWorkspaceChats = (workspaceId: string | null | undefined): WorkspaceChatsResult => {
+export const useWorkspaceMissions = (workspaceId: string | null | undefined): WorkspaceChatsResult => {
   const store = useContext(WorkspaceChatsContext)
   if (!store) {
-    throw new Error('useWorkspaceChats must be used within a WorkspaceChatsProvider')
+    throw new Error('useWorkspaceMissions must be used within a WorkspaceChatsProvider')
   }
   const { slices, register, refresh: storeRefresh } = store
 

@@ -135,21 +135,21 @@ const MobileMissionDetail = () => {
       }
     }
 
-    ws.on('expert:partial-text', handlePartialText)
-    ws.on('expert:structured-message', handleStructuredMessage)
-    ws.on('expert:permission-request', handlePermission)
-    ws.on('chat:permission-resolved', handlePermResolved)
-    ws.on('chat:status-changed', handleStatusChanged)
+    ws.on('agent:partial-text', handlePartialText)
+    ws.on('agent:structured-message', handleStructuredMessage)
+    ws.on('agent:permission-request', handlePermission)
+    ws.on('mission.permission-resolved', handlePermResolved)
+    ws.on('mission.status-changed', handleStatusChanged)
 
-    ws.send('chat:set-context', { chatId: missionId })
-    ws.send('chat:resume-experts', { chatId: missionId })
+    ws.send('mission:set-context', { chatId: missionId })
+    ws.send('mission:resume-agents', { chatId: missionId })
 
     return () => {
-      ws.off('expert:partial-text', handlePartialText)
-      ws.off('expert:structured-message', handleStructuredMessage)
-      ws.off('expert:permission-request', handlePermission)
-      ws.off('chat:permission-resolved', handlePermResolved)
-      ws.off('chat:status-changed', handleStatusChanged)
+      ws.off('agent:partial-text', handlePartialText)
+      ws.off('agent:structured-message', handleStructuredMessage)
+      ws.off('agent:permission-request', handlePermission)
+      ws.off('mission.permission-resolved', handlePermResolved)
+      ws.off('mission.status-changed', handleStatusChanged)
     }
   }, [missionId])
 
@@ -160,7 +160,7 @@ const MobileMissionDetail = () => {
   const sendPermResponse = (outcome: { outcome: 'selected'; optionId: string } | { outcome: 'cancelled' }) => {
     if (!permRequest || submitting) return
     setSubmitting(true)
-    getWebSocketClient().send('expert:permission-response', {
+    getWebSocketClient().send('agent:permission-response', {
       agentId: permRequest.agentId,
       chatId: permRequest.chatId,
       sessionId: permRequest.sessionId,
@@ -174,7 +174,7 @@ const MobileMissionDetail = () => {
   const handleSendMessage = () => {
     const text = inputText.trim()
     if (!text || !missionId) return
-    getWebSocketClient().send('expert:user-input', { chatId: missionId, text })
+    getWebSocketClient().send('agent:user-input', { chatId: missionId, text })
     setInputText('')
   }
 

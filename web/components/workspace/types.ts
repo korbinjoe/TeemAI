@@ -1,4 +1,16 @@
 import type { WorktreeSession } from '@/types/chat'
+import type {
+  MissionAgent,
+  MissionAgentStatus,
+  MissionAgentRole,
+  ChatMember,
+  ChatMemberStatus,
+  ChatMemberRole,
+} from '@shared/chat-types'
+
+export type { MissionAgent, MissionAgentStatus, MissionAgentRole }
+/** @deprecated use MissionAgent* — kept one release for cross-boundary callers */
+export type { ChatMember, ChatMemberStatus, ChatMemberRole }
 
 export interface Repository {
   id: string
@@ -18,19 +30,6 @@ export interface Workspace {
   createdAt: string
 }
 
-export type ChatMemberStatus = 'running' | 'waiting' | 'waiting_input' | 'error' | 'idle' | 'done'
-
-export type ChatMemberRole = 'lead' | 'worker'
-
-export interface ChatMember {
-  agentId: string
-  role: ChatMemberRole
-  status: ChatMemberStatus
-  lastMessageAt: string
-  lastMessage?: string
-  cliSessionId?: string
-}
-
 export interface Chat {
   id: string
   workspaceId: string
@@ -46,7 +45,7 @@ export interface Chat {
   worktreeSessions?: WorktreeSession[]
   /** Per-agent live state enriched by the server. Optional because legacy
    *  read paths may not yet pass through enrichWithMembers. */
-  members?: ChatMember[]
+  members?: MissionAgent[]
   /** 'native' for chats created in TeemAI, 'external' for adopted local
    *  Claude/Codex jsonl sessions. Defaults to 'native' server-side. */
   source?: 'native' | 'external'

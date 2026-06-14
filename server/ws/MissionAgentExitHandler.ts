@@ -10,8 +10,8 @@
 
 import type { SessionRegistry } from '../terminal/SessionRegistry'
 import type { ExecutionLogStore } from '../stores/ExecutionLogStore'
-import type { ExpertSessionStore } from './ExpertSessionStore'
-import type { ExpertTokenTracker } from './ExpertTokenTracker'
+import type { MissionAgentSessionStore } from './MissionAgentSessionStore'
+import type { MissionAgentTokenTracker } from './MissionAgentTokenTracker'
 import type { FileOperationCollector } from '../terminal/FileOperationCollector'
 import type { ActivityState } from '../terminal/ActivityDeriver'
 import { existsSync } from 'fs'
@@ -83,6 +83,56 @@ export const buildCodexExitReplay = (
   return replay.filter((m) => !currentKeys.has(buildMessageMergeKey(m)))
 }
 
+// Content-identity key for cross-parser dedup. The live StreamJsonParser and the
+// resume/exit ConversationParser assign different ids/uuids/turnIndexes to the
+// same logical message, so jsonlUuid-based keys would treat every JSONL message
+// as new. Key by stable content identity instead, and exclude stats (turnIndex
+// numbering differs between parsers).
+const buildBackfillKey = (msg: ParsedMessage): string | null => {
+  switch (msg.type) {
+    case 'text':
+      return msg.content?.trim() ? `text:${msg.content}` : null
+    case 'toolUse':
+      return msg.toolUse ? `toolUse:${msg.toolUse.toolId}` : null
+    case 'toolResult':
+      return msg.toolResult ? `toolResult:${msg.toolResult.toolUseId}` : null
+    case 'thinking':
+      return `thinking:${(msg.thinkingSummary || '').slice(0, 150)}`
+    default:
+      return null
+  }
+}
+
+// Diff the JSONL (single source of truth) against the messages the live stream
+// actually emitted, returning the agent messages the stream dropped so they can
+// be backfilled on exit. Used for Claude sessions where stream parsing may miss
+// authoritative messages.
+export const buildJsonlBackfillReplay = (
+  currentMessages: ParsedMessage[] | null,
+  jsonlMessages: ParsedMessage[] | null,
+): ParsedMessage[] => {
+  const current = currentMessages ?? []
+  const jsonl = jsonlMessages ?? []
+  if (jsonl.length === 0) return []
+
+  const presentKeys = new Set<string>()
+  for (const m of current) {
+    const k = buildBackfillKey(m)
+    if (k) presentKeys.add(k)
+  }
+
+  const replay: ParsedMessage[] = []
+  const seen = new Set<string>()
+  for (const m of jsonl) {
+    if (m.role !== 'agent') continue
+    const k = buildBackfillKey(m)
+    if (!k || presentKeys.has(k) || seen.has(k)) continue
+    seen.add(k)
+    replay.push(m)
+  }
+  return replay
+}
+
 export interface ExitContext {
   agentId: string
   chatId: string
@@ -92,21 +142,21 @@ export interface ExitContext {
   resumeSessionId?: string
   startedSent: boolean
   fileCollector: FileOperationCollector
-  tokenTracker: ExpertTokenTracker
+  tokenTracker: MissionAgentTokenTracker
   compiledCleanup: () => Promise<void>
 }
 
 export interface ExitHandlerDeps {
   sessionRegistry: SessionRegistry
   executionLogStore: ExecutionLogStore
-  store: ExpertSessionStore
+  store: MissionAgentSessionStore
   chatStore: ChatStore
   agentStore?: AgentStore
   sendTo: (connectionId: string, msg: Record<string, unknown>) => void
   onExited?: (chatId: string, agentId: string, exitCode: number, taskCompleted: boolean) => void
 }
 
-export const createExpertExitHandler = (deps: ExitHandlerDeps) => {
+export const createMissionAgentExitHandler = (deps: ExitHandlerDeps) => {
   const { sessionRegistry, executionLogStore, store, chatStore, agentStore, sendTo, onExited } = deps
 
   const notifyExited = (chatId: string, agentId: string, exitCode: number, taskCompleted: boolean): void => {
@@ -263,6 +313,36 @@ export const createExpertExitHandler = (deps: ExitHandlerDeps) => {
             sessionId,
             replayCount: replay.length,
           })
+        }
+      }
+    }
+
+    // Claude sessions: stream parsing can miss authoritative messages. The JSONL
+    // is the single source of truth, so reconcile against it on exit and backfill
+    // any agent messages the live stream dropped.
+    if (exitCode === 0 && expertInfo.provider !== 'codex' && expertInfo.cwd && expertInfo.cliSessionId) {
+      const projectKey = cwdToCliProjectKey(expertInfo.cwd)
+      const jsonlPath = join(homedir(), '.claude', 'projects', projectKey, `${expertInfo.cliSessionId}.jsonl`)
+      if (existsSync(jsonlPath)) {
+        const streamMessages = sessionRegistry.get(sessionId)?.streamManager.getCurrentMessages() ?? null
+        const jsonlMessages = parseConversationFile(jsonlPath)
+        const replay = buildJsonlBackfillReplay(streamMessages, jsonlMessages)
+        if (replay.length > 0) {
+          const wsMsg = acpUpdateToWSMessage({
+            sessionUpdate: '_teemai/messages_batch',
+            messages: replay as unknown as import('../../shared/acp-types').TeemAIParsedMessage[],
+            replacedStatsId: null,
+            batchType: 'delta',
+          }, { agentId, sessionId, chatId })
+          if (wsMsg) {
+            sessionRegistry.sendToSession(sessionId, wsMsg as Record<string, unknown>)
+            log.info('Applied Claude exit JSONL backfill', {
+              agentId,
+              chatId,
+              sessionId,
+              replayCount: replay.length,
+            })
+          }
         }
       }
     }

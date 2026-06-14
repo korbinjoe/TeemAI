@@ -13,3 +13,9 @@ if [ -z "${EXPERT_API_BASE:-}" ] || [ -z "${OPENTEAM_CHAT_ID:-}" ] || [ -z "${OP
   fi
   unset _ENV_DIR _LATEST_ENV
 fi
+
+# PR-D: prefer canonical AGENT_API_BASE, fall back to legacy EXPERT_API_BASE.
+# Keep EXPERT_API_BASE populated so existing consumers keep working until PR-F.
+EXPERT_API_BASE="${AGENT_API_BASE:-${EXPERT_API_BASE:-}}"
+AGENT_API_BASE="${AGENT_API_BASE:-${EXPERT_API_BASE:-}}"
+export EXPERT_API_BASE AGENT_API_BASE

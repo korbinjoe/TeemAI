@@ -1,5 +1,5 @@
 /**
- * ExpertTokenTracker - Token
+ * MissionAgentTokenTracker - Token
  *
  *  ExpertLifecycle  (chatId, agentId, model)
  *  5  token
@@ -10,9 +10,9 @@ import type { TokenUsageStore } from '../stores/TokenUsageStore'
 import type { ChatStore } from '../stores/ChatStore'
 import { createLogger } from '../lib/logger'
 
-const log = createLogger('ExpertTokenTracker')
+const log = createLogger('MissionAgentTokenTracker')
 
-export class ExpertTokenTracker {
+export class MissionAgentTokenTracker {
   private throttleKeys = new Set<string>()
   private throttleTimers = new Map<string, ReturnType<typeof setTimeout>>()
 

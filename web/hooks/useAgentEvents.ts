@@ -5,7 +5,7 @@ import { buildContentKey, buildMessageInstanceKey } from '../utils/messageDedup'
 import type { AgentMessagesMap } from './useAgentMessages'
 import { SYSTEM_MESSAGE_AGENT } from './useAgentMessages'
 
-export interface ExpertEventContext {
+export interface AgentEventContext {
   isCurrentChatEvent: (payload?: { chatId?: string }) => boolean
   /** Append a chat-level message (errors, system notices) to a specific or default slot. */
   addSystemMessage: (msg: Message) => void
@@ -124,7 +124,7 @@ const applyAgentReplay = (base: Message[], tagged: Message[], agentId: string): 
   return result.filter((m) => !(m.streaming && m.agentId === agentId))
 }
 
-export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
+export const createAgentEventHandlers = (ctx: AgentEventContext) => {
   const {
     isCurrentChatEvent, addSystemMessage, uid, t,
     setExpertActivities, setAgentMessages, setLoading, setThinking,
@@ -524,5 +524,5 @@ export const createExpertEventHandlers = (ctx: ExpertEventContext) => {
   }
 }
 
-export type ExpertEventHandlers = ReturnType<typeof createExpertEventHandlers>
+export type AgentEventHandlers = ReturnType<typeof createAgentEventHandlers>
 export { SYSTEM_MESSAGE_AGENT }

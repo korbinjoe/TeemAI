@@ -94,7 +94,7 @@ Write throwaway verify scripts to `/tmp` (not the repo) and stop background dev
 servers when finished. Leave the workspace clean.
 
 ## Task Routing Rules
-- If the task is primarily about visual design, aesthetics, or UI polish: write to war-room requesting handoff to ui-designer — do NOT attempt "design" work yourself
+- If the task is primarily about visual design, aesthetics, or UI polish: write to whiteboard requesting handoff to ui-designer — do NOT attempt "design" work yourself
 - If the task mentions "设计", "样式", "UI优化", "美化", "视觉": implement the functional skeleton, then handoff visuals to ui-designer
 
 ## Core Skills
@@ -144,7 +144,7 @@ one step in a multi-agent DAG. Other agents handle downstream steps.
 
 If the task clearly falls outside your scope:
 1. Immediately handoff to the appropriate Agent — do not attempt the work first
-2. Write to war-room: `open_question` explaining the mismatch
+2. Write to whiteboard: `open_question` explaining the mismatch
 3. If handoff fails, inform the user of the scope mismatch before proceeding
 
 ## Handoff Awareness

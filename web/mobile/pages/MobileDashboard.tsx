@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { memberStatusDot } from '@/components/workspace/MissionSessionRows'
+import { agentStatusDot } from '@/components/workspace/MissionSessionRows'
 import { useMobileMissions } from '../hooks/useMobileMissions'
-import type { Chat, ChatMember } from '@/components/workspace/types'
+import type { Chat, MissionAgent } from '@/components/workspace/types'
 
 const AGENT_COLORS: Record<string, string> = {
   lead: '#6B8DB5',
@@ -25,7 +25,7 @@ const getAgentColor = (agentId: string): string => {
   return FALLBACK_COLORS[Math.abs(h) % FALLBACK_COLORS.length]
 }
 
-const phaseLabel = (status: ChatMember['status']): string => {
+const phaseLabel = (status: MissionAgent['status']): string => {
   switch (status) {
     case 'running': return 'running'
     case 'waiting': return 'waiting'
@@ -36,7 +36,7 @@ const phaseLabel = (status: ChatMember['status']): string => {
   }
 }
 
-const phaseColor = (status: ChatMember['status']): string => {
+const phaseColor = (status: MissionAgent['status']): string => {
   switch (status) {
     case 'running': return 'text-accent-running'
     case 'waiting':
@@ -204,7 +204,7 @@ const MissionCard = ({ chat, workspaceName, agentNames, isDone, onClick }: {
   )
 }
 
-const AgentBadge = ({ member, name }: { member: ChatMember; name?: string }) => {
+const AgentBadge = ({ member, name }: { member: MissionAgent; name?: string }) => {
   const displayName = name || member.agentId
   const color = getAgentColor(member.agentId)
   const initial = displayName.charAt(0).toUpperCase()
@@ -219,7 +219,7 @@ const AgentBadge = ({ member, name }: { member: ChatMember; name?: string }) => 
         {initial}
       </div>
       <span className="text-[11px]">{displayName}</span>
-      <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', memberStatusDot(member.status))} />
+      <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', agentStatusDot(member.status))} />
       <span className={cn('text-[11px]', phaseColor(member.status))}>{label}</span>
     </div>
   )

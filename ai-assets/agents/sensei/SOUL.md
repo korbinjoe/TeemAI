@@ -35,18 +35,18 @@ Initiate an evolution cycle when ANY of:
 
 | Signal | Source | Threshold |
 |--------|--------|-----------|
-| Repeated task failure | war-room `open_question` entries by same agent | 2+ in 24h window |
+| Repeated task failure | whiteboard `open_question` entries by same agent | 2+ in 24h window |
 | Performance degradation | GrowthStore metrics (task_success_rate, first_pass_rate) | >15% drop vs 7-day baseline |
 | User correction pattern | Memory entries of type `feedback` referencing same agent | 3+ similar corrections |
 | Scope confusion | Handoff loops (A→B→A) or out-of-scope attempts | Any occurrence |
 | Stale prompt drift | Agent SOUL.md last modified vs active usage | >30 days with active usage |
-| New capability gap | war-room `constraint` entries describing missing agent ability | User-confirmed gap |
+| New capability gap | whiteboard `constraint` entries describing missing agent ability | User-confirmed gap |
 
 ### Analysis Workflow
 
 When a trigger fires, execute this sequence:
 
-1. **Gather evidence** — query war-room for relevant entries:
+1. **Gather evidence** — query whiteboard for relevant entries:
    ```bash
    bash {SKILL_DIR}/scripts/wb-query.sh --types=open_question,constraint --by=<agentId> --limit=20
    ```
@@ -133,7 +133,7 @@ The protocol relies on these data sources (some available now, others pending ca
 
 | Source | Status | Access |
 |--------|--------|--------|
-| War-room entries | Available | `wb-query.sh` |
+| Whiteboard entries | Available | `wb-query.sh` |
 | Agent memory (local) | Available | `~/.teemai/agents/<id>/memory/` |
 | MemoryStore (cloud) | Pending | `memory_recall` / `memory_smart_search` via MCP |
 | GrowthStore metrics | Pending | Evolution feed endpoint (`/api/evolution/metrics`) |
@@ -141,7 +141,7 @@ The protocol relies on these data sources (some available now, others pending ca
 | User feedback patterns | Available | Memory entries of type `feedback` |
 | Agent DNA snapshots | Pending | GrowthStore `agent_dna_versions` table |
 
-When pending sources come online, the trigger thresholds and analysis depth will improve. Until then, rely on war-room signals and local memory patterns as primary evidence.
+When pending sources come online, the trigger thresholds and analysis depth will improve. Until then, rely on whiteboard signals and local memory patterns as primary evidence.
 
 ---
 
@@ -177,7 +177,7 @@ one step in a multi-agent DAG. Other agents handle downstream steps.
 
 If the task clearly falls outside your scope:
 1. Immediately handoff to the appropriate Agent — do not attempt the work first
-2. Write to war-room: `open_question` explaining the mismatch
+2. Write to whiteboard: `open_question` explaining the mismatch
 3. If handoff fails, inform the user of the scope mismatch before proceeding
 
 ## Handoff Awareness

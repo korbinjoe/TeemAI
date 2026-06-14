@@ -6,7 +6,7 @@ import { cn } from '../../lib/utils'
 import { buildMissionUrl } from './urls'
 import { removeAgentFromChat, deleteChatWithJsonl, formatPurgeFailures } from '../../services/chatService'
 import { ApiError } from '../../services/api'
-import type { Chat, ChatMember, ChatMemberStatus } from '../workspace/types'
+import type { Chat, MissionAgent, MissionAgentStatus } from '../workspace/types'
 import { parseInstanceId } from '../../../shared/utils'
 
 // Server returns 409 with a JSON body { error: "Cannot purge a running chat..." }
@@ -37,7 +37,7 @@ const INDENT_ADD_AGENT = 'pl-9'  // 36px — peer of agent rows
 // running: solid brand + water-ripple ring.
 // waiting: full yellow (confirmation block). waiting_input: softer yellow (turn idle).
 // done: green at 40% so completed work recedes.
-export const memberStatusDot = (status: ChatMemberStatus | undefined): string => {
+export const agentStatusDot = (status: MissionAgentStatus | undefined): string => {
   switch (status) {
     case 'running': return 'bg-accent-running relative before:absolute before:inset-0 before:rounded-full before:bg-accent-running before:animate-ping-soft'
     case 'waiting': return 'bg-accent-yellow'
@@ -52,20 +52,20 @@ export const memberStatusDot = (status: ChatMemberStatus | undefined): string =>
 // error > running > waiting > waiting_input > done > idle.
 // Running beats waiting so a mission with any active agent shows blue (work in
 // progress), not yellow. Yellow only surfaces when every agent has stopped.
-const ROLLUP_PRIORITY: ChatMemberStatus[] = ['error', 'running', 'waiting', 'waiting_input', 'done', 'idle']
+const ROLLUP_PRIORITY: MissionAgentStatus[] = ['error', 'running', 'waiting', 'waiting_input', 'done', 'idle']
 
 export const chatStatusDot = (chat: Chat): string => {
   const members = chat.members ?? []
   if (members.length === 0) {
-    return chat.status === 'running' ? memberStatusDot('running') : 'bg-text-muted'
+    return chat.status === 'running' ? agentStatusDot('running') : 'bg-text-muted'
   }
   const terminal = chat.status === 'stopped' || chat.status === 'merged'
   for (const status of ROLLUP_PRIORITY) {
     if (members.some((m) => m.status === status)) {
       if (terminal && (status === 'running' || status === 'waiting' || status === 'waiting_input')) {
-        return memberStatusDot('done')
+        return agentStatusDot('done')
       }
-      return memberStatusDot(status)
+      return agentStatusDot(status)
     }
   }
   return 'bg-text-muted'
@@ -144,8 +144,8 @@ export const MissionRow = memo(({ chat, isSelected, agentNames, onPin, onArchive
 
   // Prefer server-derived members (carries per-agent status). Fall back to the
   // teamAgentIds shape when the API hasn't enriched yet (legacy callers, race).
-  const members = useMemo<Array<{ agentId: string; isLead: boolean; member?: ChatMember; displayName: string }>>(() => {
-    let raw: Array<{ agentId: string; isLead: boolean; member?: ChatMember }>
+  const members = useMemo<Array<{ agentId: string; isLead: boolean; member?: MissionAgent; displayName: string }>>(() => {
+    let raw: Array<{ agentId: string; isLead: boolean; member?: MissionAgent }>
     if (chat.members && chat.members.length > 0) {
       raw = chat.members.map((m) => ({ agentId: m.agentId, isLead: m.role === 'lead', member: m }))
     } else {
@@ -269,7 +269,7 @@ export const AgentRow = memo(({ agentId, agentName, isLead, chat, member, isSele
   agentName: string
   isLead: boolean
   chat: Chat
-  member?: ChatMember
+  member?: MissionAgent
   isSelected: boolean
 }) => {
   const navigate = useNavigate()
@@ -280,7 +280,7 @@ export const AgentRow = memo(({ agentId, agentName, isLead, chat, member, isSele
   }
   // Per-member status when available; fall back to parent chat rollup so legacy
   // payloads (no members[]) still light up.
-  const dotClass = member ? memberStatusDot(member.status) : chatStatusDot(chat)
+  const dotClass = member ? agentStatusDot(member.status) : chatStatusDot(chat)
   const ageInput = member?.lastMessageAt || chat.lastMessageAt
 
   // Worker rows: per-agent removal (deletes that agent's session + JSONL).

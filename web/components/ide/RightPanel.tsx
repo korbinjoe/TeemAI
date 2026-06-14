@@ -44,9 +44,9 @@ const RightPanel = ({ chatId, gitStatus, multiGitStatus, onMultiOptimisticUpdate
   const wsClient = getWebSocketClient()
 
   useEffect(() => {
-    const checkRunModes = (payload: { chatId?: string; experts: ExpertRunModeInfo[] }) => {
+    const checkRunModes = (payload: { chatId?: string; agents: ExpertRunModeInfo[] }) => {
       if (chatId && payload.chatId !== chatId) return
-      const streamJsonExpert = payload.experts.find(e => e.cwd)
+      const streamJsonExpert = payload.agents.find(e => e.cwd)
       if (streamJsonExpert?.cwd) setExpertCwd(streamJsonExpert.cwd)
     }
 
@@ -55,18 +55,18 @@ const RightPanel = ({ chatId, gitStatus, multiGitStatus, onMultiOptimisticUpdate
       if (payload.cwd) setExpertCwd(payload.cwd)
     }
 
-    wsClient.on('expert:list', checkRunModes)
-    wsClient.on('expert:list-updated', checkRunModes)
-    wsClient.on('expert:started', handleStarted)
+    wsClient.on('agent:list', checkRunModes)
+    wsClient.on('agent:list-updated', checkRunModes)
+    wsClient.on('agent:started', handleStarted)
 
     if (wsClient.isConnected()) {
-      wsClient.send('expert:list', { chatId })
+      wsClient.send('agent:list', { chatId })
     }
 
     return () => {
-      wsClient.off('expert:list', checkRunModes)
-      wsClient.off('expert:list-updated', checkRunModes)
-      wsClient.off('expert:started', handleStarted)
+      wsClient.off('agent:list', checkRunModes)
+      wsClient.off('agent:list-updated', checkRunModes)
+      wsClient.off('agent:started', handleStarted)
     }
   }, [wsClient, chatId])
 

@@ -830,7 +830,7 @@ const pipelineScenarios: Scenario[] = [
     expectedBehavior: 'Task has been rejected 2x (max). Despite improvement (3→8→10→11 files), it is still not fully complete. Lead MUST escalate to user or advance — cannot reject again.',
     passSignals: [
       'escalate', 'user', 'open_question', 'cap', 'maximum', 'cannot reject',
-      '2 times', 'user input', 'war-room', 'advance', 'accept',
+      '2 times', 'user input', 'whiteboard', 'advance', 'accept',
       'reached', 'limit', 'no more rejections',
     ],
     failSignals: ['reject-task'],
@@ -877,7 +877,7 @@ No further context was provided. No design specs, no specific complaints, no per
 
 Context from the workflow history:
 - The architect (task: api-design) previously completed work and decided: "Use GraphQL with Apollo Client for all data fetching. Schema defined in schema.graphql."
-- However, the user's original project brief (posted in the war-room) states: "We use REST APIs exclusively. No GraphQL — the team doesn't have GraphQL experience."
+- However, the user's original project brief (posted on the whiteboard) states: "We use REST APIs exclusively. No GraphQL — the team doesn't have GraphQL experience."
 
 These two instructions directly contradict each other. The architect's decision conflicts with the user's stated project constraints.`,
     availableAgents: [

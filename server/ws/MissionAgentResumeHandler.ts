@@ -1,7 +1,7 @@
 /**
  * ExpertResumeHandler - Expert Agent
  *
- *  ExpertHandler
+ *  MissionAgentHandler
  * -  Chat resumeFromChat
  * - Re-attach  Agent session
  * - Dead Agent
@@ -17,10 +17,11 @@ import type { AgentStore } from '../stores/AgentStore'
 import type { SessionRegistry } from '../terminal/SessionRegistry'
 import { parseConversationFile, createParserState, type ParsedMessage } from '../terminal/ConversationParser'
 import { codexOutputParser } from '../terminal/CodexParser'
-import { ExpertSessionStore, compositeKey, parseAgentId, parseChatId } from './ExpertSessionStore'
+import { MissionAgentSessionStore, compositeKey, parseAgentId, parseChatId } from './MissionAgentSessionStore'
 import { StreamJsonManager } from '../terminal/StreamJsonManager'
 import { acpUpdateToWSMessage } from '../acp/ACPToFrontendBridge'
 import type { CliProvider, ExpertSessionInfo } from '../config/types'
+import { isQoderVendor } from '../config/types'
 import { createLogger } from '../lib/logger'
 import { trackEvent } from '../lib/eventTracker'
 import { cwdToCliProjectKey } from '../../shared/projectKey'
@@ -28,12 +29,12 @@ import { scanPluginSlashCommands, scanProjectSlashCommands, scanUserSkills } fro
 
 const log = createLogger('ExpertResume')
 
-export interface ExpertResumeDeps {
+export interface MissionAgentResumeDeps {
   chatStore: ChatStore
   workspaceStore: WorkspaceStore
   agentStore: AgentStore
   sessionRegistry: SessionRegistry
-  store: ExpertSessionStore
+  store: MissionAgentSessionStore
   sendTo: (connectionId: string, msg: Record<string, unknown>) => void
   handleStart: (
     ws: WebSocket,
@@ -42,7 +43,7 @@ export interface ExpertResumeDeps {
   ) => Promise<void>
 }
 
-export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
+export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) => {
   const { chatStore, workspaceStore, agentStore, sessionRegistry, store, sendTo, handleStart } = deps
 
   /** Agent spawn key=chatId::agentId → { count, lastFailedAt } */
@@ -63,7 +64,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
     if (provider === 'codex') {
       return readCodexRollout(cliSessionId)
     }
-    if (provider === 'qoder' || provider === 'qodercli') {
+    if (isQoderVendor(provider)) {
       const projectKey = cwdToCliProjectKey(cwd)
       const jsonlPath = join(homedir(), '.qoder', 'projects', projectKey, 'transcript', `${cliSessionId}.jsonl`)
       if (!existsSync(jsonlPath)) return null
@@ -584,7 +585,7 @@ export const createExpertResumeHandler = (deps: ExpertResumeDeps) => {
                 chatId,
                 agentName: agentId,
                 reason: 'command_not_found',
-                message: (failedProvider === 'qoder' || failedProvider === 'qodercli')
+                message: isQoderVendor(failedProvider)
                   ? 'Qoder CLI not found. Install it with: curl -fsSL https://qoder.com/install | bash'
                   : 'CLI tool not installed, please install Claude Code or Codex CLI first',
               },

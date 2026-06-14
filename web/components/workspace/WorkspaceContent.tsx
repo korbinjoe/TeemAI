@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useWorkspace, useWorkspaceResize, IDE_WIDTH_DEFAULT } from '../../contexts/WorkspaceContext'
 import { useDialog } from '../../contexts/DialogContext'
-import { useWorkspaceChats } from '../../hooks/useWorkspaceChats'
+import { useWorkspaceMissions } from '../../hooks/useWorkspaceMissions'
 import ChatPane from './ChatPane'
 import IDEPanel from './IDEPanel'
 import QuadAgentTile from './QuadAgentTile'
@@ -187,7 +187,7 @@ const QuadFrame = ({ ideCollapsed }: { ideCollapsed: boolean }) => {
   const QUAD_SIZE = 4
   const { workspaceId, activeChatId } = useWorkspace()
   const { openAddAgent } = useDialog()
-  const { chats } = useWorkspaceChats(workspaceId)
+  const { chats } = useWorkspaceMissions(workspaceId)
   const chat = activeChatId ? chats.find((c) => c.id === activeChatId) : undefined
   const members = chat?.members ?? []
   const total = members.length

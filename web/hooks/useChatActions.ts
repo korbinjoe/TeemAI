@@ -107,7 +107,7 @@ export const useChatActions = ({
         [agentId]: { phase: 'initializing', background: false, toolCount: 0, toolCompleted: 0, hasText: false, startedAt: Date.now(), updatedAt: Date.now() },
       }))
 
-      wsClient.send('expert:direct-input', {
+      wsClient.send('agent:direct-input', {
         chatId, agentId, message, images: wsImages, autoStart: true,
         cwd: currentWorkingDirectory,
         repositories: wsRepositories.map((r) => ({ path: r.path })),
@@ -211,7 +211,7 @@ export const useChatActions = ({
 
   const handleAnswerQuestion = useCallback((agentId: string, answer: string) => {
     if (!chatId) return
-    wsClient.send('expert:direct-input', { chatId, agentId, message: answer })
+    wsClient.send('agent:direct-input', { chatId, agentId, message: answer })
   }, [chatId, wsClient])
 
   // In single-agent mode (Quad tile / ?agent=X), interrupt must NOT cascade to
@@ -220,7 +220,7 @@ export const useChatActions = ({
     Object.entries(expertActivities).forEach(([agentId, activity]) => {
       if (lockedAgentId && agentId !== lockedAgentId) return
       if (activity.phase !== 'completed') {
-        wsClient.send('expert:stop', { agentId, chatId })
+        wsClient.send('agent:stop', { agentId, chatId })
       }
     })
   }, [expertActivities, wsClient, chatId, lockedAgentId])

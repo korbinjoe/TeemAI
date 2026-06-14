@@ -6,20 +6,20 @@ import type { AgentStore } from '../../stores/AgentStore'
 import { WorktreeManager, detectGitRepo } from '../../git/WorktreeManager'
 import { createLogger } from '../../lib/logger'
 
-const log = createLogger('ChatService')
+const log = createLogger('MissionService')
 
-interface ChatServiceDeps {
+interface MissionServiceDeps {
   chatStore: ChatStore
   workspaceStore: WorkspaceStore
   agentStore: AgentStore
 }
 
-export class ChatService {
+export class MissionService {
   private chatStore: ChatStore
   private workspaceStore: WorkspaceStore
   private agentStore: AgentStore
 
-  constructor(deps: ChatServiceDeps) {
+  constructor(deps: MissionServiceDeps) {
     this.chatStore = deps.chatStore
     this.workspaceStore = deps.workspaceStore
     this.agentStore = deps.agentStore
@@ -111,3 +111,8 @@ export class ChatService {
     })
   }
 }
+
+/** @deprecated PR-D: use MissionService. */
+export const ChatService = MissionService
+/** @deprecated PR-D: use MissionService. */
+export type ChatService = MissionService

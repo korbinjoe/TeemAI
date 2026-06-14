@@ -12,7 +12,7 @@
  *   - unmatchedDirs:     orphan cwds with no matching workspace
  *
  * The hook is intentionally a thin wrapper around the snapshot endpoint —
- * native chats still come from useAllChats. We layer external data ON TOP
+ * native chats still come from useAllMissions. We layer external data ON TOP
  * rather than replacing the existing chat fetch so the change stays small.
  */
 

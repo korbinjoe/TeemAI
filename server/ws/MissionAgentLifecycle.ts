@@ -1,32 +1,33 @@
 /**
  * ExpertLifecycle - Expert Agent
  *
- *  ExpertHandler
+ *  MissionAgentHandler
  * - Expert spawn stream-json  SessionRegistry
  * - handleDirectInput
  *
- * Token  → ExpertTokenTracker.ts
+ * Token  → MissionAgentTokenTracker.ts
  *  → ExpertAttacher.ts
  */
 
 import type { WebSocket } from 'ws'
+import { sendFrame } from './wireCompat'
 import { StreamJsonManager } from '../terminal/StreamJsonManager'
 import { ConfigCompiler } from '../runtime/ConfigCompiler'
 import type { AgentRegistry } from '../config/AgentRegistry'
 import type { AgentStore } from '../stores/AgentStore'
-import { agentDefToAgent } from '../config/types'
+import { agentDefToAgent, isQoderVendor } from '../config/types'
 import type { SessionRegistry } from '../terminal/SessionRegistry'
 import { getServerPort } from '../lib/serverPort'
 import type { ChatStore } from '../stores/ChatStore'
 import type { WorkspaceStore } from '../stores/WorkspaceStore'
 import type { TokenUsageStore } from '../stores/TokenUsageStore'
 import type { ExecutionLogStore } from '../stores/ExecutionLogStore'
-import { ExpertSessionStore, compositeKey } from './ExpertSessionStore'
-import { createExpertAttacher, type ExpertAttacherDeps } from './ExpertAttacher'
-import { createExpertExitHandler, type ExitHandlerDeps } from './ExpertExitHandler'
-import { createExpertDirectInput } from './ExpertDirectInput'
-import { wireExpertStreamHandlers } from './ExpertEventWiring'
-import { flushPendingTasks } from './ExpertPendingTaskFlush'
+import { MissionAgentSessionStore, compositeKey } from './MissionAgentSessionStore'
+import { createMissionAgentAttacher, type MissionAgentAttacherDeps } from './MissionAgentAttacher'
+import { createMissionAgentExitHandler, type ExitHandlerDeps } from './MissionAgentExitHandler'
+import { createMissionAgentDirectInput } from './MissionAgentDirectInput'
+import { wireMissionAgentStreamHandlers } from './MissionAgentEventWiring'
+import { flushPendingTasks } from './MissionAgentPendingTaskFlush'
 import { expandSlashCommand } from '../runtime/SlashCommandResolver'
 import type { WhiteboardManager } from '../whiteboard/WhiteboardManager'
 import { ContextBriefing } from '../whiteboard/ContextBriefing'
@@ -41,7 +42,7 @@ import { createACPAdapter } from '../acp/ACPAdapterFactory'
 
 const log = createLogger('Expert')
 
-export interface ExpertLifecycleDeps {
+export interface MissionAgentLifecycleDeps {
   configCompiler: ConfigCompiler
   agentRegistry: AgentRegistry
   agentStore: AgentStore
@@ -50,7 +51,7 @@ export interface ExpertLifecycleDeps {
   tokenUsageStore: TokenUsageStore
   executionLogStore: ExecutionLogStore
   sessionRegistry: SessionRegistry
-  store: ExpertSessionStore
+  store: MissionAgentSessionStore
   versionGate: VersionGate
   getConnectionWs: (connectionId: string) => WebSocket | undefined
   getConnectionChatId: (connectionId: string) => string | undefined
@@ -63,7 +64,7 @@ export interface ExpertLifecycleDeps {
   onAgentExited?: (chatId: string, agentId: string, exitCode: number, taskCompleted: boolean) => void
 }
 
-export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
+export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => {
   const {
     configCompiler, agentRegistry, agentStore, chatStore, workspaceStore, tokenUsageStore,
     executionLogStore, sessionRegistry, store, versionGate, sendTo,
@@ -74,11 +75,11 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
   const titleService = new ChatTitleService()
   const briefing = whiteboardManager ? new ContextBriefing(whiteboardManager) : null
 
-  const attacherDeps: ExpertAttacherDeps = { sessionRegistry, chatStore, store, getConnectionChatId, sendTo }
-  const { trackParticipant, ensureAttachedRunning } = createExpertAttacher(attacherDeps)
+  const attacherDeps: MissionAgentAttacherDeps = { sessionRegistry, chatStore, store, getConnectionChatId, sendTo }
+  const { trackParticipant, ensureAttachedRunning } = createMissionAgentAttacher(attacherDeps)
 
   const exitDeps: ExitHandlerDeps = { sessionRegistry, executionLogStore, store, chatStore, agentStore, sendTo, onExited: onAgentExited }
-  const { handleExit } = createExpertExitHandler(exitDeps)
+  const { handleExit } = createMissionAgentExitHandler(exitDeps)
 
   const handleStart = async (
     ws: WebSocket,
@@ -91,10 +92,10 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
       const chatId = payload.chatId
       if (!chatId) {
         log.error('expert:start missing chatId', { connectionId, agentId })
-        ws.send(JSON.stringify({
+        sendFrame(ws, {
           type: 'expert:error',
           payload: { agentId, chatId: '', error: 'missing_chat_id', message: 'expert:start payload must carry chatId' },
-        }))
+        })
         return { started: false }
       }
       const key = compositeKey(connectionId, chatId, agentId)
@@ -108,7 +109,7 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
           clientVersion: versionGate.getClientVersion(),
           minClientVersion: policy?.minClientVersion,
         })
-        ws.send(JSON.stringify({
+        sendFrame(ws, {
           type: 'expert:version-blocked',
           payload: {
             agentId,
@@ -118,7 +119,7 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
             upgradeMessage: policy?.upgradeMessage,
             upgradeUrl: policy?.upgradeUrl,
           },
-        }))
+        })
         return { started: false }
       }
 
@@ -146,7 +147,7 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
       if (existing) {
         if (existing.acpClient.isAlive()) {
           log.info('Agent already running, sending task via prompt', { agentId, sessionId: existing.sessionId })
-          ws.send(JSON.stringify({
+          sendFrame(ws, {
             type: 'expert:already-running',
             payload: {
               agentId,
@@ -157,7 +158,7 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
               agentIcon: existing.agentIcon,
               status: 'running',
             },
-          }))
+          })
           if (task?.trim()) {
             const expandedTask = existing.provider !== 'codex'
               ? await expandSlashCommand(task.trim(), existing.cwd)
@@ -205,10 +206,10 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
       const agentDef = agentRegistry.get(agentId)
       const storedAgent = !agentDef ? agentStore.get(agentId) : undefined
       if (!agentDef && !storedAgent) {
-        ws.send(JSON.stringify({
+        sendFrame(ws, {
           type: 'expert:error',
           payload: { agentId, chatId, message: `Expert ${agentId} not found` },
-        }))
+        })
         store.clearStarting(key)
         return { started: false }
       }
@@ -241,10 +242,10 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
 
       if (!isAllowedCwd(cwd)) {
         log.warn('Expert start rejected: cwd outside allowed roots', { agentId, cwd, connectionId })
-        ws.send(JSON.stringify({
+        sendFrame(ws, {
           type: 'expert:start-failed',
           payload: { agentId, chatId, message: `Refused: cwd "${cwd}" is outside allowed workspace` },
-        }))
+        })
         return { started: false }
       }
 
@@ -321,7 +322,7 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
 
       let startedSent = false
 
-      const { fileCollector, tokenTracker } = wireExpertStreamHandlers({
+      const { fileCollector, tokenTracker } = wireMissionAgentStreamHandlers({
         streamManager, acpClient, sessionRegistry, store, chatStore, tokenUsageStore,
         sessionId, key, agentId, chatId, agentName: agent.name, cwd, provider,
         persistExpertSession, connectionId, globalBroadcast, ws,
@@ -441,10 +442,10 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
       log.error('Start error', { agentId: payload.agentId, error: errorMsg, isCommandNotFound })
       trackEvent('agent', 'agent.start_failed', { agentId: payload.agentId, error: errorMsg, isCommandNotFound, connectionId })
       let displayMsg = errorMsg
-      if (isCommandNotFound && (provider === 'qoder' || provider === 'qodercli')) {
+      if (isCommandNotFound && isQoderVendor(provider)) {
         displayMsg = 'Qoder CLI not found. Install it with: curl -fsSL https://qoder.com/install | bash'
       }
-      ws.send(JSON.stringify({
+      sendFrame(ws, {
         type: 'expert:error',
         payload: {
           agentId: payload.agentId,
@@ -452,7 +453,7 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
           error: isCommandNotFound ? 'command_not_found' : 'start_failed',
           message: displayMsg,
         },
-      }))
+      })
 
       sendTo(connectionId, {
         type: 'expert:list-updated',
@@ -463,11 +464,11 @@ export const createExpertLifecycle = (deps: ExpertLifecycleDeps) => {
     }
   }
 
-  const directInputDeps: import('./ExpertDirectInput').ExpertDirectInputDeps = {
+  const directInputDeps: import('./MissionAgentDirectInput').MissionAgentDirectInputDeps = {
     store, chatStore, sessionRegistry, titleService,
     broadcastToChat, ensureAttachedRunning, trackParticipant, handleStart,
   }
-  const { handleDirectInput } = createExpertDirectInput(directInputDeps)
+  const { handleDirectInput } = createMissionAgentDirectInput(directInputDeps)
 
   return { handleStart, handleDirectInput }
 }

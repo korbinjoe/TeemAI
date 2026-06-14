@@ -6,7 +6,7 @@
  *
  * -  ACPSessionManager  ACP
  * -  onNotification  Agent→Client
- * -  ExpertHandler
+ * -  MissionAgentHandler
  */
 
 import { CliACPAdapter, type CliACPAdapterOptions } from './CliACPAdapter'

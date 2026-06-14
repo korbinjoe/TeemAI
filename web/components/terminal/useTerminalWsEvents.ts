@@ -119,7 +119,7 @@ export const useTerminalWsEvents = ({
     // replays (live re-attach + dead-JSONL playback). Dispose any stale
     // TerminalInstance from a prior run, then UPSERT the entry so terminal
     // mode discovers persisted-but-not-running agents — `replayHistoryForDeadSession`
-    // does not trigger `expert:list-updated`, so without this upsert the dead
+    // does not trigger `agent:list-updated`, so without this upsert the dead
     // JSONL case never populates `experts` and the cli-attach effect never fires.
     const handleExpertStarted = (payload: ExpertInfo & { chatId?: string }) => {
       if (!isCurrentChatEvent(payload)) return
@@ -151,7 +151,7 @@ export const useTerminalWsEvents = ({
 
     // Resume-PTY bridge: server tells us a view-PTY is up for an agent. Make
     // sure that agent has an ExpertInfo slot so xterm renders and so the
-    // strict `expert:data` validator (which gates on the entry + sessionId)
+    // strict `agent:data` validator (which gates on the entry + sessionId)
     // lets the first bytes through. We synthesize a "completed" entry — the
     // resumed PTY is just a transient view onto an existing JSONL, not a
     // newly-launched ACP session.
@@ -280,7 +280,7 @@ export const useTerminalWsEvents = ({
           inst.write('\r\n\x1b[33m[Connection restored]\x1b[0m\r\n')
           inst.reactivate()
           if (cid) {
-            wsClient.send('expert:resize', { chatId: cid, agentId, cols: inst.cols, rows: inst.rows })
+            wsClient.send('agent:resize', { chatId: cid, agentId, cols: inst.cols, rows: inst.rows })
           }
         }
       })
@@ -289,13 +289,13 @@ export const useTerminalWsEvents = ({
     // Server-authoritative roster sync. Without this, multi-agent terminal view
     // never knows which agents have JSONL sessions to resume — TerminalPanel's
     // cli-attach effect iterates `experts`, finds it empty, and never sends
-    // `expert:cli-attach`, so no `claude --resume` PTY ever spawns.
-    // Merge instead of replace: preserve `expert:view-attached`-synthesized
+    // `agent:cli-attach`, so no `claude --resume` PTY ever spawns.
+    // Merge instead of replace: preserve `agent:view-attached`-synthesized
     // entries the server's expert list (live ACP processes only) doesn't know
     // about yet.
-    const handleExpertListSync = (payload: { chatId?: string; experts: ExpertInfo[] }) => {
+    const handleExpertListSync = (payload: { chatId?: string; agents: ExpertInfo[] }) => {
       if (!isCurrentChatEvent(payload)) return
-      const incoming = payload.experts ?? []
+      const incoming = payload.agents ?? []
       const merge = (prev: ExpertInfo[]): ExpertInfo[] => {
         const incomingMap = new Map(incoming.map(e => [e.agentId, e]))
         const merged: ExpertInfo[] = prev.map(e => {
@@ -314,29 +314,29 @@ export const useTerminalWsEvents = ({
       expertsRef.current = merge(expertsRef.current ?? [])
     }
 
-    wsClient.on('expert:data', handleExpertData)
-    wsClient.on('expert:started', handleExpertStarted)
-    wsClient.on('expert:view-attached', handleViewAttached)
-    wsClient.on('expert:list', handleExpertListSync)
-    wsClient.on('expert:list-updated', handleExpertListSync)
-    wsClient.on('expert:exit', handleExpertExit)
-    wsClient.on('expert:stopped', handleExpertStopped)
-    wsClient.on('expert:resume-failed', handleExpertResumeFailed)
-    wsClient.on('expert:error', handleExpertError)
-    wsClient.on('expert:start-failed', handleExpertStartFailed)
+    wsClient.on('agent:data', handleExpertData)
+    wsClient.on('agent:started', handleExpertStarted)
+    wsClient.on('agent:view-attached', handleViewAttached)
+    wsClient.on('agent:list', handleExpertListSync)
+    wsClient.on('agent:list-updated', handleExpertListSync)
+    wsClient.on('agent:exit', handleExpertExit)
+    wsClient.on('agent:stopped', handleExpertStopped)
+    wsClient.on('agent:resume-failed', handleExpertResumeFailed)
+    wsClient.on('agent:error', handleExpertError)
+    wsClient.on('agent:start-failed', handleExpertStartFailed)
     wsClient.on('reconnected', handleReconnected)
 
     return () => {
-      wsClient.off('expert:data', handleExpertData)
-      wsClient.off('expert:started', handleExpertStarted)
-      wsClient.off('expert:view-attached', handleViewAttached)
-      wsClient.off('expert:list', handleExpertListSync)
-      wsClient.off('expert:list-updated', handleExpertListSync)
-      wsClient.off('expert:exit', handleExpertExit)
-      wsClient.off('expert:stopped', handleExpertStopped)
-      wsClient.off('expert:resume-failed', handleExpertResumeFailed)
-      wsClient.off('expert:error', handleExpertError)
-      wsClient.off('expert:start-failed', handleExpertStartFailed)
+      wsClient.off('agent:data', handleExpertData)
+      wsClient.off('agent:started', handleExpertStarted)
+      wsClient.off('agent:view-attached', handleViewAttached)
+      wsClient.off('agent:list', handleExpertListSync)
+      wsClient.off('agent:list-updated', handleExpertListSync)
+      wsClient.off('agent:exit', handleExpertExit)
+      wsClient.off('agent:stopped', handleExpertStopped)
+      wsClient.off('agent:resume-failed', handleExpertResumeFailed)
+      wsClient.off('agent:error', handleExpertError)
+      wsClient.off('agent:start-failed', handleExpertStartFailed)
       wsClient.off('reconnected', handleReconnected)
       const nextChatId = chatIdRef.current
       if (nextChatId !== prevChatIdRef.current) {

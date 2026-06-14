@@ -45,19 +45,19 @@ const makeChatStore = (initial: Chat[]) => {
   } as any
 }
 
-let createChatRoutes: typeof import('../routes/chat/chatRoutes').createChatRoutes
+let createChatRoutes: typeof import('../routes/chat/missionRoutes').createChatRoutes
 
 beforeAll(async () => {
   await fs.mkdir(TMP_HOME, { recursive: true })
   vi.resetModules()
-  ;({ createChatRoutes } = await import('../routes/chat/chatRoutes'))
+  ;({ createChatRoutes } = await import('../routes/chat/missionRoutes'))
 })
 
 afterAll(async () => {
   await fs.rm(TMP_HOME, { recursive: true, force: true })
 })
 
-// Minimal SessionRegistry stub. MemberAggregator only reaches into
+// Minimal SessionRegistry stub. MissionAgentAggregator only reaches into
 // findAllByChat() and getActiveActivities(); other methods are unused at
 // runtime for these tests so we can leave them as no-ops.
 const makeSessionRegistry = (runningChatIds: string[] = []) => ({

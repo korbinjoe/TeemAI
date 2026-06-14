@@ -4,7 +4,7 @@ import { WorkspaceProvider, useWorkspace } from '../contexts/WorkspaceContext'
 import { DialogProvider, useDialog } from '../contexts/DialogContext'
 import { buildMissionUrl } from '../components/workspace/urls'
 import { useChatTabs } from '../contexts/ChatTabContext'
-import { useWorkspaceChats } from '../hooks/useWorkspaceChats'
+import { useWorkspaceMissions } from '../hooks/useWorkspaceMissions'
 import MissionSidebar from '../components/workspace/MissionSidebar'
 import WorkspaceToolbar from '../components/workspace/WorkspaceToolbar'
 import WorkspaceContent from '../components/workspace/WorkspaceContent'
@@ -39,7 +39,7 @@ const WorkspaceLayoutInner = () => {
   } = useDialog()
   const { openTab } = useChatTabs()
   const navigate = useNavigate()
-  const { chats, running, awaitingReview } = useWorkspaceChats(workspaceId)
+  const { chats, running, awaitingReview } = useWorkspaceMissions(workspaceId)
 
   useResponsiveLayout()
 

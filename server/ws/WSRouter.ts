@@ -1,6 +1,7 @@
 
 import type { WebSocket } from 'ws'
-import { ExpertHandler } from './ExpertHandler'
+import { MissionAgentHandler } from './MissionAgentHandler'
+import { canonicalizeInbound } from './wireCompat'
 import { ShellHandler } from './ShellHandler'
 import { GitWatchHandler } from './GitWatchHandler'
 import { ShellManager } from '../terminal/ShellManager'
@@ -18,7 +19,7 @@ import { trackEvent } from '../lib/eventTracker'
 const log = createLogger('WSRouter')
 
 export class WSRouter {
-  private expertHandler: ExpertHandler
+  private expertHandler: MissionAgentHandler
   private shellHandler: ShellHandler
   private gitWatchHandler?: GitWatchHandler
   private terminalViewManager?: TerminalViewManager
@@ -30,7 +31,7 @@ export class WSRouter {
   private executionModeRouter?: ExecutionModeRouter
 
   constructor(deps: {
-    expertHandler: ExpertHandler
+    expertHandler: MissionAgentHandler
     gitWatchManager?: GitWatchManager
     terminalViewManager?: TerminalViewManager
     senseiUpgradeService?: SenseiUpgradeService
@@ -58,7 +59,10 @@ export class WSRouter {
   }
 
   handle(ws: WebSocket, message: { type: string; payload: any }, connectionId: string): void {
-    const { type, payload } = message
+    // PR-D dual-accept: map new-name channels (agent:*, mission:*) back to the
+    // legacy strings the branches below match on. Removed in PR-F.
+    const type = canonicalizeInbound(message.type) as string
+    const { payload } = message
 
     if (type === 'expert:start') {
       if (this.executionModeRouter && payload.agentId === 'lead' && payload.task) {

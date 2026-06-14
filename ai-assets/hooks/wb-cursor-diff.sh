@@ -22,7 +22,7 @@ if [ "${WHITEBOARD_ON_DEMAND_CONTEXT:-1}" = "0" ]; then
 fi
 
 # Required env: if any missing, fail-open (no output -> no impact on tool result)
-: "${EXPERT_API_BASE:=}"
+: "${EXPERT_API_BASE:=${AGENT_API_BASE:-}}"
 : "${TEEMAI_CHAT_ID:=}"
 : "${TEEMAI_INSTANCE_ID:=}"
 if [ -z "$EXPERT_API_BASE" ] || [ -z "$TEEMAI_CHAT_ID" ] || [ -z "$TEEMAI_INSTANCE_ID" ]; then

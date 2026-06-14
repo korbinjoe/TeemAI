@@ -12,6 +12,7 @@
 import type { ManagedSession } from './SessionRegistry'
 import type { ActivityState } from './ActivityDeriver'
 import type { ChatStore } from '../stores/ChatStore'
+import type { ChatActivityPayload, AgentActivitySnapshot } from '../../shared/ws/chat'
 import { createLogger } from '../lib/logger'
 
 const log = createLogger('ActivityAggregator')
@@ -30,38 +31,7 @@ function pickTopPhase(phases: string[]): string {
   return 'initializing'
 }
 
-export interface ChatActivityPayload {
-  chatId: string
-  phase: string
-  currentTool?: string
-  toolCount: number
-  toolCompleted: number
-  cost?: number
-  logLine?: string
-  exitReason?: 'user_stop' | 'timeout' | 'model_switch'
-  agentActivities?: AgentActivitySnapshot[]
-  latestMessage?: {
-    role: 'user' | 'agent' | 'assistant'
-    text: string
-    at: number
-  }
-}
-
-export interface AgentActivitySnapshot {
-  agentId: string
-  agentName: string
-  phase: string
-  currentTool?: string
-  toolCount: number
-  toolCompleted: number
-  cost?: number
-  /**  Read index.ts$ npm install */
-  logLine?: string
-  fileOp?: {
-    path: string
-    operation: 'create' | 'edit' | 'delete' | 'read'
-  }
-}
+export type { ChatActivityPayload, AgentActivitySnapshot }
 
 export type ChatStatusChangedCallback = (chatId: string, status: string) => void
 export type ChatActivityChangedCallback = (payload: ChatActivityPayload) => void

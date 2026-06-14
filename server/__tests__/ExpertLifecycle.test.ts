@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { createExpertLifecycle, type ExpertLifecycleDeps } from '../ws/ExpertLifecycle'
-import { ExpertSessionStore, compositeKey } from '../ws/ExpertSessionStore'
+import { createMissionAgentLifecycle, type MissionAgentLifecycleDeps } from '../ws/MissionAgentLifecycle'
+import { MissionAgentSessionStore, compositeKey } from '../ws/MissionAgentSessionStore'
 
 vi.mock('../terminal/StreamJsonManager', () => ({
   StreamJsonManager: class MockStreamJsonManager {
@@ -74,14 +74,14 @@ vi.mock('../services/chat/ChatTitleService', () => {
   }
 })
 
-vi.mock('../ws/ExpertEventWiring', () => ({
-  wireExpertStreamHandlers: vi.fn().mockReturnValue({
+vi.mock('../ws/MissionAgentEventWiring', () => ({
+  wireMissionAgentStreamHandlers: vi.fn().mockReturnValue({
     fileCollector: {},
     tokenTracker: {},
   }),
 }))
 
-vi.mock('../ws/ExpertPendingTaskFlush', () => ({
+vi.mock('../ws/MissionAgentPendingTaskFlush', () => ({
   flushPendingTasks: vi.fn(),
 }))
 
@@ -96,7 +96,7 @@ function mockWs() {
   }
 }
 
-function createMockDeps(store: ExpertSessionStore, overrides: Partial<ExpertLifecycleDeps> = {}): ExpertLifecycleDeps {
+function createMockDeps(store: MissionAgentSessionStore, overrides: Partial<MissionAgentLifecycleDeps> = {}): MissionAgentLifecycleDeps {
   return {
     configCompiler: {
       compile: vi.fn().mockResolvedValue({
@@ -155,10 +155,10 @@ function createMockDeps(store: ExpertSessionStore, overrides: Partial<ExpertLife
 }
 
 describe('ExpertLifecycle', () => {
-  let store: ExpertSessionStore
+  let store: MissionAgentSessionStore
 
   beforeEach(() => {
-    store = new ExpertSessionStore()
+    store = new MissionAgentSessionStore()
   })
 
   afterEach(() => {
@@ -170,7 +170,7 @@ describe('ExpertLifecycle', () => {
   describe('first start → spawn', () => {
     it('spawns a new process and returns { started: true, method: "spawned" }', async () => {
       const deps = createMockDeps(store)
-      const { handleStart } = createExpertLifecycle(deps)
+      const { handleStart } = createMissionAgentLifecycle(deps)
       const { ws } = mockWs()
 
       const result = await handleStart(ws, {
@@ -212,7 +212,7 @@ describe('ExpertLifecycle', () => {
       })
 
       const deps = createMockDeps(store)
-      const { handleStart } = createExpertLifecycle(deps)
+      const { handleStart } = createMissionAgentLifecycle(deps)
       const { ws } = mockWs()
 
       const result = await handleStart(ws, {
@@ -249,7 +249,7 @@ describe('ExpertLifecycle', () => {
       })
 
       const deps = createMockDeps(store)
-      const { handleStart } = createExpertLifecycle(deps)
+      const { handleStart } = createMissionAgentLifecycle(deps)
       const { ws } = mockWs()
 
       const result = await handleStart(ws, {
@@ -274,7 +274,7 @@ describe('ExpertLifecycle', () => {
       store.markStarting(key)
 
       const deps = createMockDeps(store)
-      const { handleStart } = createExpertLifecycle(deps)
+      const { handleStart } = createMissionAgentLifecycle(deps)
       const { ws } = mockWs()
 
       const result = await handleStart(ws, {
@@ -307,7 +307,7 @@ describe('ExpertLifecycle', () => {
       })
 
       const deps = createMockDeps(store)
-      const { handleStart } = createExpertLifecycle(deps)
+      const { handleStart } = createMissionAgentLifecycle(deps)
       const { ws } = mockWs()
 
       const result = await handleStart(ws, {
@@ -327,7 +327,7 @@ describe('ExpertLifecycle', () => {
   describe('missing chatId', () => {
     it('returns { started: false } and sends expert:error', async () => {
       const deps = createMockDeps(store)
-      const { handleStart } = createExpertLifecycle(deps)
+      const { handleStart } = createMissionAgentLifecycle(deps)
       const { ws, sent } = mockWs()
 
       const result = await handleStart(ws, {
@@ -349,7 +349,7 @@ describe('ExpertLifecycle', () => {
           get: vi.fn().mockReturnValue(undefined),
         } as any,
       })
-      const { handleStart } = createExpertLifecycle(deps)
+      const { handleStart } = createMissionAgentLifecycle(deps)
       const { ws, sent } = mockWs()
 
       const result = await handleStart(ws, {
@@ -384,7 +384,7 @@ describe('ExpertLifecycle', () => {
           onSessionRemoved: vi.fn(),
         } as any,
       })
-      const { handleStart } = createExpertLifecycle(deps)
+      const { handleStart } = createMissionAgentLifecycle(deps)
       const { ws } = mockWs()
 
       const result = await handleStart(ws, {
@@ -404,7 +404,7 @@ describe('ExpertLifecycle', () => {
   describe('sequential re-assignment: dispatch → complete → dispatch same agent', () => {
     it('second dispatch after first completion succeeds with method=spawned', async () => {
       const deps = createMockDeps(store)
-      const { handleStart } = createExpertLifecycle(deps)
+      const { handleStart } = createMissionAgentLifecycle(deps)
       const { ws } = mockWs()
 
       // First dispatch
@@ -456,7 +456,7 @@ describe('ExpertLifecycle', () => {
           }),
         } as any,
       })
-      const { handleStart } = createExpertLifecycle(deps)
+      const { handleStart } = createMissionAgentLifecycle(deps)
       const { ws } = mockWs()
 
       const result = await handleStart(ws, {

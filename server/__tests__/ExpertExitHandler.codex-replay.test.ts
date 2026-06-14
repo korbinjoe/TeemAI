@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildCodexExitReplay } from '../ws/ExpertExitHandler'
+import { buildCodexExitReplay } from '../ws/MissionAgentExitHandler'
 import type { ParsedMessage } from '../terminal/ConversationParser'
 
 const msg = (overrides: Partial<ParsedMessage>): ParsedMessage => ({

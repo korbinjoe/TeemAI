@@ -9,7 +9,7 @@ const PHASE_PRIORITY = ['error', 'tool_running', 'responding', 'thinking', 'wait
  * -  Expert  currentMergedActivity
  * -  completed
  */
-export const useExpertActivities = () => {
+export const useAgentActivities = () => {
   const [expertActivities, setExpertActivities] = useState<Record<string, AgentActivity>>({})
   const [showCompletion, setShowCompletion] = useState(false)
   const lastCompletionRef = useRef<AgentActivity | null>(null)

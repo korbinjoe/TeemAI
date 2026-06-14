@@ -40,8 +40,12 @@ export interface StreamParserState {
   /**  assistant message id apiCallId */
   currentApiCallId: string | null
   messageSeq: number
-  /**  stream_event  assistant  */
-  streamedCurrentTurn: boolean
+  /** apiCallIds already emitted via stream_event so the authoritative
+   *  `assistant` event for the same call can be skipped — per call, not per turn. */
+  streamedApiCalls: Set<string>
+  /** Whether any agent text was emitted since the last `result` event.
+   *  Drives whether the `result` event synthesizes final text. */
+  emittedTextSinceResult: boolean
   codexUsage: { input: number; output: number } | null
   idPrefix: string
 }
@@ -60,7 +64,8 @@ export const createStreamParserState = (): StreamParserState => ({
   sessionId: null,
   currentApiCallId: null,
   messageSeq: 0,
-  streamedCurrentTurn: false,
+  streamedApiCalls: new Set(),
+  emittedTextSinceResult: false,
   codexUsage: null,
   idPrefix: `s${Math.random().toString(36).slice(2, 8)}`,
 })

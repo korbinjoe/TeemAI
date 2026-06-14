@@ -6,20 +6,20 @@
  * Drain failures surface as `expert:error { error: 'pending_task_failed' }`
  * routed via the session registry so whoever is currently watching the
  * session sees the failure. Loss reasons handled by the store itself
- * (TTL, cleanup, stop) go through `ExpertSessionStore.onPendingTaskLoss`
- * and are surfaced by ExpertHandler — not here.
+ * (TTL, cleanup, stop) go through `MissionAgentSessionStore.onPendingTaskLoss`
+ * and are surfaced by MissionAgentHandler — not here.
  */
 
 import type { ACPClient } from '../acp/ACPClient'
 import type { SessionRegistry } from '../terminal/SessionRegistry'
-import type { ExpertSessionStore } from './ExpertSessionStore'
+import type { MissionAgentSessionStore } from './MissionAgentSessionStore'
 import { expandSlashCommand } from '../runtime/SlashCommandResolver'
 import { createLogger } from '../lib/logger'
 
 const log = createLogger('ExpertPendingTaskFlush')
 
 export interface FlushDeps {
-  store: ExpertSessionStore
+  store: MissionAgentSessionStore
   acpClient: ACPClient
   sessionRegistry: SessionRegistry
   sessionId: string

@@ -1,6 +1,28 @@
 // ── CLI Provider ──
 
+/**
+ * The three orthogonal CLI axes (WS-3a). The legacy single `CliProvider` union
+ * conflated all three; these split it apart:
+ *  - vendor:    which CLI tool family (claude / codex / qoder)
+ *  - transport: how we talk to it (native PTY vs ACP protocol)
+ *  - surface:   where it runs (local cli binary vs cloud tier)
+ */
+export type CliVendor = 'claude' | 'codex' | 'qoder'
+export type CliTransport = 'native' | 'acp'
+export type CliSurface = 'cli' | 'cloud'
+
+/**
+ * @deprecated Legacy provider union. Retained as a compatibility alias during the
+ * WS-3 migration window — dropping `'acp'`/`'qodercli'` from the union is a
+ * ~20-file TS cascade with no data risk and is deferred to a follow-up cleanup.
+ * Prefer `CliVendor` + `transport`/`surface`. Use {@link isQoderVendor} for the
+ * qoder/qodercli predicate.
+ */
 export type CliProvider = 'claude' | 'codex' | 'acp' | 'qoder' | 'qodercli'
+
+/** True for both the collapsed `qoder` vendor and the legacy `qodercli` value. */
+export const isQoderVendor = (p?: CliProvider | CliVendor | string | null): boolean =>
+  p === 'qoder' || p === 'qodercli'
 
 export interface AgentPersonality {
   nickname: string
@@ -35,6 +57,10 @@ export interface Agent {
   personality?: AgentPersonality
 
   provider?: CliProvider
+  /** WS-3a transport axis. Defaults to 'native'; 'acp' for ACP-protocol agents. */
+  transport?: CliTransport
+  /** WS-3a surface axis. 'cli' for local binaries (incl. qoder), 'cloud' for tiers. */
+  surface?: CliSurface
 
   heartbeat?: HeartbeatConfig
 
@@ -120,20 +146,19 @@ export interface ExpertSessionInfo {
   taskCompleted?: boolean
 }
 
-export type ChatMemberStatus = 'running' | 'waiting' | 'waiting_input' | 'error' | 'idle' | 'done'
+import type {
+  MissionAgent,
+  MissionAgentStatus,
+  MissionAgentRole,
+  ChatMember,
+  ChatMemberStatus,
+  ChatMemberRole,
+} from '../../shared/chat-types'
+export type { MissionAgent, MissionAgentStatus, MissionAgentRole }
+/** @deprecated use MissionAgent* — kept one release for cross-boundary callers */
+export type { ChatMember, ChatMemberStatus, ChatMemberRole }
 
-export type ChatMemberRole = 'lead' | 'worker'
-
-export interface ChatMember {
-  agentId: string
-  role: ChatMemberRole
-  status: ChatMemberStatus
-  lastMessageAt: string
-  lastMessage?: string
-  cliSessionId?: string
-}
-
-export type TaskStatus =
+export type MissionStatus =
   | 'running'
   | 'waiting_input'
   | 'waiting_confirm'
@@ -142,11 +167,16 @@ export type TaskStatus =
   | 'timeout'
   | 'interrupted'
 
-export interface TaskSummary {
+export interface MissionSummary {
   lastMessage?: string
   errorMessage?: string
   durationSec?: number
 }
+
+/** @deprecated PR-D compat alias; use {@link MissionStatus}. Removed in PR-F. */
+export type TaskStatus = MissionStatus
+/** @deprecated PR-D compat alias; use {@link MissionSummary}. Removed in PR-F. */
+export type TaskSummary = MissionSummary
 
 // ── Chat ──
 
@@ -168,10 +198,10 @@ export interface Chat {
   totalToolCalls?: number
   participantAgents?: string[]
   lastAgentId?: string
-  /** Per-agent live state, derived by MemberAggregator on read. Optional because
+  /** Per-agent live state, derived by MissionAgentAggregator on read. Optional because
    *  it is enrichment, not persistence — every API surface that returns Chat
    *  to the client SHOULD populate this via enrichWithMembers(). */
-  members?: ChatMember[]
+  members?: MissionAgent[]
   /** Origin of the chat. 'native' = created in TeemAI; 'external' = adopted
    *  from a pre-existing local CLI jsonl (Claude Code / Codex). Defaults to
    *  'native' for legacy rows. */

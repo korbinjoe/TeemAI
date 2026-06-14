@@ -30,7 +30,7 @@ import PermissionModal from './modals/PermissionModal'
 import PlanCard from './messages/PlanCard'
 import useMultiRepoGitStatus from '../../hooks/useMultiRepoGitStatus'
 import { useChatScroll } from '../../hooks/useChatScroll'
-import { useExpertActivities } from '../../hooks/useExpertActivities'
+import { useAgentActivities } from '../../hooks/useAgentActivities'
 import { useAgents } from '../../hooks/useAgents'
 import { useChatWebSocket } from '../../hooks/useChatWebSocket'
 import { useChatActions } from '../../hooks/useChatActions'
@@ -152,7 +152,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   const {
     expertActivities, setExpertActivities,
     currentMergedActivity,
-  } = useExpertActivities()
+  } = useAgentActivities()
 
   // In singleAgentMode (Quad tile / ?agent=X route), every chat-level "merged"
   // activity must collapse to just the locked agent's slot — otherwise a sibling
@@ -407,7 +407,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     if (!agentId) return
     addAgentMessage(agentId, { id: uid('usr'), role: 'user', content: message, timestamp: Date.now(), type: 'text' })
     handleScrollToBottom()
-    wsClient.send('expert:direct-input', {
+    wsClient.send('agent:direct-input', {
       chatId, agentId, message, autoStart: true,
       cwd: currentWorkingDirectory,
       repositories: wsRepositories.map((r) => ({ path: r.path })),

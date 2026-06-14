@@ -2,7 +2,7 @@
  * ExpertEventWiring -  Expert Agent
  *
  *  ExpertLifecycle  StreamJsonManager  ACPClient
- *  FileOperationCollector + ExpertTokenTracker + Activity handler
+ *  FileOperationCollector + MissionAgentTokenTracker + Activity handler
  *  spawn / cleanup
  */
 
@@ -15,20 +15,20 @@ import type { TokenUsageStore } from '../stores/TokenUsageStore'
 import type { ACPClient } from '../acp/ACPClient'
 import { acpUpdateToWSMessage, type BridgeContext } from '../acp/ACPToFrontendBridge'
 import type { ACPSessionUpdateParams } from '../../shared/acp-types'
-import type { ExpertSessionStore } from './ExpertSessionStore'
-import { ExpertTokenTracker } from './ExpertTokenTracker'
-import { createActivityHandler } from './ExpertActivityHandler'
-import { flushPendingTasks } from './ExpertPendingTaskFlush'
+import type { MissionAgentSessionStore } from './MissionAgentSessionStore'
+import { MissionAgentTokenTracker } from './MissionAgentTokenTracker'
+import { createActivityHandler } from './MissionAgentActivityHandler'
+import { flushPendingTasks } from './MissionAgentPendingTaskFlush'
 import { createLogger } from '../lib/logger'
 import { scanPluginSlashCommands, scanProjectSlashCommands, scanUserSkills } from '../runtime/PluginCommandsScanner'
 
 const log = createLogger('ExpertEventWiring')
 
-export interface ExpertEventWiringDeps {
+export interface MissionAgentEventWiringDeps {
   streamManager: StreamJsonManager
   acpClient: ACPClient
   sessionRegistry: SessionRegistry
-  store: ExpertSessionStore
+  store: MissionAgentSessionStore
   chatStore: ChatStore
   tokenUsageStore: TokenUsageStore
   sessionId: string
@@ -41,19 +41,19 @@ export interface ExpertEventWiringDeps {
   persistExpertSession: (agentId: string, cliSessionId: string, cwd: string, connectionId: string, provider?: import('../config/types').CliProvider, chatId?: string) => void
   connectionId: string
   globalBroadcast?: (msg: Record<string, unknown>) => void
-  onExit: (exitCode: number, signal: number | undefined, ctx: { fileCollector: FileOperationCollector; tokenTracker: ExpertTokenTracker }) => void
+  onExit: (exitCode: number, signal: number | undefined, ctx: { fileCollector: FileOperationCollector; tokenTracker: MissionAgentTokenTracker }) => void
   ws: WebSocket
 }
 
-export interface WiredExpertHandles {
+export interface WiredMissionAgentHandles {
   fileCollector: FileOperationCollector
-  tokenTracker: ExpertTokenTracker
+  tokenTracker: MissionAgentTokenTracker
 }
 
 /**
  *  StreamManager + ACPClient  caller
  */
-export const wireExpertStreamHandlers = (deps: ExpertEventWiringDeps): WiredExpertHandles => {
+export const wireMissionAgentStreamHandlers = (deps: MissionAgentEventWiringDeps): WiredMissionAgentHandles => {
   const {
     streamManager, acpClient, sessionRegistry, store, chatStore, tokenUsageStore,
     sessionId, key, agentId, chatId, agentName, cwd, provider,
@@ -84,7 +84,7 @@ export const wireExpertStreamHandlers = (deps: ExpertEventWiringDeps): WiredExpe
     })
   })
 
-  const tokenTracker = new ExpertTokenTracker(chatId, agentId, tokenUsageStore, chatStore)
+  const tokenTracker = new MissionAgentTokenTracker(chatId, agentId, tokenUsageStore, chatStore)
 
   const handleActivity = createActivityHandler({
     store, sessionRegistry, sessionId, key, agentId, chatId,

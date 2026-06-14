@@ -7,7 +7,7 @@
 
 import { Router } from 'express'
 import { join } from 'path'
-import type { ExpertHandler } from '../../ws/ExpertHandler'
+import type { MissionAgentHandler } from '../../ws/MissionAgentHandler'
 import type { AgentRegistry } from '../../config/AgentRegistry'
 import type { ExecutionPlanManager } from '../../mailbox/ExecutionPlanManager'
 import type { WhiteboardManager } from '../../whiteboard/WhiteboardManager'
@@ -16,7 +16,7 @@ import { wrapTaskEnvelope, type TaskEnvelope } from '../../../shared/agent-messa
 import type { HandoffRequest } from '../../../shared/handoff-types'
 import { WHITEBOARD_SUMMARY_MAX } from '../../../shared/whiteboard-types'
 import { TERMINAL_PHASES, type ExpertEvent } from '../../../shared/expert-event-types'
-import { parseAgentId } from '../../ws/ExpertSessionStore'
+import { parseAgentId } from '../../ws/MissionAgentSessionStore'
 import { expandSlashCommand } from '../../runtime/SlashCommandResolver'
 import { cwdToCliProjectKey } from '../../../shared/projectKey'
 import { createLogger } from '../../lib/logger'
@@ -27,7 +27,7 @@ const log = createLogger('ExpertRoutes')
 const API_CONNECTION_ID = '__api__'
 
 interface ExpertRouteDeps {
-  expertHandler: ExpertHandler
+  expertHandler: MissionAgentHandler
   agentRegistry: AgentRegistry
   executionPlanManager?: ExecutionPlanManager
   whiteboardManager?: WhiteboardManager
@@ -35,9 +35,18 @@ interface ExpertRouteDeps {
   broadcastToChat?: (chatId: string, msg: Record<string, unknown>) => void
 }
 
-export const createExpertRoutes = (deps: ExpertRouteDeps): Router => {
+export const createMissionAgentRoutes = (deps: ExpertRouteDeps): Router => {
   const router = Router()
   const { expertHandler, agentRegistry, executionPlanManager, whiteboardManager, workflowRegistry, broadcastToChat } = deps
+
+  // PR-D alias: canonical prefix is /api/agent/*; rewrite to legacy /api/expert/*
+  // handlers (kept internal until PR-F). /api/expert/* continues to work directly.
+  router.use((req, _res, next) => {
+    if (req.url.startsWith('/api/agent/')) {
+      req.url = '/api/expert/' + req.url.slice('/api/agent/'.length)
+    }
+    next()
+  })
 
   router.post('/api/expert/start', async (req, res) => {
     const { agentId, task, taskEnvelope, instanceSuffix, connectionId, chatId: reqChatId } = req.body as {
@@ -427,3 +436,6 @@ ${expandedTask}`
 
   return router
 }
+
+/** @deprecated PR-D: use createMissionAgentRoutes (mounts /api/agent* + /api/expert* alias). */
+export const createExpertRoutes = createMissionAgentRoutes

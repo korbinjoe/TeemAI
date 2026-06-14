@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
-import { useWorkspaceChats } from '../../hooks/useWorkspaceChats'
+import { useWorkspaceMissions } from '../../hooks/useWorkspaceMissions'
 import { useWorkspaceMeta } from '../../hooks/useWorkspaceMeta'
 import { useAgents } from '../../hooks/useAgents'
 import LayoutControls from './LayoutControls'
@@ -8,8 +8,8 @@ import { UsersGroup, ChevronRight } from './icons'
 import { cn } from '../../lib/utils'
 import { isElectron } from '../../utils/env'
 import { buildMissionUrl, buildWorkspaceUrl } from './urls'
-import { memberStatusDot } from './MissionSessionRows'
-import type { Chat, ChatMember } from '../workspace/types'
+import { agentStatusDot } from './MissionSessionRows'
+import type { Chat, MissionAgent } from '../workspace/types'
 
 const noDrag = { WebkitAppRegion: 'no-drag' } as React.CSSProperties
 
@@ -66,7 +66,7 @@ const SIBLING_DOTS_MAX = 4
 
 const ActiveChatInfoBar = () => {
   const { workspaceId, activeChatId, selectedAgentId } = useWorkspace()
-  const { chats } = useWorkspaceChats(workspaceId)
+  const { chats } = useWorkspaceMissions(workspaceId)
   const { agentNames } = useAgents()
   const navigate = useNavigate()
   const chat = activeChatId ? chats.find((c) => c.id === activeChatId) : undefined
@@ -77,7 +77,7 @@ const ActiveChatInfoBar = () => {
 
   // Members source-of-truth: server-derived members[] when present, else synth
   // from primaryAgentId + teamAgentIds so the toolbar still functions pre-enrich.
-  const members: ChatMember[] = chat.members && chat.members.length > 0
+  const members: MissionAgent[] = chat.members && chat.members.length > 0
     ? chat.members
     : synthMembers(chat)
 
@@ -103,7 +103,7 @@ const ActiveChatInfoBar = () => {
 
   return (
     <div className="flex items-center gap-1.5 min-w-0">
-      <span className={cn('w-2 h-2 rounded-full flex-shrink-0', memberStatusDot(active.status))} />
+      <span className={cn('w-2 h-2 rounded-full flex-shrink-0', agentStatusDot(active.status))} />
       <span className="text-xs font-semibold text-text-primary truncate max-w-[180px]" title={activeName}>
         {activeName}
       </span>
@@ -133,15 +133,15 @@ const ActiveChatInfoBar = () => {
   )
 }
 
-const synthMembers = (chat: Chat): ChatMember[] => {
+const synthMembers = (chat: Chat): MissionAgent[] => {
   const ids = [chat.primaryAgentId, ...(chat.teamAgentIds || [])].filter(Boolean)
   const seen = new Set<string>()
   return ids
     .filter((id) => (seen.has(id) ? false : (seen.add(id), true)))
     .map((agentId, idx) => ({
       agentId,
-      role: (idx === 0 ? 'lead' : 'worker') as ChatMember['role'],
-      status: 'idle' as ChatMember['status'],
+      role: (idx === 0 ? 'lead' : 'worker') as MissionAgent['role'],
+      status: 'idle' as MissionAgent['status'],
       lastMessageAt: chat.lastMessageAt,
     }))
 }
@@ -155,7 +155,7 @@ const MemberCountBadge = ({ count }: { count: number }) => (
 )
 
 const SiblingDots = ({ siblings, agentNames, onSelect }: {
-  siblings: ChatMember[]
+  siblings: MissionAgent[]
   agentNames: Record<string, string>
   onSelect: (agentId: string) => void
 }) => {
@@ -174,7 +174,7 @@ const SiblingDots = ({ siblings, agentNames, onSelect }: {
             title={`Switch to ${name}`}
             className={cn(
               'w-2.5 h-2.5 rounded-full flex-shrink-0 ring-1 ring-transparent hover:ring-accent-brand-light/60 transition-shadow',
-              memberStatusDot(m.status),
+              agentStatusDot(m.status),
             )}
           />
         )
@@ -188,7 +188,7 @@ const SiblingDots = ({ siblings, agentNames, onSelect }: {
 
 const MissionInfoBar = () => {
   const { workspaceId, selectedMissionId } = useWorkspace()
-  const { chats } = useWorkspaceChats(workspaceId)
+  const { chats } = useWorkspaceMissions(workspaceId)
   const chat = selectedMissionId ? chats.find((c) => c.id === selectedMissionId) : undefined
   const title = chat?.title ?? selectedMissionId ?? 'No mission selected'
 

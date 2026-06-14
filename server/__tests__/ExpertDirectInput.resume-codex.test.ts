@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { createExpertDirectInput } = await import('../ws/ExpertDirectInput')
-const { ExpertSessionStore } = await import('../ws/ExpertSessionStore')
+const { createMissionAgentDirectInput } = await import('../ws/MissionAgentDirectInput')
+const { MissionAgentSessionStore } = await import('../ws/MissionAgentSessionStore')
 
 describe('ExpertDirectInput codex resume', () => {
   const connId = 'conn-1'
   const chatId = 'chat-1'
   const agentId = 'agent-1'
 
-  let store: InstanceType<typeof ExpertSessionStore>
+  let store: InstanceType<typeof MissionAgentSessionStore>
   let handleStart: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
-    store = new ExpertSessionStore()
+    store = new MissionAgentSessionStore()
     handleStart = vi.fn(async () => ({ started: true }))
   })
 
@@ -41,7 +41,7 @@ describe('ExpertDirectInput codex resume', () => {
   })
 
   it('does not pass resumeSessionId for codex historical session', async () => {
-    const { handleDirectInput } = createExpertDirectInput(buildDeps())
+    const { handleDirectInput } = createMissionAgentDirectInput(buildDeps())
     const ws = { send: vi.fn(), readyState: 1 } as any
 
     await handleDirectInput(ws, {

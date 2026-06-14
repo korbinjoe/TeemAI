@@ -1,12 +1,12 @@
 /**
  * expertActivityReconcile — un-stick the message-area `expertActivities` map
- * from the authoritative, workspace-broadcast `chat:activity` payload.
+ * from the authoritative, workspace-broadcast `mission.activity` payload.
  *
- * The per-agent `expert:activity` / `expert:exit` stream that normally drives
+ * The per-agent `agent:activity` / `agent:exit` stream that normally drives
  * `expertActivities` is `isActive`-gated and chatId-filtered, so a missed
  * turn-end event freezes an agent's progress card at a working phase (spinner)
- * while the right Agents panel — fed by this same `chat:activity` via
- * `reconcileMembersFromActivity` — already shows the terminal phase.
+ * while the right Agents panel — fed by this same `mission.activity` via
+ * `reconcileAgentsFromActivity` — already shows the terminal phase.
  *
  * We only ever advance a stuck *working* phase to the authoritative *terminal*
  * phase; never the reverse, so a live running update is never regressed.

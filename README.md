@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/korbinjoe/TeemAI/actions/workflows/ci.yml/badge.svg)](https://github.com/korbinjoe/TeemAI/actions/workflows/ci.yml)
 
-**The GUI and team layer for Claude Code, Codex, and Qoder CLI.**
+**The GUI for Claude Code, Codex, and your CLI fleet — every session in one place, your attention back, agents with real roles.**
 
 You already ship with AI CLIs. But you're still juggling raw terminals: hunting for the right session, re-explaining your stack every time, and watching one agent while three other tasks wait. TeemAI is the control surface those CLIs never gave you — one place to see every session, run a team in parallel, and come back to finished work.
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.0-beta.8] - 2026-06-15
+
+### Bug Fixes
+
+- Fix startup crash where the V27-era `chats` compat VIEW blocked SCHEMA_V1 index creation (`views may not be indexed`), preventing V28 cleanup from ever running
+- Drop stale `chats` VIEW (and any ghost table SCHEMA_V1 recreates) before migrations run
+- Restore 16 built-in skills accidentally deleted during the social-platform migration (`handoff`, `whiteboard`, `workflow`, `playwright-cli`, `product-design`, `architecture-review`, `ui-designer`, `ui-reviewer`, `code-reviewer-*`, and others)
+
+### Improvements
+
+- **README**: sharpen one-line tagline around GUI, attention management, and role-defined agents for Claude Code / Codex CLI users
+- Clean broken `ai-assets/skills` symlinks before `electron-builder` packaging
+- Bump `better-sqlite3` to ^12.10.1 and `concurrently` to ^10.0.3
+
 ## [0.1.0-beta.7] - 2026-06-15
 
 ### Features

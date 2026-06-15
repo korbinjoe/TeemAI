@@ -183,8 +183,43 @@ export function getDatabase(): BetterSqlite3.Database {
   _db.pragma('foreign_keys = ON')
   _db.pragma('synchronous = NORMAL')
 
+  // V27 renamed the `chats` table to `missions` and left a compat VIEW named
+  // `chats`. SCHEMA_V1 contains CREATE INDEX … ON chats() which SQLite rejects
+  // against a VIEW ("views may not be indexed") before evaluating IF NOT EXISTS.
+  // Drop the VIEW early so SCHEMA_V1 can proceed; V28 cleanup is idempotent.
+  try {
+    const chatsEntry = _db.prepare(
+      "SELECT type FROM sqlite_master WHERE name = 'chats'"
+    ).get() as { type: string } | undefined
+    if (chatsEntry?.type === 'view') {
+      _db.exec(`
+        DROP TRIGGER IF EXISTS chats_instead_insert;
+        DROP TRIGGER IF EXISTS chats_instead_update;
+        DROP TRIGGER IF EXISTS chats_instead_delete;
+        DROP VIEW IF EXISTS chats;
+      `)
+      log.info('Dropped stale chats VIEW before schema init')
+    }
+  } catch { /* safe on empty DB — sqlite_master always exists */ }
+
   // Initialize Schema V1
   _db.exec(SCHEMA_V1)
+
+  // SCHEMA_V1 creates a `chats` table. On DBs that already migrated to
+  // `missions` (V27+), this produces an empty ghost table. Drop it before
+  // migrations run so it doesn't linger.
+  try {
+    const hasMissions = _db.prepare(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'missions'"
+    ).get()
+    const hasChats = _db.prepare(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'chats'"
+    ).get()
+    if (hasMissions && hasChats) {
+      _db.exec('DROP TABLE chats')
+      log.info('Dropped ghost chats table (data lives in missions)')
+    }
+  } catch { /* non-critical cleanup */ }
 
   runMigrations(_db)
 

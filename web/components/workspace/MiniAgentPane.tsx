@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { startTransition } from 'react'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { useAgents } from '../../hooks/useAgents'
 import { cn } from '../../lib/utils'
@@ -86,11 +87,16 @@ const MiniAgentPane = ({ chat, member, parentChat, agentId, agentName, status, r
       chat={chat}
       isActive={activeChatId === chat.id}
       shortcutKey={shortcutKey}
-      onSelect={() => workspaceId && navigate(buildMissionOpenUrl(chat))}
+      onSelect={() => {
+        if (!workspaceId) return
+        startTransition(() => navigate(buildMissionOpenUrl(chat)))
+      }}
       onZoom={() => {
         if (!workspaceId) return
-        navigate(buildMissionOpenUrl(chat))
-        setLayoutMode('single')
+        startTransition(() => {
+          navigate(buildMissionOpenUrl(chat))
+          setLayoutMode('single')
+        })
       }}
     />
   )
@@ -241,12 +247,16 @@ const MemberBackedPane = ({ member, parentChat, isActive, shortcutKey }: {
 
   const handleSelect = () => {
     if (!workspaceId) return
-    navigate(buildMissionUrl(workspaceId, parentChat.id, member.agentId))
+    startTransition(() => {
+      navigate(buildMissionUrl(workspaceId, parentChat.id, member.agentId))
+    })
   }
   const handleZoom = () => {
     if (!workspaceId) return
-    navigate(buildMissionUrl(workspaceId, parentChat.id, member.agentId))
-    setLayoutMode('single')
+    startTransition(() => {
+      navigate(buildMissionUrl(workspaceId, parentChat.id, member.agentId))
+      setLayoutMode('single')
+    })
   }
 
   return (

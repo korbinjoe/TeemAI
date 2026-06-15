@@ -11,6 +11,7 @@ import { createAgentEventHandlers, type AgentEventHandlers } from './useAgentEve
 import { usePermissionEvents } from './usePermissionEvents'
 import { useAgentMessages, SYSTEM_MESSAGE_AGENT } from './useAgentMessages'
 import type { PrefetchedWorkspaceData } from '../components/chat/ChatInstance'
+import { missionSwitchPerf } from '../lib/missionSwitchPerf'
 
 interface UseChatWebSocketOptions {
   workspaceId?: string
@@ -27,6 +28,8 @@ interface UseChatWebSocketOptions {
   setAvailableAgents: React.Dispatch<React.SetStateAction<AgentSummary[]>>
   /** Tab  Tab —  Tab  chat:set-context */
   isActive?: boolean
+  /** ChatPane LRU hit — instance stayed mounted; skip JSONL replay on re-activate. */
+  resumeWarm?: boolean
   onInitError?: () => void
   prefetchedWorkspace?: PrefetchedWorkspaceData | null
 }
@@ -45,11 +48,15 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     uid, t,
     setExpertActivities,
     selectedAgentId, availableAgents, handleSetSelectedAgentId, setAvailableAgents,
-    isActive = true, onInitError, prefetchedWorkspace,
+    isActive = true, onInitError, prefetchedWorkspace, resumeWarm = false,
   } = opts
   const wsClient = getWebSocketClient()
   const isActiveRef = useRef(isActive)
   isActiveRef.current = isActive
+  const resumeWarmRef = useRef(resumeWarm)
+  resumeWarmRef.current = resumeWarm
+  const cwdReadyRef = useRef(false)
+  const forceFullResumeRef = useRef(false)
 
   const initialAgentSetRef = useRef(false)
   const isNewChatRef = useRef(isNewChat)
@@ -134,6 +141,46 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
 
   const sendContextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const shouldSkipReplay = useCallback((): boolean => {
+    return resumeWarmRef.current && cwdReadyRef.current && !forceFullResumeRef.current
+  }, [])
+
+  const dispatchChatContext = useCallback(() => {
+    const cid = chatIdRef.current
+    if (!cid || !wsClient.isConnected() || !isActiveRef.current) return
+
+    const skipReplay = !isNewChatRef.current && shouldSkipReplay()
+
+    wsClient.send('mission:set-context', { chatId: cid })
+    missionSwitchPerf.markWsContextSent(cid)
+
+    if (!isNewChatRef.current) {
+      wsClient.send('mission:resume-agents', { chatId: cid, ...(skipReplay ? { skipReplay: true } : {}) })
+      missionSwitchPerf.markWsResumeSent(cid, { skipReplay })
+      if (skipReplay) missionSwitchPerf.mark('ws-resume-warm', cid)
+    }
+
+    if (!skipReplay) forceFullResumeRef.current = false
+  }, [wsClient, shouldSkipReplay])
+
+  const scheduleChatContext = useCallback(() => {
+    const currentChatId = chatIdRef.current
+    if (!currentChatId || !wsClient.isConnected()) return
+    if (!isActiveRef.current) return
+    if (sendContextTimerRef.current) clearTimeout(sendContextTimerRef.current)
+
+    const immediate = isNewChatRef.current || shouldSkipReplay()
+    if (immediate) {
+      dispatchChatContext()
+      return
+    }
+
+    sendContextTimerRef.current = setTimeout(() => {
+      sendContextTimerRef.current = null
+      dispatchChatContext()
+    }, 300)
+  }, [wsClient, dispatchChatContext, shouldSkipReplay])
+
   const wsHandlersRef = useRef({
     handleError: (data: { message?: string; chatId?: string } | undefined) => {
       if (!isActiveRef.current) return
@@ -144,23 +191,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     ...expertHandlers,
     handleExpertPermissionRequest,
     handleChatPermissionResolved,
-    sendChatContext: () => {
-      const currentChatId = chatIdRef.current
-      if (!currentChatId || !wsClient.isConnected()) return
-      if (!isActiveRef.current) return
-      if (sendContextTimerRef.current) clearTimeout(sendContextTimerRef.current)
-      const fire = () => {
-        const cid = chatIdRef.current
-        if (!cid || !wsClient.isConnected() || !isActiveRef.current) return
-        wsClient.send('mission:set-context', { chatId: cid })
-        if (!isNewChatRef.current) wsClient.send('mission:resume-agents', { chatId: cid })
-      }
-      if (isNewChatRef.current) { fire(); return }
-      sendContextTimerRef.current = setTimeout(() => {
-        sendContextTimerRef.current = null
-        fire()
-      }, 300)
-    },
+    sendChatContext: () => scheduleChatContext(),
   })
 
   wsHandlersRef.current.handleError = (data) => {
@@ -169,23 +200,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     addSystemMessage({ id: uid('err'), role: 'agent', content: `Error: ${data?.message ?? 'unknown'}`, timestamp: Date.now(), type: 'error' })
     setLoading(false); setThinking(false)
   }
-  wsHandlersRef.current.sendChatContext = () => {
-    const currentChatId = chatIdRef.current
-    if (!currentChatId || !wsClient.isConnected()) return
-    if (!isActiveRef.current) return
-    if (sendContextTimerRef.current) clearTimeout(sendContextTimerRef.current)
-    const fire = () => {
-      const cid = chatIdRef.current
-      if (!cid || !wsClient.isConnected() || !isActiveRef.current) return
-      wsClient.send('mission:set-context', { chatId: cid })
-      if (!isNewChatRef.current) wsClient.send('mission:resume-agents', { chatId: cid })
-    }
-    if (isNewChatRef.current) { fire(); return }
-    sendContextTimerRef.current = setTimeout(() => {
-      sendContextTimerRef.current = null
-      fire()
-    }, 300)
-  }
+  wsHandlersRef.current.sendChatContext = () => scheduleChatContext()
 
   // ── Workspace Initialize ──
   const prefetchedRef = useRef(prefetchedWorkspace)
@@ -271,6 +286,8 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       }
 
       setCwdReady(true)
+      cwdReadyRef.current = true
+      if (chatId) missionSwitchPerf.markCwdReady(chatId)
     }
 
     init()
@@ -323,10 +340,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       if (phase === 'completed' || phase === 'error') setChatStatus('stopped')
       else if (phase === 'waiting_input' || phase === 'waiting_confirmation') setChatStatus('idle')
       else if (ACTIVE_PHASES.has(phase)) setChatStatus('running')
-      // Reconcile the message-area progress cards: the per-agent expert:activity
-      // stream is isActive-gated and can miss a turn-end event, freezing a card
-      // at a working phase. This authoritative payload advances any such stuck
-      // card to its terminal phase (same signal the right Agents panel uses).
+      if (!isActiveRef.current) return
       setExpertActivities((prev) => reconcileExpertActivitiesFromChat(prev, payload))
     }
 
@@ -354,6 +368,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
 
     const handleReconnected = () => {
       setConnected(true)
+      forceFullResumeRef.current = true
       wsHandlersRef.current.sendChatContext()
     }
     wsClient.on('reconnected', handleReconnected)

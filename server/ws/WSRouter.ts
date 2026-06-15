@@ -169,7 +169,9 @@ export class WSRouter {
     }
     if (type === 'mission:resume-agents') {
       if (payload.chatId) {
-        this.expertHandler.resumeFromChat(ws, payload.chatId, connectionId).catch((err) => {
+        this.expertHandler.resumeFromChat(ws, payload.chatId, connectionId, {
+          skipReplay: payload.skipReplay === true,
+        }).catch((err) => {
           log.error('resumeFromChat error', { error: err instanceof Error ? err.message : String(err) })
         })
 

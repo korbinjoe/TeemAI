@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useMemo } from 'react'
+import { useRef, useEffect, useState, useMemo, startTransition } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { useDialog } from '../../contexts/DialogContext'
@@ -7,6 +7,7 @@ import { useAgents } from '../../hooks/useAgents'
 import { Search } from './icons'
 import { buildMissionUrl } from './urls'
 import { buildMissionOpenUrl } from './MissionSessionRows'
+import { missionSwitchPerf } from '../../lib/missionSwitchPerf'
 import type { Chat, MissionAgent } from '../workspace/types'
 
 interface PaletteEntry {
@@ -90,7 +91,11 @@ const CommandPalette = () => {
         group: 'overview',
         status,
         time,
-        run: () => { if (workspaceId) navigate(buildMissionOpenUrl(c)) },
+        run: () => {
+          if (!workspaceId) return
+          missionSwitchPerf.start(c.id, 'other')
+          startTransition(() => navigate(buildMissionOpenUrl(c)))
+        },
       })
       const members = c.members ?? []
       for (const m of members) {
@@ -102,7 +107,11 @@ const CommandPalette = () => {
           group: m.role === 'lead' ? 'lead' : 'worker',
           status: memberStatusToString(m.status),
           time: formatTimeAgo(m.lastMessageAt),
-          run: () => { if (workspaceId) navigate(buildMissionUrl(workspaceId, c.id, m.agentId)) },
+          run: () => {
+            if (!workspaceId) return
+            missionSwitchPerf.start(c.id, 'other')
+            startTransition(() => navigate(buildMissionUrl(workspaceId, c.id, m.agentId)))
+          },
         })
       }
     }

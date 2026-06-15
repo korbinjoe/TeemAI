@@ -14,7 +14,7 @@ export interface ImageAttachment {
 export interface WsSendMessages {
   // ── Canonical (PR-D): mission.* + agent:* ──────────────────────────────────
   'mission:set-context': { chatId: string | undefined }
-  'mission:resume-agents': { chatId: string | undefined }
+  'mission:resume-agents': { chatId: string | undefined; skipReplay?: boolean }
   'agent:direct-input': {
     chatId: string
     agentId: string

@@ -491,7 +491,12 @@ export class MissionAgentHandler {
     }
   }
 
-  async resumeFromChat(ws: WebSocket, chatId: string, connectionId: string): Promise<void> {
+  async resumeFromChat(
+    ws: WebSocket,
+    chatId: string,
+    connectionId: string,
+    options?: { skipReplay?: boolean },
+  ): Promise<void> {
     this.connectionActiveChatId.set(connectionId, chatId)
     const connKey = `${connectionId}::${chatId}`
     const now = Date.now()
@@ -501,9 +506,12 @@ export class MissionAgentHandler {
       return
     }
     this.resumeInFlight.add(connKey)
+    const perfT0 = performance.now()
     try {
-      await this.resumeHandler.resumeFromChat(ws, chatId, connectionId)
+      await this.resumeHandler.resumeFromChat(ws, chatId, connectionId, options)
       this.resumeRecent.set(connKey, Date.now())
+      const durationMs = Math.round(performance.now() - perfT0)
+      log.debug('[mission-switch-perf] resumeFromChat', { chatId, connectionId, durationMs, skipReplay: options?.skipReplay === true })
     } finally {
       this.resumeInFlight.delete(connKey)
     }

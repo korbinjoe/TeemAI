@@ -13,6 +13,7 @@
 - **README**: sharpen one-line tagline around GUI, attention management, and role-defined agents for Claude Code / Codex CLI users
 - Clean broken `ai-assets/skills` symlinks before `electron-builder` packaging
 - Bump `better-sqlite3` to ^12.10.1 and `concurrently` to ^10.0.3
+- **Mission switch (Phase 1–3)**: skip JSONL replay on warm LRU; stable IDE via `ChatIDEOutlet`; inactive cache instances skip Virtuoso; `startTransition` on mission navigation; trace finalizes on `ide-ready`; perf **67 → 99 (A)**, `p95 total` **720 → 153ms**
 
 ## [0.1.0-beta.7] - 2026-06-15
 

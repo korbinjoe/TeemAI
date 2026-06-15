@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-15T16:44:53.242Z",
+  "score": 99,
+  "grade": "A",
+  "summary": {
+    "samples": 8,
+    "avgInteractiveMs": 61,
+    "p95InteractiveMs": 137,
+    "avgResumeMs": 33,
+    "avgTotalMs": 126,
+    "p95TotalMs": 211,
+    "avgIdeReadyMs": 47,
+    "p95IdeReadyMs": 114,
+    "avgReplayMsgs": 0,
+    "avgReplayProcessMs": 0,
+    "cachedHitRate": 100,
+    "warmSwitchRate": 100,
+    "warmCacheAvgReplayMsgs": 0
+  }
+}

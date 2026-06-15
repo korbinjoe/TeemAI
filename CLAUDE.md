@@ -106,7 +106,19 @@ After every bug fix or feature modification, output the following:
 - [ ] State persistence after page refresh
 ```
 
-## Rule 4: xterm / PTY Rules
+## Rule 4: Mission Switch Performance
+
+Mission switch instrumentation and scoring are **permanent** (not dev-only throwaway code).
+
+After changes touching mission navigation, `ChatPane` cache, `ChatInstance` lifecycle, `useChatWebSocket` resume/replay, mission sidebar, or IDE portal:
+
+1. Run `npm run perf:mission-switch` (requires `npm run dev` in another terminal)
+2. Ensure score does not regress vs `scripts/perf-baselines/mission-switch.json`
+3. If improvements are intentional, refresh baseline: `npm run perf:mission-switch:baseline`
+
+Details: `docs/perf-mission-switch.md`. Browser console: `__missionSwitchPerf.score()`.
+
+## Rule 5: xterm / PTY Rules
 
 This is the highest-bug-density area of the project — exercise extra caution before modifying:
 
@@ -120,7 +132,7 @@ This is the highest-bug-density area of the project — exercise extra caution b
 - Do not add PTY timeout/auto-cleanup logic unless the user explicitly requests it
 - xterm fit addon call timing must account for actual DOM mount completion
 
-## Rule 5: Prohibited Actions
+## Rule 6: Prohibited Actions
 
 The following are explicitly prohibited:
 
@@ -130,7 +142,7 @@ The following are explicitly prohibited:
 - Do not add timeout recycling, auto-cleanup, or polling logic unless the user requests it
 - Do not reimplement work that the user asked to be done using an existing skill
 
-## Rule 6: Code Standards
+## Rule 7: Code Standards
 
 - Always respond in English
 - **Code, comments, documentation, and commit messages must all be in English**

@@ -271,8 +271,10 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
     ws: WebSocket,
     chatId: string,
     connectionId: string,
+    options?: { skipReplay?: boolean },
   ): Promise<void> => {
-    log.debug('resumeFromChat called', { chatId, connectionId })
+    const skipReplay = options?.skipReplay === true
+    log.debug('resumeFromChat called', { chatId, connectionId, skipReplay })
     const chat = chatStore.get(chatId)
     log.debug('resumeFromChat chat data', { chatId, hasChat: !!chat, hasExpertSessions: !!chat?.expertSessions, expertSessionsCount: chat?.expertSessions ? Object.keys(chat.expertSessions).length : 0 })
 
@@ -358,26 +360,28 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
 
       existingSession.streamManager.forceRedraw()
 
-      const sessionProvider = existingSession.streamManager.getProvider()
-      const memoryMessages = existingSession.streamManager.getCurrentMessages()
-      const historyMessages = existingSession.cliSessionId && existingSession.cwd
-        ? readMessagesFromJsonl(existingSession.cwd, existingSession.cliSessionId, sessionProvider)
-        : null
-      const messages = mergeReplayMessages(historyMessages, memoryMessages, {
-        agentId,
-        source: 'resend',
-        provider: sessionProvider,
-      })
-      if (messages && messages.length > 0) {
-        replayMessagesTo(
-          connectionId,
-          { agentId, sessionId: existingSession.sessionId, chatId },
-          messages,
-          existingSession.acpClient,
-          'resend',
-        )
-      } else if (!existingSession.streamManager.isWatcherReady()) {
-        log.warn('Same-connection resend: JSONL file not found, message history unavailable', { agentId, chatId })
+      if (!skipReplay) {
+        const sessionProvider = existingSession.streamManager.getProvider()
+        const memoryMessages = existingSession.streamManager.getCurrentMessages()
+        const historyMessages = existingSession.cliSessionId && existingSession.cwd
+          ? readMessagesFromJsonl(existingSession.cwd, existingSession.cliSessionId, sessionProvider)
+          : null
+        const messages = mergeReplayMessages(historyMessages, memoryMessages, {
+          agentId,
+          source: 'resend',
+          provider: sessionProvider,
+        })
+        if (messages && messages.length > 0) {
+          replayMessagesTo(
+            connectionId,
+            { agentId, sessionId: existingSession.sessionId, chatId },
+            messages,
+            existingSession.acpClient,
+            'resend',
+          )
+        } else if (!existingSession.streamManager.isWatcherReady()) {
+          log.warn('Same-connection resend: JSONL file not found, message history unavailable', { agentId, chatId })
+        }
       }
 
       const lastActivity = store.getActivity(compositeKey(connectionId, chatId, agentId))
@@ -390,7 +394,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
         },
       })
 
-      log.debug('Same-connection resend', { agentId, messages: messages?.length ?? 0 })
+      log.debug('Same-connection resend', { agentId, skipReplay })
     }
 
     if (toResume.length === 0) return
@@ -464,31 +468,35 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
 
         existingSession.streamManager.forceRedraw()
 
-        const sessionProvider = existingSession.streamManager.getProvider()
-        const memoryMessages = existingSession.streamManager.getCurrentMessages()
-        const historyMessages = existingSession.cliSessionId && existingSession.cwd
-          ? readMessagesFromJsonl(existingSession.cwd, existingSession.cliSessionId, sessionProvider)
-          : null
-        const reAttachMessages = mergeReplayMessages(historyMessages, memoryMessages, {
-          agentId,
-          source: 'reattach',
-          provider: sessionProvider,
-        })
-        if (reAttachMessages && reAttachMessages.length > 0) {
-          replayMessagesTo(
-            connectionId,
-            { agentId, sessionId: existingSession.sessionId, chatId },
-            reAttachMessages,
-            existingSession.acpClient,
-            'reattach',
-          )
-        } else if (!existingSession.streamManager.isWatcherReady()) {
-          log.warn('Re-attach: JSONL file not found, message history unavailable', { agentId, chatId, sessionId: existingSession.sessionId })
+        if (!skipReplay) {
+          const sessionProvider = existingSession.streamManager.getProvider()
+          const memoryMessages = existingSession.streamManager.getCurrentMessages()
+          const historyMessages = existingSession.cliSessionId && existingSession.cwd
+            ? readMessagesFromJsonl(existingSession.cwd, existingSession.cliSessionId, sessionProvider)
+            : null
+          const reAttachMessages = mergeReplayMessages(historyMessages, memoryMessages, {
+            agentId,
+            source: 'reattach',
+            provider: sessionProvider,
+          })
+          if (reAttachMessages && reAttachMessages.length > 0) {
+            replayMessagesTo(
+              connectionId,
+              { agentId, sessionId: existingSession.sessionId, chatId },
+              reAttachMessages,
+              existingSession.acpClient,
+              'reattach',
+            )
+          } else if (!existingSession.streamManager.isWatcherReady()) {
+            log.warn('Re-attach: JSONL file not found, message history unavailable', { agentId, chatId, sessionId: existingSession.sessionId })
+          }
         }
 
-        log.info('Re-attached agent', { agentId, connectionId, sessionId: existingSession.sessionId, messages: reAttachMessages?.length ?? 0, watcherReady: existingSession.streamManager.isWatcherReady() })
+        log.info('Re-attached agent', { agentId, connectionId, sessionId: existingSession.sessionId, skipReplay, watcherReady: existingSession.streamManager.isWatcherReady() })
         continue
       }
+
+      if (skipReplay) continue
 
       const cliSessionId = typeof sessionInfo === 'string'
         ? sessionInfo
@@ -556,7 +564,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
       deadPtyResumes.push({ agentId, cliSessionId, cwd, provider })
     }
 
-    if (deadPtyResumes.length > 0) {
+    if (!skipReplay && deadPtyResumes.length > 0) {
       log.info('Resuming dead sessions in parallel', { count: deadPtyResumes.length })
       const results = await Promise.allSettled(
         deadPtyResumes.map(async ({ agentId, cliSessionId, cwd }) => {

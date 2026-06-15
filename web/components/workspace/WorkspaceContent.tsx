@@ -8,9 +8,8 @@ import QuadAgentTile from './QuadAgentTile'
 import ResizeHandle from './ResizeHandle'
 import { Plus } from './icons'
 
-// Quad tiles MiniAgentPanes (which don't mount ChatInstance), so we keep an
-// off-screen ChatPane to feed the IDE portal source. Single/split layouts render
-// ChatPane + IdeRegion at stable React positions (see UnifiedFrame).
+// Quad tiles use MiniAgentPanes (which don't mount ChatInstance), so we keep an
+// off-screen ChatPane to feed ChatIDEOutlet for the workspace IDE column.
 const HiddenChatPortalSource = () => (
   <div
     aria-hidden
@@ -182,7 +181,7 @@ const IdeRegion = ({ mode, collapsed }: { mode: 'single' | 'split' | 'quad'; col
 
 /** Quad: 2×2 of the active mission's agent members.
  *  No active mission → guidance placeholder + empty IDE. >4 members → first 3 + "more".
- *  HiddenChatPortalSource feeds the IDE portal (MiniAgentPanes don't mount ChatInstance). */
+ *  HiddenChatPortalSource feeds ChatIDEOutlet (MiniAgentPanes don't mount ChatInstance). */
 const QuadFrame = ({ ideCollapsed }: { ideCollapsed: boolean }) => {
   const QUAD_SIZE = 4
   const { workspaceId, activeChatId } = useWorkspace()

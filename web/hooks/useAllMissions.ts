@@ -7,7 +7,7 @@
  * hook, so a status change in any workspace updates the sidebar without polling.
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { API_BASE, authFetch } from '@/config/api'
 import { getWebSocketClient } from '@/services/WebSocketClient'
 import type { ChatActivityPayload } from '@/types/chat'
@@ -24,32 +24,90 @@ export interface V2AllChatsResult {
   chats: Chat[]
   workspaces: WorkspaceLite[]
   loading: boolean
+  loadingMore: boolean
+  hasMore: boolean
   refresh: () => Promise<void>
+  loadMore: () => Promise<void>
+}
+
+const PAGE_LIMIT = 200
+
+interface MissionPage {
+  items: Chat[]
+  nextOffset: number | null
+  hasMore: boolean
+}
+
+const parseMissionPage = async (res: Response): Promise<MissionPage> => {
+  const body = await res.json()
+  if (Array.isArray(body)) {
+    return { items: body as Chat[], nextOffset: null, hasMore: false }
+  }
+  return {
+    items: (body.items ?? []) as Chat[],
+    nextOffset: typeof body.nextOffset === 'number' ? body.nextOffset : null,
+    hasMore: body.hasMore === true,
+  }
+}
+
+const mergeById = (base: Chat[], incoming: Chat[]): Chat[] => {
+  if (incoming.length === 0) return base
+  const seen = new Set(base.map((c) => c.id))
+  const appended = incoming.filter((c) => {
+    if (seen.has(c.id)) return false
+    seen.add(c.id)
+    return true
+  })
+  return appended.length === 0 ? base : [...base, ...appended]
 }
 
 export const useAllMissions = (): V2AllChatsResult => {
   const [chats, setChats] = useState<Chat[]>([])
   const [workspaces, setWorkspaces] = useState<WorkspaceLite[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [nextOffset, setNextOffset] = useState<number | null>(null)
+  const requestSeq = useRef(0)
 
   const refresh = useCallback(async () => {
+    const seq = ++requestSeq.current
     setLoading(true)
     try {
+      const params = new URLSearchParams({ limit: String(PAGE_LIMIT), offset: '0' })
       const [wsRes, chatsRes] = await Promise.all([
         authFetch(`${API_BASE}/api/workspaces`),
-        authFetch(`${API_BASE}/api/all-chats`),
+        authFetch(`${API_BASE}/api/all-chats?${params}`),
       ])
+      if (seq !== requestSeq.current) return
       if (wsRes.ok) {
         const wsData: Workspace[] = await wsRes.json()
         setWorkspaces(wsData.map((w) => ({ id: w.id, name: w.name, hiddenAt: w.hiddenAt })))
       }
       if (chatsRes.ok) {
-        setChats(await chatsRes.json() as Chat[])
+        const page = await parseMissionPage(chatsRes)
+        setChats(page.items)
+        setNextOffset(page.hasMore ? page.nextOffset : null)
       }
     } finally {
-      setLoading(false)
+      if (seq === requestSeq.current) setLoading(false)
     }
   }, [])
+
+  const loadMore = useCallback(async () => {
+    if (nextOffset === null || loadingMore) return
+    const seq = requestSeq.current
+    setLoadingMore(true)
+    try {
+      const params = new URLSearchParams({ limit: String(PAGE_LIMIT), offset: String(nextOffset) })
+      const res = await authFetch(`${API_BASE}/api/all-chats?${params}`)
+      if (!res.ok || seq !== requestSeq.current) return
+      const page = await parseMissionPage(res)
+      setChats((prev) => mergeById(prev, page.items))
+      setNextOffset(page.hasMore ? page.nextOffset : null)
+    } finally {
+      if (seq === requestSeq.current) setLoadingMore(false)
+    }
+  }, [nextOffset, loadingMore])
 
   useEffect(() => { void refresh() }, [refresh])
 
@@ -153,5 +211,5 @@ export const useAllMissions = (): V2AllChatsResult => {
     }
   }, [refresh])
 
-  return { chats, workspaces, loading, refresh }
+  return { chats, workspaces, loading, loadingMore, hasMore: nextOffset !== null, refresh, loadMore }
 }

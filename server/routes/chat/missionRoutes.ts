@@ -14,6 +14,8 @@ import { cwdToCliProjectKey } from '../../../shared/projectKey'
 import { purgeExpertSessionJsonl, type PurgeResult } from '../../services/sessionFilePurger'
 
 const log = createLogger('ChatRoutes')
+const DEFAULT_MISSION_PAGE_LIMIT = 100
+const MAX_MISSION_PAGE_LIMIT = 200
 
 interface ChatRouteDeps {
   chatStore: ChatStore
@@ -49,6 +51,25 @@ const pickUpdatableFields = (body: Record<string, unknown>): Partial<Chat> => {
   return updates as Partial<Chat>
 }
 
+const firstQueryValue = (value: unknown): string | undefined => {
+  if (Array.isArray(value)) return value[0] === undefined ? undefined : String(value[0])
+  return typeof value === 'string' ? value : undefined
+}
+
+const parseBoundedInt = (value: unknown, fallback: number, min: number, max: number): number => {
+  const raw = Number(firstQueryValue(value))
+  if (!Number.isFinite(raw)) return fallback
+  return Math.max(min, Math.min(Math.floor(raw), max))
+}
+
+const parsePagination = (query: Record<string, unknown>): { limit: number; offset: number } | null => {
+  if (query.limit === undefined && query.offset === undefined && query.cursor === undefined) return null
+  return {
+    limit: parseBoundedInt(query.limit, DEFAULT_MISSION_PAGE_LIMIT, 1, MAX_MISSION_PAGE_LIMIT),
+    offset: parseBoundedInt(query.offset ?? query.cursor, 0, 0, Number.MAX_SAFE_INTEGER),
+  }
+}
+
 export const createMissionRoutes = ({ chatStore, chatService, tokenUsageStore, sessionRegistry, broadcast }: ChatRouteDeps): Router => {
   const router = Router()
   const memberAggregator = new MissionAgentAggregator(sessionRegistry)
@@ -76,7 +97,7 @@ export const createMissionRoutes = ({ chatStore, chatService, tokenUsageStore, s
   }
 
   router.get('/api/missions/recent', (req, res) => {
-    const limit = Number(req.query.limit) || 10
+    const limit = parseBoundedInt(req.query.limit, 10, 1, MAX_MISSION_PAGE_LIMIT)
     const chats = chatStore.listRecent(limit)
     const enriched = enrichWithMembers(enrichWithTokenUsage(chats))
 
@@ -93,11 +114,29 @@ export const createMissionRoutes = ({ chatStore, chatService, tokenUsageStore, s
   })
 
   router.get('/api/all-chats', (req, res) => {
+    const pageParams = parsePagination(req.query)
+    if (pageParams) {
+      const page = chatStore.listAllPage(pageParams)
+      return res.json({
+        items: enrichWithMembers(enrichWithTokenUsage(page.items)),
+        nextOffset: page.nextOffset,
+        hasMore: page.hasMore,
+      })
+    }
     const chats = chatStore.listAll()
     res.json(enrichWithMembers(enrichWithTokenUsage(chats)))
   })
 
   router.get('/api/workspaces/:id/chats', (req, res) => {
+    const pageParams = parsePagination(req.query)
+    if (pageParams) {
+      const page = chatStore.listWorkspacePage(req.params.id, pageParams)
+      return res.json({
+        items: enrichWithMembers(enrichWithTokenUsage(page.items)),
+        nextOffset: page.nextOffset,
+        hasMore: page.hasMore,
+      })
+    }
     const chats = chatStore.listByWorkspace(req.params.id)
     res.json(enrichWithMembers(enrichWithTokenUsage(chats)))
   })

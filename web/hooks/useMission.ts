@@ -8,8 +8,9 @@
  * Backed by useAllMissions so cache + WS subscriptions are shared.
  */
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAllMissions } from './useAllMissions'
+import { API_BASE, authFetch } from '@/config/api'
 import type { Chat, MissionAgent } from '@/components/workspace/types'
 
 export interface V2MissionResult {
@@ -20,12 +21,45 @@ export interface V2MissionResult {
 
 export const useMission = (missionId: string | null | undefined): V2MissionResult => {
   const { chats, loading } = useAllMissions()
+  const [fallbackChat, setFallbackChat] = useState<Chat | null>(null)
+  const [fallbackLoading, setFallbackLoading] = useState(false)
+
+  const cachedChat = useMemo(
+    () => missionId ? chats.find((c) => c.id === missionId) ?? null : null,
+    [chats, missionId],
+  )
+
+  useEffect(() => {
+    if (!missionId || cachedChat) {
+      setFallbackChat(null)
+      setFallbackLoading(false)
+      return
+    }
+    let cancelled = false
+    setFallbackLoading(true)
+    authFetch(`${API_BASE}/api/missions/${encodeURIComponent(missionId)}`)
+      .then(async (res) => {
+        if (!res.ok) return null
+        return await res.json() as Chat
+      })
+      .then((chat) => {
+        if (!cancelled) setFallbackChat(chat)
+      })
+      .catch(() => {
+        if (!cancelled) setFallbackChat(null)
+      })
+      .finally(() => {
+        if (!cancelled) setFallbackLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [missionId, cachedChat])
+
   return useMemo(() => {
-    const chat = missionId ? chats.find((c) => c.id === missionId) ?? null : null
+    const chat = cachedChat ?? fallbackChat
     return {
       chat,
       members: chat?.members ?? [],
-      loading,
+      loading: loading || fallbackLoading,
     }
-  }, [chats, missionId, loading])
+  }, [cachedChat, fallbackChat, loading, fallbackLoading])
 }

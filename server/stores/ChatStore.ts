@@ -7,6 +7,23 @@ import { createLogger } from '../lib/logger'
 const log = createLogger('ChatStore')
 
 const MAX_CHATS = 500
+const DEFAULT_PAGE_LIMIT = 100
+
+interface ListPageOptions {
+  limit?: number
+  offset?: number
+}
+
+export interface ChatPage {
+  items: Chat[]
+  nextOffset: number | null
+  hasMore: boolean
+}
+
+const normalizePageOptions = (options: ListPageOptions): Required<ListPageOptions> => ({
+  limit: Math.max(1, Math.min(Math.floor(options.limit ?? DEFAULT_PAGE_LIMIT), MAX_CHATS)),
+  offset: Math.max(0, Math.floor(options.offset ?? 0)),
+})
 
 export class ChatStore extends SqliteBaseStore<Chat> {
   constructor(_filePath?: string) {
@@ -17,18 +34,54 @@ export class ChatStore extends SqliteBaseStore<Chat> {
     return this.getById(id)
   }
 
-  listByWorkspace(workspaceId: string): Chat[] {
+  listByWorkspace(workspaceId: string, options?: ListPageOptions): Chat[] {
+    if (options?.limit !== undefined || options?.offset !== undefined) {
+      const { limit, offset } = normalizePageOptions(options)
+      const rows = this.db.prepare(
+        'SELECT * FROM missions WHERE workspace_id = ? ORDER BY last_message_at DESC LIMIT ? OFFSET ?'
+      ).all(workspaceId, limit, offset)
+      return rows.map((row) => this.rowToEntity(row as Record<string, unknown>))
+    }
     const rows = this.db.prepare(
       'SELECT * FROM missions WHERE workspace_id = ? ORDER BY last_message_at DESC'
     ).all(workspaceId)
     return rows.map((row) => this.rowToEntity(row as Record<string, unknown>))
   }
 
-  listAll(): Chat[] {
+  listAll(options?: ListPageOptions): Chat[] {
+    if (options?.limit !== undefined || options?.offset !== undefined) {
+      const { limit, offset } = normalizePageOptions(options)
+      const rows = this.db.prepare(
+        'SELECT * FROM missions ORDER BY last_message_at DESC LIMIT ? OFFSET ?'
+      ).all(limit, offset)
+      return rows.map((row) => this.rowToEntity(row as Record<string, unknown>))
+    }
     const rows = this.db.prepare(
       'SELECT * FROM missions ORDER BY last_message_at DESC'
     ).all()
     return rows.map((row) => this.rowToEntity(row as Record<string, unknown>))
+  }
+
+  listAllPage(options: ListPageOptions = {}): ChatPage {
+    const { limit, offset } = normalizePageOptions(options)
+    const rows = this.listAll({ limit: limit + 1, offset })
+    const items = rows.slice(0, limit)
+    return {
+      items,
+      nextOffset: rows.length > limit ? offset + limit : null,
+      hasMore: rows.length > limit,
+    }
+  }
+
+  listWorkspacePage(workspaceId: string, options: ListPageOptions = {}): ChatPage {
+    const { limit, offset } = normalizePageOptions(options)
+    const rows = this.listByWorkspace(workspaceId, { limit: limit + 1, offset })
+    const items = rows.slice(0, limit)
+    return {
+      items,
+      nextOffset: rows.length > limit ? offset + limit : null,
+      hasMore: rows.length > limit,
+    }
   }
 
   countByWorkspace(): Record<string, number> {

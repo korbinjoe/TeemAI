@@ -33,7 +33,7 @@ interface MissionSessionListProps {
 const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
   const { workspaceId, activeChatId, selectedAgentId } = useWorkspace()
   const { openAddAgent, openNewMission } = useDialog()
-  const { chats, workspaces, loading } = useAllMissions()
+  const { chats, workspaces, loading, hasMore, loadingMore, loadMore } = useAllMissions()
   const { unmatchedDirs } = useExternalCwds()
   const { agentNames } = useAgents()
 
@@ -230,6 +230,16 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
           hiddenDirs={visibleUnmatched.filter((d) => hiddenIds.has(d.cwd))}
           onUnhide={toggleHide}
         />
+      )}
+
+      {!isSearching && hasMore && (
+        <button
+          onClick={() => void loadMore()}
+          disabled={loadingMore}
+          className="ml-3 mt-1 text-[10px] text-text-muted hover:text-text-primary underline self-start disabled:opacity-50"
+        >
+          {loadingMore ? 'Loading…' : 'Load older missions'}
+        </button>
       )}
 
       {isSearching && !hasMatches && (

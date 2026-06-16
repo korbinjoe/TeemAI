@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.1.0-beta.9] - 2026-06-16
+
+### Features
+
+- Add an `ai-assets` integrity guard for release packaging
+- Harden agent skill self-evolution flow and persistence
+
+### Bug Fixes
+
+- Keep terminal view PTYs alive across mission switches and hoist `TerminalPanel` so inactive mission caching no longer blanks the terminal surface
+- Speed up mission terminal restore with hidden prewarm, PTY reuse, replay snapshots, and guarded first-frame rendering
+- Backfill empty warm mission message caches so switching back to a warm mission restores conversation content
+- Update the bundled handoff script to call the `/api/agent/handoff` endpoint
+
+### Improvements
+
+- Add mission list pagination and workspace-recency indexes for faster sidebar loading with large histories
+- Optimize IDE and git workflows, including file tree/search state handling, untracked-file line counting, directory ignore checks, and Codex rollout lookup caching
+
 ## [0.1.0-beta.8] - 2026-06-15
 
 ### Bug Fixes

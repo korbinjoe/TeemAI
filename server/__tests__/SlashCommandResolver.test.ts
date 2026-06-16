@@ -11,7 +11,7 @@ vi.mock('os', async () => {
 })
 
 // Import AFTER the mock so the module captures the fake homedir.
-const { expandSlashCommand, setProjectRoot } = await import('../runtime/SlashCommandResolver')
+const { expandSlashCommand, setProjectRoot, setSkillEvolutionStore } = await import('../runtime/SlashCommandResolver')
 
 const PROJECT_CWD = join(FAKE_HOME, 'project')
 
@@ -69,6 +69,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  setSkillEvolutionStore(undefined)
   await rm(FAKE_HOME, { recursive: true, force: true }).catch(() => {})
 })
 
@@ -231,6 +232,21 @@ describe('expandSlashCommand', () => {
     expect(out).toContain('Codex skill body.')
     const marker = decodeMarker(out)
     expect(marker?.cmd).toBe('/codex-skill:run')
+  })
+
+  it('bumps use_count for slash-resolved user skills', async () => {
+    const bumpUse = vi.fn()
+    setSkillEvolutionStore({ bumpUse })
+    await writeFileAt(
+      join(FAKE_HOME, '.codex/skills/telemetry-skill/SKILL.md'),
+      'Telemetry skill body.',
+    )
+
+    const out = await expandSlashCommand('/telemetry-skill', PROJECT_CWD)
+
+    expect(out).toContain('Telemetry skill body.')
+    expect(bumpUse).toHaveBeenCalledWith('telemetry-skill')
+    setSkillEvolutionStore(undefined)
   })
 
   it('project/user command takes priority over user skill fallback', async () => {

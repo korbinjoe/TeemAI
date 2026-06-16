@@ -33,6 +33,10 @@ import {
   CronJobStore, NotificationStore, MemoryStore,
   TokenUsageStore,
   EventStore,
+  SkillEvolutionStore,
+  EvolutionEventStore,
+  EvolutionReviewJobStore,
+  EpisodeStore,
 } from './stores'
 
 import { ChatService } from './services/chat/ChatService'
@@ -53,6 +57,8 @@ import { TerminalViewManager } from './terminal/TerminalViewManager'
 import { WhiteboardManager } from './whiteboard/WhiteboardManager'
 import { MemoryGrowthCapture } from './services/agent-evolution/MemoryGrowthCapture'
 import { startPeriodicCheck as startEvolutionTrigger } from './services/agent-evolution/EvolutionTrigger'
+import { EvolutionReviewService } from './services/agent-evolution/EvolutionReviewService'
+import { EpisodicMemoryService } from './services/agent-evolution/EpisodicMemoryService'
 import { ExecutionPlanManager } from './mailbox/ExecutionPlanManager'
 import { WorkflowRegistry } from './orchestration/WorkflowRegistry'
 import { WorkflowScheduler } from './orchestration/WorkflowScheduler'
@@ -62,7 +68,7 @@ import { createLogger, getLogDir } from './lib/logger'
 import { ensureAvatarDir } from './lib/avatarStorage'
 import { initEventTracker, trackEvent } from './lib/eventTracker'
 
-import { setProjectRoot } from './runtime/SlashCommandResolver'
+import { setProjectRoot, setSkillEvolutionStore } from './runtime/SlashCommandResolver'
 import { healStaleChatStatuses, watchAiAssetsDev } from './startup/StartupHealers'
 import { runAsyncBoot, getExternalDirWatcher, type AsyncBootResult } from './startup/AsyncBoot'
 import { setupRoutes } from './startup/routeSetup'
@@ -128,7 +134,14 @@ const notificationStore = new NotificationStore()
 const memoryStore = new MemoryStore()
 const tokenUsageStore = new TokenUsageStore()
 const eventStore = new EventStore()
+const skillEvolutionStore = new SkillEvolutionStore()
+const evolutionEventStore = new EvolutionEventStore()
+const reviewJobStore = new EvolutionReviewJobStore()
+const episodeStore = new EpisodeStore()
+const evolutionReviewService = new EvolutionReviewService(reviewJobStore)
+const episodicMemoryService = new EpisodicMemoryService(episodeStore)
 initEventTracker(eventStore)
+setSkillEvolutionStore(skillEvolutionStore)
 
 const updateManager = new UpdateManager()
 const bundleStorage = new BundleStorage()
@@ -142,7 +155,7 @@ const lanAccess = new LanAccessController()
 const hooksConfigManager = new HooksConfigManager()
 
 const configCompiler = new ConfigCompiler(
-  skillManager, hooksConfigManager, memoryStore, undefined, PROJECT_ROOT, whiteboardManager,
+  skillManager, hooksConfigManager, memoryStore, undefined, PROJECT_ROOT, whiteboardManager, skillEvolutionStore, episodicMemoryService,
 )
 
 const broadcast = (msg: Record<string, unknown>) => {
@@ -199,7 +212,7 @@ const broadcastToChat = (chatId: string, msg: Record<string, unknown>) => {
 }
 const expertHandler = new MissionAgentHandler(configCompiler, agentRegistry, agentStore, chatStore, workspaceStore, tokenUsageStore, executionLogStore, undefined, sessionRegistry, versionGate, broadcastToChat, whiteboardManager, broadcast)
 const workflowScheduler = new WorkflowScheduler({ workflowRegistry, expertHandler, chatStore, workspaceStore, sessionRegistry, broadcastToChat })
-const memoryGrowthCapture = new MemoryGrowthCapture(memoryStore, whiteboardManager, agentRegistry)
+const memoryGrowthCapture = new MemoryGrowthCapture(memoryStore, whiteboardManager, agentRegistry, episodicMemoryService)
 whiteboardManager.onEntryAppended((chatId, entry) => {
   memoryGrowthCapture.onWhiteboardEntry(chatId, entry)
 })
@@ -253,12 +266,12 @@ let asyncBootResult: AsyncBootResult | null = null
 let aiAssetsHealth: AiAssetsHealth = { status: 'ok', missing: [] }
 
 setupRoutes(app, {
-  agentRegistry, agentStore, skillManager, senseiPromptPaths,
+  agentRegistry, agentStore, skillManager, skillEvolutionStore, senseiPromptPaths,
   expertHandler, executionPlanManager,
   workspaceStore, chatStore, chatService,
   tokenUsageStore, executionLogStore,
   cronJobStore, cronScheduler, nlCronParser,
-  notificationStore, memoryStore, eventStore,
+  notificationStore, memoryStore, evolutionEventStore, reviewJobStore, reviewService: evolutionReviewService, episodicMemoryService, eventStore,
   sessionRegistry, whiteboardManager, workflowRegistry, workflowScheduler,
   updateManager, bundleStorage, updateMonitor, lanAccess,
   broadcastToChat, broadcast,
@@ -284,6 +297,7 @@ export async function startServer(port?: number): Promise<number> {
     await new WorkspaceSeeder(bundledAssetsDir, TEEMAI_HOME).seed()
 
     await skillManager.loadBuiltinSkills()
+    await skillEvolutionStore.syncFromManifestPath(join(TEEMAI_HOME, 'skills'))
     const aiAssetsReport = validateAiAssets({
       root: TEEMAI_HOME,
       availableSkillNames: skillManager.listSkills().map((skill) => skill.name),
@@ -318,7 +332,7 @@ export async function startServer(port?: number): Promise<number> {
     })
 
     if (!isBundled) {
-      watchAiAssetsDev({ bundledAssetsDir, teemaiHome: TEEMAI_HOME, agentRegistry, skillManager, seederFactory: () => new WorkspaceSeeder(bundledAssetsDir, TEEMAI_HOME) })
+      watchAiAssetsDev({ bundledAssetsDir, teemaiHome: TEEMAI_HOME, agentRegistry, skillManager, skillEvolutionStore, seederFactory: () => new WorkspaceSeeder(bundledAssetsDir, TEEMAI_HOME) })
     }
 
     healStaleChatStatuses(chatStore)
@@ -351,7 +365,7 @@ export async function startServer(port?: number): Promise<number> {
           log.warn('Workflow reconciliation failed', { error: err instanceof Error ? err.message : String(err) }),
         )
 
-        startEvolutionTrigger()
+        startEvolutionTrigger(agentRegistry, evolutionReviewService)
 
         resolve(actualPort)
       })

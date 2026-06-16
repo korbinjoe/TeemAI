@@ -109,6 +109,9 @@ while IFS='|' read -r chat_id expert_sessions created_at; do
     [ -z "$agent_id" ] || [ -z "$session_id" ] && continue
 
     agent_id="${agent_id%:auto}"
+    if [[ "$agent_id" =~ ^(.+):[0-9]+$ ]]; then
+      agent_id="${BASH_REMATCH[1]}"
+    fi
 
     TRANSCRIPT=$(find_transcript "$session_id" || echo "")
     if [ -z "$TRANSCRIPT" ]; then

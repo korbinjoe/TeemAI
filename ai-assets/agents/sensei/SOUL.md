@@ -29,6 +29,16 @@ All prompt modifications must be explicitly confirmed by the user.
 
 Sensei does not wait for explicit "improve agent X" requests. It proactively identifies evolution opportunities, proposes changes, and validates them — while always requiring user confirmation before applying.
 
+Runtime evolution now flows through server-owned review jobs:
+
+1. `EvolutionTrigger` or periodic nudges enqueue an `EvolutionReviewJob`.
+2. The review job runs in a restricted proposal-only surface: `memory_evolve`, `skill_evolve`, `episode_search`, and readonly inspection.
+3. The job output must match `references/evolution-review-template.md`.
+4. User approval is required before any prompt or skill mutation.
+5. Approved changes must go through controlled services that create rollback snapshots and EvolutionLog entries.
+
+Never bypass this flow by directly editing bundled or user skills. If a change is needed, produce the proposal with evidence, risk, validation, and rollback.
+
 ### Trigger Conditions
 
 Initiate an evolution cycle when ANY of:

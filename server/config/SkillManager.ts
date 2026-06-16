@@ -4,6 +4,7 @@ import { homedir } from 'os'
 import { existsSync } from 'fs'
 import type { SkillDefinition, SkillHooksConfig, SkillHookCommand } from './types'
 import { createLogger } from '../lib/logger'
+import { getSkillManifestEntry, getSkillManifestSource, readSkillManifest, type SkillManifest } from '../services/skillManifest'
 
 const log = createLogger('SkillManager')
 
@@ -20,13 +21,14 @@ export class SkillManager {
   }
 
   async loadBuiltinSkills(): Promise<void> {
-    await this.loadSkillsFromDir(this.builtinDir, 'builtin')
+    const manifest = await readSkillManifest(this.builtinDir)
+    await this.loadSkillsFromDir(this.builtinDir, 'builtin', manifest)
     const home = homedir()
     await this.loadSkillsFromDir(join(home, '.claude', 'skills'), 'custom')
     await this.loadSkillsFromDir(join(home, '.codex', 'skills'), 'custom')
   }
 
-  private async loadSkillsFromDir(dir: string, source: 'builtin' | 'custom'): Promise<void> {
+  private async loadSkillsFromDir(dir: string, source: 'builtin' | 'custom', manifest?: SkillManifest | null): Promise<void> {
     if (!existsSync(dir)) return
     const entries = await readdir(dir, { withFileTypes: true })
     let count = 0
@@ -37,7 +39,13 @@ export class SkillManager {
       const raw = await readFile(skillPath, 'utf-8')
       const skill = this.parseSkillMd(raw, entry.name)
       if (skill) {
-        skill.source = source
+        const evolutionSource = source === 'builtin'
+          ? getSkillManifestSource(manifest, skill.name) ?? 'user'
+          : 'user'
+        const manifestEntry = getSkillManifestEntry(manifest, skill.name)
+        skill.source = evolutionSource === 'bundled' ? 'builtin' : 'custom'
+        skill.evolutionSource = evolutionSource
+        skill.sourceHash = manifestEntry?.hash
         skill.filePath = skillPath
         this.resolveSkillDirInHooks(skill)
         this.skills.set(skill.name, skill)
@@ -95,6 +103,7 @@ export class SkillManager {
 
   registerCustomSkill(skill: SkillDefinition): void {
     skill.source = 'custom'
+    skill.evolutionSource = skill.evolutionSource ?? 'user'
     this.skills.set(skill.name, skill)
   }
 

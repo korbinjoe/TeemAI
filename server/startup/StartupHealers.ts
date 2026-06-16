@@ -1,7 +1,7 @@
 import chokidar from 'chokidar'
 import { join } from 'path'
 import { createLogger } from '../lib/logger'
-import type { ChatStore } from '../stores'
+import type { ChatStore, SkillEvolutionStore } from '../stores'
 import type { AgentRegistry } from '../config/AgentRegistry'
 import type { SkillManager } from '../config/SkillManager'
 import type { WorkspaceSeeder } from '../services/WorkspaceSeeder'
@@ -12,6 +12,7 @@ interface HealerDeps {
   chatStore: ChatStore
   agentRegistry: AgentRegistry
   skillManager: SkillManager
+  skillEvolutionStore?: SkillEvolutionStore
   bundledAssetsDir: string
   teemaiHome: string
   isBundled: boolean
@@ -32,7 +33,7 @@ export const healStaleChatStatuses = (chatStore: ChatStore) => {
   }
 }
 
-export const watchAiAssetsDev = ({ bundledAssetsDir, teemaiHome, agentRegistry, skillManager, seederFactory }: Omit<HealerDeps, 'chatStore' | 'isBundled'>) => {
+export const watchAiAssetsDev = ({ bundledAssetsDir, teemaiHome, agentRegistry, skillManager, skillEvolutionStore, seederFactory }: Omit<HealerDeps, 'chatStore' | 'isBundled'>) => {
   const seeder = seederFactory()
   let reseedTimer: ReturnType<typeof setTimeout> | null = null
   chokidar.watch([join(bundledAssetsDir, 'agents'), join(bundledAssetsDir, 'skills'), join(bundledAssetsDir, 'hooks')], {
@@ -46,6 +47,7 @@ export const watchAiAssetsDev = ({ bundledAssetsDir, teemaiHome, agentRegistry, 
       await seeder.seed()
       await agentRegistry.reload()
       await skillManager.loadBuiltinSkills()
+      await skillEvolutionStore?.syncFromManifestPath(join(teemaiHome, 'skills'))
       await skillManager.syncBuiltinToClaudeHome()
     }, 500)
   })

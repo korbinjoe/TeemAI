@@ -8,10 +8,12 @@
  * Node 18  withFileTypes: true  entry.parentPath
  */
 
+import { createHash, type Hash } from 'crypto'
 import { mkdir, readFile, writeFile, readdir, rm, lstat, stat } from 'fs/promises'
 import { existsSync } from 'fs'
-import { join } from 'path'
+import { join, relative } from 'path'
 import { createLogger } from '../lib/logger'
+import { emptySkillManifest, SKILL_MANIFEST_FILE } from './skillManifest'
 
 const log = createLogger('WorkspaceSeeder')
 
@@ -30,6 +32,7 @@ export class WorkspaceSeeder {
       this.seedDir('system', true),
       this.seedTeemAIJson(),
     ])
+    await this.writeSkillManifest()
     await this.ensureAgentMemoryDirs()
   }
 
@@ -107,6 +110,92 @@ export class WorkspaceSeeder {
 
     await this.copyRecursive(src, dst, overwrite)
     log.info('WorkspaceSeeder: done', { sub })
+  }
+
+  private async writeSkillManifest(): Promise<void> {
+    const bundledSkillsDir = join(this.bundledAssetsDir, 'skills')
+    const runtimeSkillsDir = join(this.teemaiHome, 'skills')
+    if (!existsSync(runtimeSkillsDir)) return
+
+    try {
+      const manifest = emptySkillManifest()
+      manifest.generatedAt = new Date().toISOString()
+
+      const bundledSkillNames = await this.listSkillDirs(bundledSkillsDir)
+      const runtimeSkillNames = await this.listSkillDirs(runtimeSkillsDir)
+
+      const bundledHashes = new Map<string, string>()
+      for (const name of bundledSkillNames) {
+        const sourcePath = join(bundledSkillsDir, name)
+        bundledHashes.set(name, await this.hashDirectory(sourcePath))
+      }
+
+      for (const name of runtimeSkillNames) {
+        const runtimePath = join(runtimeSkillsDir, name)
+        const runtimeHash = await this.hashDirectory(runtimePath)
+        const bundledHash = bundledHashes.get(name)
+        if (bundledHash && bundledHash === runtimeHash) {
+          manifest.bundled[name] = {
+            sourcePath: join(bundledSkillsDir, name),
+            runtimePath,
+            hash: runtimeHash,
+            seededAt: manifest.generatedAt,
+          }
+        } else {
+          manifest.user[name] = {
+            runtimePath,
+            hash: runtimeHash,
+            detectedAt: manifest.generatedAt,
+          }
+        }
+      }
+
+      await writeFile(
+        join(runtimeSkillsDir, SKILL_MANIFEST_FILE),
+        JSON.stringify(manifest, null, 2) + '\n',
+        'utf-8',
+      )
+      log.info('Wrote skill manifest', {
+        bundled: Object.keys(manifest.bundled).length,
+        user: Object.keys(manifest.user).length,
+      })
+    } catch (err) {
+      log.warn('Failed to write skill manifest', { error: err instanceof Error ? err.message : String(err) })
+    }
+  }
+
+  private async listSkillDirs(dir: string): Promise<string[]> {
+    if (!existsSync(dir)) return []
+    const entries = await readdir(dir, { withFileTypes: true })
+    return entries
+      .filter((entry) => entry.isDirectory() && existsSync(join(dir, entry.name, 'SKILL.md')))
+      .map((entry) => entry.name)
+      .sort()
+  }
+
+  private async hashDirectory(dir: string): Promise<string> {
+    const hash = createHash('sha256')
+    await this.hashDirectoryInto(dir, dir, hash)
+    return `sha256:${hash.digest('hex')}`
+  }
+
+  private async hashDirectoryInto(root: string, dir: string, hash: Hash): Promise<void> {
+    const entries = await readdir(dir, { withFileTypes: true })
+    entries.sort((a, b) => a.name.localeCompare(b.name))
+
+    for (const entry of entries) {
+      if (entry.name === SKILL_MANIFEST_FILE) continue
+      const fullPath = join(dir, entry.name)
+      const relPath = relative(root, fullPath)
+      if (entry.isDirectory()) {
+        await this.hashDirectoryInto(root, fullPath, hash)
+      } else if (entry.isFile()) {
+        hash.update(relPath)
+        hash.update('\0')
+        hash.update(await readFile(fullPath))
+        hash.update('\0')
+      }
+    }
   }
 
   /**

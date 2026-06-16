@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { parseSatisfactionFile, evaluateTriggers } from '../services/agent-evolution/EvolutionTrigger'
+import { parseSatisfactionFile, evaluateTriggers, collectAgentRecords } from '../services/agent-evolution/EvolutionTrigger'
 import type { SatisfactionRecord } from '../services/agent-evolution/EvolutionTrigger'
 
 const recentDate = (daysAgo: number): string => {
@@ -62,6 +62,34 @@ describe('EvolutionTrigger', () => {
       const records = parseSatisfactionFile(filePath)
       expect(records).toHaveLength(1)
       expect(records[0].chatId).toBe('chat-002')
+    })
+  })
+
+  describe('collectAgentRecords', () => {
+    it('scans registered canonical agents and merges suffixed satisfaction dirs', () => {
+      mkdirSync(join(tmpDir, 'lead', 'memory'), { recursive: true })
+      mkdirSync(join(tmpDir, 'lead:2', 'memory'), { recursive: true })
+      mkdirSync(join(tmpDir, 'unknown-agent', 'memory'), { recursive: true })
+      writeFileSync(join(tmpDir, 'lead', 'memory', 'satisfaction.md'), buildSatisfactionFile([
+        { chatId: 'chat-001', date: '2026-06-10 14:30', mss: 10, turns: 4, corrections: 0, escalations: 0, iterations: 0, acceptances: 1, commits: 0, rating: 'MEDIUM' },
+      ]))
+      writeFileSync(join(tmpDir, 'lead:2', 'memory', 'satisfaction.md'), buildSatisfactionFile([
+        { chatId: 'chat-002', date: '2026-06-11 14:30', mss: -5, turns: 4, corrections: 1, escalations: 0, iterations: 0, acceptances: 0, commits: 0, rating: 'LOW' },
+      ]))
+      writeFileSync(join(tmpDir, 'unknown-agent', 'memory', 'satisfaction.md'), buildSatisfactionFile([
+        { chatId: 'chat-003', date: '2026-06-12 14:30', mss: -50, turns: 4, corrections: 3, escalations: 2, iterations: 0, acceptances: 0, commits: 0, rating: 'LOW' },
+      ]))
+
+      const registry = {
+        get: (id: string) => id.replace(/:\d+$/, '') === 'lead' ? { id: 'lead' } : undefined,
+        list: () => [{ id: 'lead' }],
+      }
+
+      const records = collectAgentRecords(registry, tmpDir)
+
+      expect(records).toHaveLength(1)
+      expect(records[0].agentId).toBe('lead')
+      expect(records[0].records.map(r => r.chatId)).toEqual(['chat-001', 'chat-002'])
     })
   })
 

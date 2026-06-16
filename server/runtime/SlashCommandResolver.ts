@@ -20,6 +20,7 @@ import { existsSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 import { createLogger } from '../lib/logger'
+import type { SkillEvolutionStore } from '../stores/SkillEvolutionStore'
 
 const log = createLogger('SlashCommandResolver')
 
@@ -27,9 +28,14 @@ const CLAUDE_HOME = join(homedir(), '.claude')
 const INSTALLED_PLUGINS_PATH = join(CLAUDE_HOME, 'plugins', 'installed_plugins.json')
 
 let _projectRoot: string | undefined
+let _skillEvolutionStore: Pick<SkillEvolutionStore, 'bumpUse'> | undefined
 
 export const setProjectRoot = (root: string): void => {
   _projectRoot = root
+}
+
+export const setSkillEvolutionStore = (store: Pick<SkillEvolutionStore, 'bumpUse'> | undefined): void => {
+  _skillEvolutionStore = store
 }
 
 interface InstalledPluginEntry {
@@ -144,6 +150,20 @@ const resolveCommandFile = async (cwd: string, segments: string[]): Promise<stri
   return pluginHit
 }
 
+const skillNameFromSkillPath = (filePath: string): string | null => {
+  const parts = filePath.split(/[\\/]/)
+  const fileName = parts[parts.length - 1]
+  if (fileName !== 'SKILL.md') return null
+  const skillsIdx = parts.lastIndexOf('skills')
+  if (skillsIdx === -1 || skillsIdx >= parts.length - 2) return null
+  return parts[skillsIdx + 1] || null
+}
+
+const trackSlashSkillUse = (filePath: string): void => {
+  const skillName = skillNameFromSkillPath(filePath)
+  if (skillName) _skillEvolutionStore?.bumpUse(skillName)
+}
+
 /**
  * Marker prefix injected into the expanded prompt so the chat UI can recover
  * the user-typed slash command from JSONL-derived messages and render it as a
@@ -196,6 +216,7 @@ export const expandSlashCommand = async (text: string, cwd: string): Promise<str
       const raw = await readFile(flatFile, 'utf-8')
       const body = stripFrontmatter(raw).trim()
       if (!body) return text
+      trackSlashSkillUse(flatFile)
       const expanded = applyArguments(body, rawArgs)
       log.info('Expanded flat slash command', { name: rawName, file: flatFile, argsLen: rawArgs.length })
       const marker = encodeSlashMarker({
@@ -227,6 +248,7 @@ export const expandSlashCommand = async (text: string, cwd: string): Promise<str
         const skillRaw = await readFile(skillFallback, 'utf-8')
         const skillBody = stripFrontmatter(skillRaw).trim()
         if (skillBody) {
+          trackSlashSkillUse(skillFallback)
           const subCommand = segments.slice(1).join(':')
           const effectiveArgs = [subCommand, rawArgs].filter(Boolean).join(' ')
           const expanded = applyArguments(skillBody, effectiveArgs)
@@ -245,6 +267,7 @@ export const expandSlashCommand = async (text: string, cwd: string): Promise<str
     const raw = await readFile(file, 'utf-8')
     const body = stripFrontmatter(raw).trim()
     if (!body) return text.replace(/^\//, '')
+    trackSlashSkillUse(file)
     const expanded = applyArguments(body, rawArgs)
     log.info('Expanded slash command', { name: rawName, file, argsLen: rawArgs.length })
     const marker = encodeSlashMarker({

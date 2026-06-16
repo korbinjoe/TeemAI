@@ -22,6 +22,8 @@ import { createCronJobRoutes } from '../routes/system/cronJobRoutes'
 import { createNotificationRoutes } from '../routes/system/notificationRoutes'
 import { createMemoryRoutes } from '../routes/agent/memoryRoutes'
 import { createEvolutionRoutes } from '../routes/agent/evolutionRoutes'
+import { createEvolutionReviewRoutes } from '../routes/agent/evolutionReviewRoutes'
+import { createEpisodeRoutes } from '../routes/agent/episodeRoutes'
 import { createTokenUsageRoutes } from '../routes/system/tokenUsageRoutes'
 import { createPreferencesRoutes } from '../routes/system/preferencesRoutes'
 import { createAdminRoutes } from '../routes/system/adminRoutes'
@@ -47,6 +49,7 @@ interface RouteDeps {
   agentRegistry: Parameters<typeof createAgentRoutes>[0]['agentRegistry']
   agentStore: Parameters<typeof createAgentRoutes>[0]['agentStore']
   skillManager: Parameters<typeof createAgentRoutes>[0]['skillManager']
+  skillEvolutionStore: Parameters<typeof createAgentRoutes>[0]['skillEvolutionStore']
   senseiPromptPaths: Parameters<typeof createAgentRoutes>[0]['senseiPromptPaths']
   expertHandler: Parameters<typeof createMissionAgentRoutes>[0]['expertHandler']
   executionPlanManager: Parameters<typeof createMissionAgentRoutes>[0]['executionPlanManager']
@@ -60,6 +63,10 @@ interface RouteDeps {
   nlCronParser: Parameters<typeof createCronJobRoutes>[0]['nlCronParser']
   notificationStore: Parameters<typeof createNotificationRoutes>[0]['notificationStore']
   memoryStore: Parameters<typeof createMemoryRoutes>[0]['memoryStore']
+  evolutionEventStore: Parameters<typeof createEvolutionRoutes>[0]['evolutionEventStore']
+  reviewJobStore: Parameters<typeof createEvolutionReviewRoutes>[0]['reviewJobStore']
+  reviewService: Parameters<typeof createEvolutionReviewRoutes>[0]['reviewService']
+  episodicMemoryService: Parameters<typeof createEpisodeRoutes>[0]
   eventStore: Parameters<typeof createEventRoutes>[0]
   sessionRegistry: Parameters<typeof createMissionRoutes>[0]['sessionRegistry']
   whiteboardManager: Parameters<typeof createWhiteboardRoutes>[0]['whiteboardManager']
@@ -144,7 +151,7 @@ export const setupRoutes = (app: Express, d: RouteDeps) => {
   app.use(conversationRoutes)
   setConflictResolver(new ConflictResolver(d.workflowScheduler, d.broadcastToChat))
   app.use(worktreeRoutes)
-  app.use(createAgentRoutes({ agentRegistry: d.agentRegistry, agentStore: d.agentStore, skillManager: d.skillManager, senseiPromptPaths: d.senseiPromptPaths }))
+  app.use(createAgentRoutes({ agentRegistry: d.agentRegistry, agentStore: d.agentStore, skillManager: d.skillManager, skillEvolutionStore: d.skillEvolutionStore, senseiPromptPaths: d.senseiPromptPaths }))
   app.use(createMissionAgentRoutes({ expertHandler: d.expertHandler, agentRegistry: d.agentRegistry, executionPlanManager: d.executionPlanManager, whiteboardManager: d.whiteboardManager, workflowRegistry: d.workflowRegistry, broadcastToChat: d.broadcastToChat }))
   app.use(createWorkspaceApiRoutes({ workspaceStore: d.workspaceStore, chatStore: d.chatStore, chatService: d.chatService }))
   app.use(createExternalSessionRoutes({ workspaceStore: d.workspaceStore, chatStore: d.chatStore, broadcast: d.broadcast }))
@@ -154,7 +161,9 @@ export const setupRoutes = (app: Express, d: RouteDeps) => {
   app.use(createCronJobRoutes({ cronJobStore: d.cronJobStore, cronScheduler: d.cronScheduler, nlCronParser: d.nlCronParser, workspaceStore: d.workspaceStore, agentStore: d.agentStore }))
   app.use(createNotificationRoutes({ notificationStore: d.notificationStore, broadcast: d.broadcast }))
   app.use(createMemoryRoutes({ memoryStore: d.memoryStore }))
-  app.use(createEvolutionRoutes({ memoryStore: d.memoryStore }))
+  app.use(createEvolutionRoutes({ memoryStore: d.memoryStore, evolutionEventStore: d.evolutionEventStore }))
+  app.use(createEvolutionReviewRoutes({ reviewJobStore: d.reviewJobStore, reviewService: d.reviewService }))
+  app.use(createEpisodeRoutes(d.episodicMemoryService))
   app.use(createTokenUsageRoutes({ tokenUsageStore: d.tokenUsageStore }))
   app.use(createPreferencesRoutes({ db: getDatabase() }))
   app.use(createAdminRoutes({ db: getDatabase() }))

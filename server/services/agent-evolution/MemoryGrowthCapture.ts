@@ -3,6 +3,8 @@ import type { WhiteboardManager } from '../../whiteboard/WhiteboardManager'
 import type { AgentRegistry } from '../../config/AgentRegistry'
 import type { WhiteboardEntry } from '../../../shared/whiteboard-types'
 import type { MemoryCategory } from '../../config/types'
+import { canonicalAgentId } from '../../../shared/utils'
+import type { EpisodicMemoryService } from './EpisodicMemoryService'
 import { createLogger } from '../../lib/logger'
 
 const log = createLogger('MemoryGrowthCapture')
@@ -22,6 +24,7 @@ export class MemoryGrowthCapture {
     private memoryStore: MemoryStore,
     private whiteboardManager: WhiteboardManager,
     private agentRegistry: AgentRegistry,
+    private episodicMemoryService?: EpisodicMemoryService,
   ) {
     this.loadSourceIndex()
   }
@@ -39,19 +42,45 @@ export class MemoryGrowthCapture {
   }
 
   onTaskCompleted(agentId: string, _chatId: string): void {
-    log.debug('Task completed (growth tracking deprecated)', { agentId })
+    const canonical = canonicalAgentId(agentId, this.agentRegistry)
+    if (!canonical) return
+    this.episodicMemoryService?.indexCompletedMission({
+      agentId: canonical,
+      missionId: _chatId,
+      title: `Completed mission ${_chatId}`,
+      summary: `Mission completed by ${canonical}.`,
+      outcome: 'success',
+      tags: ['mission'],
+      sourceRef: `mission:${_chatId}`,
+    })
+    log.debug('Task completed (growth tracking deprecated)', { agentId: canonical })
   }
 
-  onTaskFailed(_agentId: string, _chatId: string): void {
-    // no-op
+  onTaskFailed(agentId: string, chatId: string): void {
+    const canonical = canonicalAgentId(agentId, this.agentRegistry)
+    if (!canonical) return
+    this.episodicMemoryService?.indexCompletedMission({
+      agentId: canonical,
+      missionId: chatId,
+      title: `Failed mission ${chatId}`,
+      summary: `Mission ended unsuccessfully for ${canonical}.`,
+      outcome: 'failed',
+      tags: ['mission'],
+      sourceRef: `mission:${chatId}`,
+    })
   }
 
   onWhiteboardEntry(chatId: string, entry: WhiteboardEntry): void {
+    const canonicalBy = canonicalAgentId(entry.by, this.agentRegistry)
+    if (canonicalBy) {
+      this.episodicMemoryService?.indexWhiteboardEntry({ ...entry, by: canonicalBy })
+    }
+
     if (!CAPTURE_TYPES.has(entry.type)) return
 
     if (entry.type === 'open_question' && entry.status !== 'archived') return
 
-    const agentId = this.resolveAgentId(entry.by)
+    const agentId = canonicalBy ?? this.resolveAgentId(entry.by)
     if (!agentId) return
 
     const source = `wb:${chatId}:${entry.id}`
@@ -77,14 +106,8 @@ export class MemoryGrowthCapture {
   }
 
   private resolveAgentId(by: string): string | null {
-    if (!by) return null
-
-    const suffixed = by.replace(/:auto$/, '')
-    if (this.agentRegistry.get(suffixed)) return suffixed
-
-    const baseId = suffixed.split(':')[0]
-    if (this.agentRegistry.get(baseId)) return baseId
-
+    const agentId = canonicalAgentId(by, this.agentRegistry)
+    if (agentId) return agentId
     log.debug('Skipping unrecognized agent', { by })
     return null
   }

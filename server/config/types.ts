@@ -260,6 +260,8 @@ export interface SkillDefinition {
   hooks?: SkillHooksConfig
   enabled: boolean
   source: 'builtin' | 'custom'
+  evolutionSource?: 'bundled' | 'user' | 'agent'
+  sourceHash?: string
   filePath?: string
 }
 
@@ -392,4 +394,3 @@ export interface AgentMemory {
   createdAt: string
   updatedAt: string
 }
-

@@ -20,8 +20,13 @@ if [ -z "$AGENT_ID" ] || [ -z "$CHAT_ID" ]; then
   exit 0
 fi
 
-# Strip :auto suffix if present
+# Strip runtime instance suffixes (:auto and :<number>) before writing memory.
 AGENT_ID="${AGENT_ID%:auto}"
+if [[ "$AGENT_ID" =~ ^(.+):[0-9]+$ ]]; then
+  AGENT_ID="${BASH_REMATCH[1]}"
+fi
+
+[ -z "$AGENT_ID" ] && exit 0
 
 INPUT=$(cat 2>/dev/null || echo "{}")
 TRANSCRIPT=$(echo "$INPUT" | jq -r '.transcript_path // empty' 2>/dev/null || echo "")

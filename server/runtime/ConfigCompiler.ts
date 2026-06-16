@@ -13,6 +13,9 @@ import type { Agent, AgentPersonality, AgentMemory, McpServerConfig, CliProvider
 import { isQoderVendor } from '../config/types'
 import type { SkillManager } from '../config/SkillManager'
 import type { MemoryStore } from '../stores/MemoryStore'
+import type { SkillEvolutionStore } from '../stores/SkillEvolutionStore'
+import type { EpisodicMemoryService } from '../services/agent-evolution/EpisodicMemoryService'
+import type { EpisodeSearchResult } from '../stores/EpisodeStore'
 import type { WhiteboardManager } from '../whiteboard/WhiteboardManager'
 import { ContextBriefing } from '../whiteboard/ContextBriefing'
 import { isWhiteboardOnDemandEnabled } from './featureFlags'
@@ -78,6 +81,8 @@ export class ConfigCompiler {
      *  ExpertLifecycle.briefing.maybeWrapTask
      */
     private whiteboardManager?: WhiteboardManager,
+    private skillEvolutionStore?: SkillEvolutionStore,
+    private episodicMemoryService?: EpisodicMemoryService,
   ) {
     this._projectRoot = projectRoot || process.cwd()
   }
@@ -386,29 +391,25 @@ export class ConfigCompiler {
           existingContent = await readFile(codexHooksPath, 'utf-8')
         } catch { /* Filedoes not exist */ }
 
-        let merged = codexHooks
-        if (existingContent) {
-          try {
-            const existing = JSON.parse(existingContent) as { hooks?: Record<string, unknown[]> }
-            if (existing.hooks?.Stop) {
-              merged = {
-                hooks: {
-                  ...existing.hooks,
-                  Stop: [...(existing.hooks.Stop as unknown[]), ...codexHooks.hooks.Stop],
-                },
-              }
-            }
-          } catch { /* invalid existing hooks.json, overwrite */ }
-        }
+        const merged = this.mergeCodexHooks(existingContent, codexHooks)
 
         await writeFile(codexHooksPath, JSON.stringify(merged, null, 2), 'utf-8')
       })
       log.info('Wrote .codex/hooks.json', { agentName: agent.name })
+      const ownedCommandKeys = this.codexHookCommandKeys(codexHooks.hooks.Stop)
       cleanupFns.push(async () => {
         try {
           await this.withCodexFileLock(codexHooksPath, async () => {
-            if (existingContent) {
-              await writeFile(codexHooksPath, existingContent, 'utf-8')
+            let currentContent: string | null = null
+            try {
+              currentContent = await readFile(codexHooksPath, 'utf-8')
+            } catch {
+            }
+            if (!currentContent) return
+
+            const cleaned = this.removeCodexHooksByCommandKeys(currentContent, ownedCommandKeys)
+            if (cleaned) {
+              await writeFile(codexHooksPath, cleaned, 'utf-8')
             } else {
               await unlink(codexHooksPath)
             }
@@ -456,6 +457,133 @@ export class ConfigCompiler {
     return { hooks: { Stop: stopEntries } }
   }
 
+  private mergeCodexHooks(
+    existingContent: string | null,
+    codexHooks: { hooks: { Stop: unknown[] } },
+  ): { hooks: Record<string, unknown[]> } {
+    const existingHooks = this.parseCodexHooks(existingContent)
+    const ownedCommandKeys = this.codexHookCommandKeys(codexHooks.hooks.Stop)
+    const existingStop = existingHooks.Stop ?? []
+    const stopWithoutOwned = this.filterCodexHookEntries(existingStop, ownedCommandKeys)
+
+    return {
+      hooks: {
+        ...existingHooks,
+        Stop: this.dedupeCodexHookEntries([...stopWithoutOwned, ...codexHooks.hooks.Stop]),
+      },
+    }
+  }
+
+  private parseCodexHooks(content: string | null): Record<string, unknown[]> {
+    if (!content) return {}
+
+    try {
+      const parsed = JSON.parse(content) as { hooks?: unknown }
+      if (!parsed.hooks || typeof parsed.hooks !== 'object' || Array.isArray(parsed.hooks)) {
+        return {}
+      }
+
+      const hooks: Record<string, unknown[]> = {}
+      for (const [event, entries] of Object.entries(parsed.hooks)) {
+        if (Array.isArray(entries)) hooks[event] = entries
+      }
+      return hooks
+    } catch {
+      return {}
+    }
+  }
+
+  private removeCodexHooksByCommandKeys(content: string, commandKeys: Set<string>): string | null {
+    let parsed: Record<string, unknown>
+    try {
+      parsed = JSON.parse(content) as Record<string, unknown>
+    } catch {
+      return content
+    }
+
+    const existingHooks = this.parseCodexHooks(content)
+    const cleanedHooks: Record<string, unknown[]> = { ...existingHooks }
+    cleanedHooks.Stop = this.filterCodexHookEntries(cleanedHooks.Stop ?? [], commandKeys)
+    if (cleanedHooks.Stop.length === 0) delete cleanedHooks.Stop
+
+    if (Object.keys(cleanedHooks).length === 0) {
+      delete parsed.hooks
+    } else {
+      parsed.hooks = cleanedHooks
+    }
+
+    if (Object.keys(parsed).length === 0) return null
+    return JSON.stringify(parsed, null, 2)
+  }
+
+  private filterCodexHookEntries(entries: unknown[], commandKeys: Set<string>): unknown[] {
+    const filtered: unknown[] = []
+
+    for (const entry of entries) {
+      if (!this.isRecord(entry) || !Array.isArray(entry.hooks)) {
+        filtered.push(entry)
+        continue
+      }
+
+      const hooks = entry.hooks.filter((hook) => {
+        if (!this.isRecord(hook)) return true
+        const key = this.codexHookCommandKey(hook.command)
+        return !key || !commandKeys.has(key)
+      })
+      if (hooks.length > 0) filtered.push({ ...entry, hooks })
+    }
+
+    return filtered
+  }
+
+  private dedupeCodexHookEntries(entries: unknown[]): unknown[] {
+    const deduped: unknown[] = []
+    const seen = new Set<string>()
+
+    for (const entry of entries) {
+      if (!this.isRecord(entry) || !Array.isArray(entry.hooks)) {
+        deduped.push(entry)
+        continue
+      }
+
+      const hooks = entry.hooks.filter((hook) => {
+        if (!this.isRecord(hook)) return true
+        const key = this.codexHookCommandKey(hook.command)
+        if (!key) return true
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+      if (hooks.length > 0) deduped.push({ ...entry, hooks })
+    }
+
+    return deduped
+  }
+
+  private codexHookCommandKeys(entries: unknown[]): Set<string> {
+    const keys = new Set<string>()
+    for (const entry of entries) {
+      if (!this.isRecord(entry) || !Array.isArray(entry.hooks)) continue
+      for (const hook of entry.hooks) {
+        if (!this.isRecord(hook)) continue
+        const key = this.codexHookCommandKey(hook.command)
+        if (key) keys.add(key)
+      }
+    }
+    return keys
+  }
+
+  private codexHookCommandKey(command: unknown): string | null {
+    if (typeof command !== 'string') return null
+    const normalized = command.trim()
+    const teemaiHook = normalized.match(/(?:^|[\s/])(wb-auto-extract\.sh|satisfaction-score\.sh)(?:\s|$)/)
+    return teemaiHook ? `teemai:${teemaiHook[1]}` : normalized
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return !!value && typeof value === 'object' && !Array.isArray(value)
+  }
+
   private async withCodexFileLock<T>(filePath: string, fn: () => Promise<T>): Promise<T> {
     const prev = ConfigCompiler.codexFileLocks.get(filePath) ?? Promise.resolve()
     let release!: () => void
@@ -500,14 +628,14 @@ export class ConfigCompiler {
     content = this.substituteSkillDirInAgentPrompt(content, scriptToDir)
 
     const skillNames = Array.from(new Set([...(agent.skills ?? []), 'whiteboard']))
-    const skillContents = skillNames
-      .map((name) => {
-        const skill = this.skillManager.getSkill(name)
-        const dir = this.skillManager.getSkillDir(name)
-        if (!skill || !dir) return null
-        return skill.content.replaceAll('{SKILL_DIR}', dir)
-      })
-      .filter((s): s is string => !!s)
+    const skillContents: string[] = []
+    for (const name of skillNames) {
+      const skill = this.skillManager.getSkill(name)
+      const dir = this.skillManager.getSkillDir(name)
+      if (!skill || !dir) continue
+      this.skillEvolutionStore?.bumpUse(name)
+      skillContents.push(skill.content.replaceAll('{SKILL_DIR}', dir))
+    }
     if (skillContents.length > 0) {
       content += '\n\n' + skillContents.join('\n\n')
     }
@@ -517,9 +645,12 @@ export class ConfigCompiler {
     }
 
     if (this.memoryStore) {
-      const memoryPrompt = this.buildMemoryPrompt(agent.name)
+      const memoryPrompt = this.buildMemoryPrompt(agent.id, agent.name)
       if (memoryPrompt) content += memoryPrompt
     }
+
+    const episodePrompt = this.buildPriorEpisodesPrompt(agent, context)
+    if (episodePrompt) content += episodePrompt
 
     if (agent.workspaceDir) {
       const today = this.formatToday()
@@ -648,9 +779,9 @@ export class ConfigCompiler {
     return Object.keys(merged).length ? merged : undefined
   }
 
-  private buildMemoryPrompt(agentName: string): string | null {
+  private buildMemoryPrompt(agentId: string, legacyAgentName?: string): string | null {
     if (!this.memoryStore) return null
-    const memories = this.memoryStore.getForPromptInjection(agentName, 20)
+    const memories = this.getPromptMemories(agentId, legacyAgentName, 20)
     if (memories.length === 0) return null
 
     const grouped = memories.reduce<Record<string, AgentMemory[]>>((acc, m) => {
@@ -667,6 +798,55 @@ export class ConfigCompiler {
       }
     }
     return prompt
+  }
+
+  private getPromptMemories(agentId: string, legacyAgentName?: string, limit = 20): AgentMemory[] {
+    if (!this.memoryStore) return []
+
+    const memories: AgentMemory[] = []
+    const seen = new Set<string>()
+    const add = (items: AgentMemory[]) => {
+      for (const item of items) {
+        const dedupKey = item.source ? `source:${item.source}` : `id:${item.id}`
+        if (seen.has(dedupKey)) continue
+        seen.add(dedupKey)
+        memories.push(item)
+        if (memories.length >= limit) return
+      }
+    }
+
+    add(this.memoryStore.getForPromptInjection(agentId, limit))
+    if (memories.length < limit && legacyAgentName && legacyAgentName !== agentId) {
+      add(this.memoryStore.getForPromptInjection(legacyAgentName, limit))
+    }
+
+    return memories
+  }
+
+  private buildPriorEpisodesPrompt(agent: Agent, context?: CompileContext): string | null {
+    if (!this.episodicMemoryService) return null
+    const query = [
+      context?.previousContext?.lastMessage,
+      agent.description,
+      agent.systemPrompt?.content?.slice(0, 500),
+    ].filter(Boolean).join('\n')
+    if (!query.trim()) return null
+
+    const episodes = this.episodicMemoryService.search(agent.id, query, 3)
+    if (episodes.length === 0) return null
+    return this.formatPriorEpisodes(episodes)
+  }
+
+  private formatPriorEpisodes(episodes: EpisodeSearchResult[]): string {
+    let prompt = '\n\n## Prior Similar Episodes\n\n'
+    for (const [idx, episode] of episodes.entries()) {
+      const files = episode.files.length > 0 ? `, files: ${episode.files.slice(0, 3).join(', ')}` : ''
+      const completedAt = episode.completedAt ?? episode.startedAt
+      prompt += `${idx + 1}. [${episode.outcome}] ${episode.title}\n`
+      prompt += `   Source: mission ${episode.missionId}, ${completedAt}${files}\n`
+      prompt += `   Lesson: ${episode.summary}\n`
+    }
+    return prompt.length > 1200 ? `${prompt.slice(0, 1190).trimEnd()}\n...` : prompt
   }
 
   private buildMailboxProtocolPrompt(chatId: string, instanceId: string, isDispatcher = false): string {

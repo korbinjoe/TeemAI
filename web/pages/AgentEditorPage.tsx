@@ -24,7 +24,9 @@ import useAgentEditor, {
 } from '../hooks/useAgentEditor'
 import useAgentDNA from '../hooks/useAgentDNA'
 import useAgentEvolution from '../hooks/useAgentEvolution'
+import useEvolutionReviewJobs from '../hooks/useEvolutionReviewJobs'
 import EvolutionLog from '@/components/evolution/EvolutionLog'
+import PendingEvolutionProposals from '@/components/evolution/PendingEvolutionProposals'
 import useSenseiUpgrade from '../hooks/useSenseiUpgrade'
 import useSenseiUpgradeFull, { type FullSuiteState } from '../hooks/useSenseiUpgradeFull'
 import { generateAvatar } from '@/services/agentApi'
@@ -87,6 +89,7 @@ const AgentEditorPage = () => {
 
   const { dna } = useAgentDNA(isNew ? undefined : id)
   const { entries: evolutionEntries } = useAgentEvolution(isNew ? undefined : id)
+  const { jobs: evolutionReviewJobs, act: actOnEvolutionReviewJob } = useEvolutionReviewJobs(isNew ? undefined : id)
   const sensei = useSenseiUpgrade(id, agentsMd, updateAgentsMd)
 
   const currentSuite = useMemo<FullSuiteState>(
@@ -99,6 +102,13 @@ const AgentEditorPage = () => {
     if (next.soul)     updateSoulMd(next.soul)
   }
   const senseiFull = useSenseiUpgradeFull(agent.id || undefined, currentSuite, applySuite)
+
+  const handleEvolutionReviewAction = useCallback(async (jobId: string, action: 'approve' | 'reject' | 'apply') => {
+    const ok = await actOnEvolutionReviewJob(jobId, action)
+    const doneLabel = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'applied'
+    if (ok) toast.success(`Proposal ${doneLabel}`)
+    else toast.error(`Failed to ${action} proposal`)
+  }, [actOnEvolutionReviewJob])
 
   /**  name/animal  ref generateAvatar */
   const pendingAvatarRef = useRef<{ name: string; animal: string } | null>(null)
@@ -483,6 +493,12 @@ const AgentEditorPage = () => {
                   </div>
                 )}
           </Section>
+          <div className="mt-4">
+            <PendingEvolutionProposals
+              jobs={evolutionReviewJobs}
+              onAction={handleEvolutionReviewAction}
+            />
+          </div>
           <div className="mt-4">
             <EvolutionLog entries={evolutionEntries} />
           </div>

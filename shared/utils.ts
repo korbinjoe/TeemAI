@@ -33,3 +33,36 @@ export const nextInstanceId = (baseId: string, existingIds: string[]): string =>
   }
   return makeInstanceId(baseId, maxInstance + 1)
 }
+
+export interface AgentIdRegistry {
+  get(id: string): unknown
+  list?(): Array<{ id: string }>
+}
+
+const registryHasExactAgentId = (registry: AgentIdRegistry, id: string): boolean => {
+  if (registry.list) {
+    return registry.list().some((agent) => agent.id === id)
+  }
+  return !!registry.get(id)
+}
+
+export const canonicalAgentId = (
+  raw: string | null | undefined,
+  registry?: AgentIdRegistry,
+): string | null => {
+  let id = (raw ?? '').trim()
+  if (!id) return null
+
+  if (id.endsWith(`${INSTANCE_SEPARATOR}auto`)) {
+    id = id.slice(0, -`${INSTANCE_SEPARATOR}auto`.length)
+  }
+
+  if (registry && registryHasExactAgentId(registry, id)) return id
+
+  const withoutNumericSuffix = id.replace(/:\d+$/, '')
+  if (registry) {
+    return registryHasExactAgentId(registry, withoutNumericSuffix) ? withoutNumericSuffix : null
+  }
+
+  return withoutNumericSuffix
+}

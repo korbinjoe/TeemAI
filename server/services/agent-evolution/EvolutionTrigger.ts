@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, statSync, readdirSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { TEEMAI_HOME } from '../../../shared/teemai-home'
+import { canonicalAgentId, type AgentIdRegistry } from '../../../shared/utils'
 import { createLogger } from '../../lib/logger'
 
 const log = createLogger('EvolutionTrigger')
@@ -39,6 +40,14 @@ export interface TriggerResult {
 interface TriggerFile {
   generatedAt: string
   triggers: TriggerResult[]
+}
+
+export interface EvolutionAgentRegistry extends AgentIdRegistry {
+  list(): Array<{ id: string }>
+}
+
+export interface EvolutionReviewEnqueuer {
+  enqueueFromTrigger(trigger: TriggerResult): unknown
 }
 
 const HEADER_RE = /^## (\S+) — (\d{4}-\d{2}-\d{2} \d{2}:\d{2})/
@@ -149,10 +158,10 @@ export const evaluateTriggers = (
   return triggers
 }
 
-const writeTriggerFile = (triggers: TriggerResult[]): void => {
+const writeTriggerFile = (triggers: TriggerResult[], agentsDir = AGENTS_DIR): void => {
   if (triggers.length === 0) return
 
-  const senseiDir = join(AGENTS_DIR, 'sensei')
+  const senseiDir = join(agentsDir, 'sensei')
   mkdirSync(senseiDir, { recursive: true })
 
   const output: TriggerFile = {
@@ -185,8 +194,8 @@ const updateLastRunTime = (): void => {
   }
 }
 
-const getSoulMtime = (agentId: string): Date | null => {
-  const soulPath = join(AGENTS_DIR, agentId, 'SOUL.md')
+const getSoulMtime = (agentId: string, agentsDir = AGENTS_DIR): Date | null => {
+  const soulPath = join(agentsDir, agentId, 'SOUL.md')
   try {
     if (existsSync(soulPath)) {
       return statSync(soulPath).mtime
@@ -197,7 +206,93 @@ const getSoulMtime = (agentId: string): Date | null => {
   return null
 }
 
-export const checkAndRun = (): void => {
+const mergeRecords = (recordSets: SatisfactionRecord[][]): SatisfactionRecord[] => {
+  const merged: SatisfactionRecord[] = []
+  const seen = new Set<string>()
+
+  for (const records of recordSets) {
+    for (const record of records) {
+      const key = `${record.chatId}:${record.date}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      merged.push(record)
+    }
+  }
+
+  return merged
+}
+
+export const collectAgentRecords = (
+  registry: EvolutionAgentRegistry,
+  agentsDir = AGENTS_DIR,
+): Array<{ agentId: string; records: SatisfactionRecord[]; soulMtime: Date | null }> => {
+  if (!existsSync(agentsDir)) return []
+
+  const registeredAgentIds = registry.list().map((agent) => agent.id)
+  const registeredSet = new Set(registeredAgentIds)
+  const dirNames = readdirSync(agentsDir, { withFileTypes: true })
+    .filter(d => d.isDirectory() && !d.name.startsWith('.'))
+    .map(d => d.name)
+
+  const dirsByAgent = new Map<string, string[]>()
+  for (const dirName of dirNames) {
+    const agentId = canonicalAgentId(dirName, registry)
+    if (!agentId || !registeredSet.has(agentId)) continue
+    const dirs = dirsByAgent.get(agentId) ?? []
+    dirs.push(dirName)
+    dirsByAgent.set(agentId, dirs)
+  }
+
+  return registeredAgentIds
+    .map(agentId => {
+      const dirs = new Set([agentId, ...(dirsByAgent.get(agentId) ?? [])])
+      const orderedDirs = [...dirs].sort((a, b) => {
+        if (a === agentId) return -1
+        if (b === agentId) return 1
+        return a.localeCompare(b)
+      })
+      const records = mergeRecords(orderedDirs.map((dirName) => {
+        const satPath = join(agentsDir, dirName, 'memory', 'satisfaction.md')
+        return parseSatisfactionFile(satPath)
+      }))
+      return { agentId, records, soulMtime: getSoulMtime(agentId, agentsDir) }
+    })
+    .filter(a => a.records.length > 0)
+}
+
+const collectDirectoryAgentRecords = (
+  agentsDir = AGENTS_DIR,
+): Array<{ agentId: string; records: SatisfactionRecord[]; soulMtime: Date | null }> => {
+  if (!existsSync(agentsDir)) return []
+
+  const agentDirs = readdirSync(agentsDir, { withFileTypes: true })
+    .filter(d => d.isDirectory() && !d.name.startsWith('.'))
+    .map(d => d.name)
+
+  const recordsByAgent = new Map<string, SatisfactionRecord[][]>()
+  for (const dirName of agentDirs) {
+    const agentId = canonicalAgentId(dirName)
+    if (!agentId) continue
+    const satPath = join(agentsDir, dirName, 'memory', 'satisfaction.md')
+    const records = parseSatisfactionFile(satPath)
+    if (records.length === 0) continue
+    const sets = recordsByAgent.get(agentId) ?? []
+    sets.push(records)
+    recordsByAgent.set(agentId, sets)
+  }
+
+  return [...recordsByAgent.entries()].map(([agentId, recordSets]) => ({
+    agentId,
+    records: mergeRecords(recordSets),
+    soulMtime: getSoulMtime(agentId, agentsDir),
+  }))
+}
+
+export const checkAndRun = (
+  registry?: EvolutionAgentRegistry,
+  agentsDir = AGENTS_DIR,
+  reviewEnqueuer?: EvolutionReviewEnqueuer,
+): void => {
   const lastRun = getLastRunTime()
   const elapsed = Date.now() - lastRun
 
@@ -211,29 +306,23 @@ export const checkAndRun = (): void => {
   log.info('Running evolution trigger check')
 
   try {
-    if (!existsSync(AGENTS_DIR)) {
+    if (!existsSync(agentsDir)) {
       log.debug('No agents directory, skipping')
       updateLastRunTime()
       return
     }
 
-    const agentDirs = readdirSync(AGENTS_DIR, { withFileTypes: true })
-      .filter(d => d.isDirectory() && !d.name.startsWith('.'))
-      .map(d => d.name)
-
-    const agentRecords = agentDirs
-      .map(agentId => {
-        const satPath = join(AGENTS_DIR, agentId, 'memory', 'satisfaction.md')
-        const records = parseSatisfactionFile(satPath)
-        const soulMtime = getSoulMtime(agentId)
-        return { agentId, records, soulMtime }
-      })
-      .filter(a => a.records.length > 0)
+    const agentRecords = registry
+      ? collectAgentRecords(registry, agentsDir)
+      : collectDirectoryAgentRecords(agentsDir)
 
     const triggers = evaluateTriggers(agentRecords)
 
     if (triggers.length > 0) {
-      writeTriggerFile(triggers)
+      writeTriggerFile(triggers, agentsDir)
+      for (const trigger of triggers) {
+        reviewEnqueuer?.enqueueFromTrigger(trigger)
+      }
       log.info('Evolution triggers fired', {
         count: triggers.length,
         agents: triggers.map(t => `${t.agentId}:${t.type}`),
@@ -249,7 +338,7 @@ export const checkAndRun = (): void => {
   }
 }
 
-export const startPeriodicCheck = (): void => {
-  checkAndRun()
-  setInterval(checkAndRun, CHECK_INTERVAL_MS)
+export const startPeriodicCheck = (registry?: EvolutionAgentRegistry, reviewEnqueuer?: EvolutionReviewEnqueuer): void => {
+  checkAndRun(registry, AGENTS_DIR, reviewEnqueuer)
+  setInterval(() => checkAndRun(registry, AGENTS_DIR, reviewEnqueuer), CHECK_INTERVAL_MS)
 }

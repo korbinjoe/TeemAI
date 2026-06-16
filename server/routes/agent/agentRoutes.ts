@@ -6,6 +6,7 @@ import { createInterface } from 'readline'
 import { dirname, resolve } from 'path'
 import type { AgentRegistry } from '../../config/AgentRegistry'
 import type { AgentStore } from '../../stores/AgentStore'
+import type { SkillEvolutionStore } from '../../stores/SkillEvolutionStore'
 import type { SkillManager } from '../../config/SkillManager'
 import type { SkillDefinition, Agent } from '../../config/types'
 import { agentDefToAgent } from '../../config/types'
@@ -54,6 +55,7 @@ interface AgentRouteDeps {
   agentRegistry: AgentRegistry
   agentStore: AgentStore
   skillManager: SkillManager
+  skillEvolutionStore?: SkillEvolutionStore
   /**
    * Sensei system prompt
    *  `server/index.ts`  `bundledAssetsDir`  `SenseiUpgradeService`
@@ -63,7 +65,7 @@ interface AgentRouteDeps {
 
 export const createAgentRoutes = (deps: AgentRouteDeps): Router => {
   const router = Router()
-  const { agentRegistry, agentStore, skillManager, senseiPromptPaths } = deps
+  const { agentRegistry, agentStore, skillManager, skillEvolutionStore, senseiPromptPaths } = deps
 
   router.get('/api/agents', (_req, res) => {
     res.json(agentStore.list())
@@ -282,9 +284,35 @@ export const createAgentRoutes = (deps: AgentRouteDeps): Router => {
     res.json(skillManager.listSkills())
   })
 
+  router.get('/api/skills/evolution-state', (_req, res) => {
+    const records = skillEvolutionStore?.list() ?? []
+    const recordsByName = new Map(records.map((record) => [record.skillName, record]))
+    const skills = skillManager.listSkills().map((skill) => ({
+      name: skill.name,
+      description: skill.description,
+      runtimeSource: skill.source,
+      evolutionSource: skill.evolutionSource ?? recordsByName.get(skill.name)?.source ?? 'user',
+      filePath: skill.filePath,
+      sourceHash: skill.sourceHash ?? recordsByName.get(skill.name)?.sourceHash,
+      lifecycle: recordsByName.get(skill.name) ?? null,
+    }))
+
+    res.json({
+      generatedAt: new Date().toISOString(),
+      skills,
+      records,
+      counts: {
+        bundled: records.filter((record) => record.source === 'bundled').length,
+        user: records.filter((record) => record.source === 'user').length,
+        agent: records.filter((record) => record.source === 'agent').length,
+      },
+    })
+  })
+
   router.get('/api/skills/:name/content', async (req, res) => {
     const skill = skillManager.getSkill(req.params.name)
     if (!skill) return res.status(404).json({ error: 'Skill not found' })
+    skillEvolutionStore?.bumpView(skill.name)
     if (!skill.filePath) return res.json({ content: skill.content })
     try {
       const raw = await readFile(skill.filePath, 'utf-8')

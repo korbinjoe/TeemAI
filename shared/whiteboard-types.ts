@@ -1,3 +1,5 @@
+import { canonicalAgentId } from './utils'
+
 /**
  * WhiteboardChat  —
  *
@@ -113,4 +115,4 @@ export interface WhiteboardSnapshotWithWorkflow extends WhiteboardSnapshot {
 }
 
 export const normalizeAgentId = (by: string): string =>
-  by.endsWith(':auto') ? by.slice(0, -':auto'.length) : by
+  canonicalAgentId(by) ?? by

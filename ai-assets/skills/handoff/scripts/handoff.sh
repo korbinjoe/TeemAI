@@ -13,7 +13,7 @@ TARGET_AGENT="${1:?Usage: handoff.sh <targetAgentId> <task> <context-json>}"
 TASK="${2:?Usage: handoff.sh <targetAgentId> <task> <context-json>}"
 CONTEXT="${3:-{}}"
 
-API_BASE="${EXPERT_API_BASE:?Environment variable EXPERT_API_BASE is not set}"
+API_BASE="${AGENT_API_BASE:?Environment variable AGENT_API_BASE is not set}"
 INSTANCE_ID="${TEEMAI_INSTANCE_ID:?Environment variable TEEMAI_INSTANCE_ID is not set}"
 CHAT_ID="${TEEMAI_CHAT_ID:?Environment variable TEEMAI_CHAT_ID is not set}"
 

@@ -49,7 +49,7 @@ You only need to **manually call** `wb-write.sh` in these scenarios:
 
 | Variable | Description |
 |----------|-------------|
-| `EXPERT_API_BASE` | teemai-server HTTP address |
+| `AGENT_API_BASE` | teemai-server HTTP address |
 | `TEEMAI_CHAT_ID` | Current chat ID |
 | `TEEMAI_INSTANCE_ID` | Your instance ID (injected as `by` field) |
 

@@ -27,7 +27,7 @@ SUMMARY="${POSITIONAL[1]:?Usage: wb-write.sh <type> <summary> [tags] [refs-json]
 TAGS="${POSITIONAL[2]:-}"
 REFS_JSON="${POSITIONAL[3]:-}"
 
-API_BASE="${EXPERT_API_BASE:?Environment variable EXPERT_API_BASE is not set}"
+API_BASE="${AGENT_API_BASE:?Environment variable AGENT_API_BASE is not set}"
 CHAT_ID="${TEEMAI_CHAT_ID:?Environment variable TEEMAI_CHAT_ID is not set}"
 BY="${TEEMAI_INSTANCE_ID:?Environment variable TEEMAI_INSTANCE_ID is not set}"
 

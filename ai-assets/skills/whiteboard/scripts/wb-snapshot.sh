@@ -10,7 +10,7 @@ set -euo pipefail
 # shellcheck disable=SC1091
 source "$(dirname "$0")/_env.sh"
 
-API_BASE="${EXPERT_API_BASE:?Environment variable EXPERT_API_BASE is not set}"
+API_BASE="${AGENT_API_BASE:?Environment variable AGENT_API_BASE is not set}"
 CHAT_ID="${TEEMAI_CHAT_ID:?Environment variable TEEMAI_CHAT_ID is not set}"
 INSTANCE_ID="${TEEMAI_INSTANCE_ID:-}"
 

@@ -90,7 +90,9 @@ const WorktreePanel = ({ sessions, repositories }: WorktreePanelProps) => {
     }
   }, [sessions])
 
-  useEffect(() => { fetchAllStatus() }, [fetchAllStatus])
+  useEffect(() => {
+    if (expanded) fetchAllStatus()
+  }, [expanded, fetchAllStatus])
 
   if (sessions.length === 0) return null
 

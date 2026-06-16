@@ -36,19 +36,36 @@ interface UseChatWebSocketOptions {
 
 export const canSkipWarmReplay = (args: {
   resumeWarm: boolean
+  hydratedFromMessageSnapshot?: boolean
+  snapshotReplaySafe?: boolean
   cwdReady: boolean
   forceFullResume: boolean
   hasDispatchedResume: boolean
   agentMessages: Record<string, Message[]>
   expectedAgentIds?: string[]
 }): boolean => {
-  if (!args.resumeWarm || !args.cwdReady || args.forceFullResume || !args.hasDispatchedResume) {
+  const snapshotHit = args.hydratedFromMessageSnapshot === true && args.snapshotReplaySafe === true
+  if (!args.resumeWarm && !snapshotHit) {
+    return false
+  }
+  if (!args.cwdReady || args.forceFullResume) {
+    return false
+  }
+  if (!args.hasDispatchedResume && !snapshotHit) {
     return false
   }
   if (args.expectedAgentIds && args.expectedAgentIds.length > 0) {
     return args.expectedAgentIds.every((agentId) => (args.agentMessages[agentId]?.length ?? 0) > 0)
   }
   return Object.values(args.agentMessages).some((messages) => messages.length > 0)
+}
+
+const isSnapshotReplaySafeChat = (chat: { status?: string; members?: Array<{ status?: string }> } | null): boolean => {
+  if (!chat) return false
+  if (chat.status === 'stopped' || chat.status === 'merged') return true
+  const members = chat.members ?? []
+  if (members.length === 0) return chat.status !== 'running'
+  return members.every((m) => m.status === 'idle' || m.status === 'done' || m.status === 'waiting_input')
 }
 
 /**
@@ -74,6 +91,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
   resumeWarmRef.current = resumeWarm
   const cwdReadyRef = useRef(false)
   const forceFullResumeRef = useRef(false)
+  const snapshotReplaySafeRef = useRef(false)
   const missedWhileInactiveRef = useRef(false)
   const hasDispatchedResumeRef = useRef(false)
   const expectedReplayAgentIdsRef = useRef<string[]>([])
@@ -84,8 +102,8 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
   const selectedAgentIdRef = useRef(selectedAgentId)
   selectedAgentIdRef.current = selectedAgentId
 
-  const agentMessagesStore = useAgentMessages()
-  const { agentMessages, agentMessagesRef, setAgentMessages, mergedMessages } = agentMessagesStore
+  const agentMessagesStore = useAgentMessages(chatId)
+  const { agentMessages, agentMessagesRef, setAgentMessages, mergedMessages, hydratedFromSnapshotRef } = agentMessagesStore
 
   const [connected, setConnected] = useState(false)
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
@@ -165,17 +183,27 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
   const shouldSkipReplay = useCallback((): boolean => {
     return canSkipWarmReplay({
       resumeWarm: resumeWarmRef.current,
+      hydratedFromMessageSnapshot: hydratedFromSnapshotRef.current,
+      snapshotReplaySafe: snapshotReplaySafeRef.current,
       cwdReady: cwdReadyRef.current,
       forceFullResume: forceFullResumeRef.current,
       hasDispatchedResume: hasDispatchedResumeRef.current,
       agentMessages: agentMessagesRef.current,
       expectedAgentIds: expectedReplayAgentIdsRef.current,
     })
-  }, [agentMessagesRef])
+  }, [agentMessagesRef, hydratedFromSnapshotRef])
 
   const dispatchChatContext = useCallback(() => {
     const cid = chatIdRef.current
     if (!cid || !wsClient.isConnected() || !isActiveRef.current) return
+    if (!cwdReadyRef.current && hydratedFromSnapshotRef.current) {
+      if (sendContextTimerRef.current) clearTimeout(sendContextTimerRef.current)
+      sendContextTimerRef.current = setTimeout(() => {
+        sendContextTimerRef.current = null
+        dispatchChatContext()
+      }, 50)
+      return
+    }
 
     const skipReplay = !isNewChatRef.current && shouldSkipReplay()
 
@@ -298,6 +326,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
         }
 
         if (chat) {
+          snapshotReplaySafeRef.current = isSnapshotReplaySafeChat(chat)
           const expertSessionIds = chat.expertSessions
             ? Object.keys(chat.expertSessions)
             : []
@@ -311,6 +340,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
             setChatTokenSnapshot({ totalCost: chat.totalCost, totalTokens: chat.totalTokens })
           }
         } else {
+          snapshotReplaySafeRef.current = false
           expectedReplayAgentIdsRef.current = []
           setResumableAgentIds([])
         }

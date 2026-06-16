@@ -7,7 +7,7 @@ import type { PrefetchedWorkspaceData } from '../chat/ChatInstance'
 import WorkspaceHome from './WorkspaceHome'
 import { missionSwitchPerf } from '../../lib/missionSwitchPerf'
 
-const MAX_CACHED = 4
+const MAX_CACHED = 8
 const MAX_WS_CACHE = 5
 
 const cachedPaneStyle = (active: boolean): React.CSSProperties => ({

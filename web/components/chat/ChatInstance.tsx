@@ -45,7 +45,8 @@ import { missionSwitchPerf } from '../../lib/missionSwitchPerf'
 const ROOT_STYLE: React.CSSProperties = { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }
 const MAIN_CONTENT_STYLE: React.CSSProperties = { flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }
 const DIVIDER_BAR_STYLE: React.CSSProperties = { width: 4, flexShrink: 0, position: 'relative', zIndex: 20 }
-const TERMINAL_PREWARM_DELAY_MS = 250
+const GIT_STATUS_ACTIVATION_DELAY_MS = 450
+const TERMINAL_PREWARM_DELAY_MS = 1800
 const RightPanel = lazy(() => import('../ide/RightPanel'))
 
 /**
@@ -209,6 +210,16 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   }, [singleAgentMode, lockedAgentKey, filterAgentId, agentMessages, mergedMessages])
 
   const [terminalPrewarmEnabled, setTerminalPrewarmEnabled] = useState(false)
+  const [gitStatusLive, setGitStatusLive] = useState(false)
+  useEffect(() => {
+    if (!isActive) {
+      setGitStatusLive(false)
+      return
+    }
+    const timer = setTimeout(() => setGitStatusLive(true), GIT_STATUS_ACTIVATION_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [isActive, chatId])
+
   useEffect(() => {
     if (!isActive || viewMode !== 'message' || !connected || !cwdReady || resumableAgentIds.length === 0) {
       if (!isActive || resumableAgentIds.length === 0) setTerminalPrewarmEnabled(false)
@@ -269,14 +280,12 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     prevIsActiveRef.current = true
     missionSwitchPerf.mark('instance-active', chatId)
     let cancelled = false
-    const raf1 = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!cancelled) missionSwitchPerf.markInteractive(chatId)
-      })
+    const raf = requestAnimationFrame(() => {
+      if (!cancelled) missionSwitchPerf.markInteractive(chatId)
     })
     return () => {
       cancelled = true
-      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf)
       prevIsActiveRef.current = false
     }
   }, [isActive, chatId])
@@ -297,7 +306,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     agentActivity: activeMergedActivity,
     repositories: wsRepositories,
     chatId,
-    enabled: isActive,
+    enabled: gitStatusLive,
   })
   const primaryGitStatus = (wsRepositories.length > 0
     ? multiGitStatus.get(wsRepositories[0].path)

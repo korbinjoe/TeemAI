@@ -28,6 +28,7 @@ export function groupMessages(messages: Message[]): MessageGroup[] {
 
   const groups: MessageGroup[] = []
   let currentGroup: MessageGroup | null = null
+  const lastGroupByAgent = new Map<string, MessageGroup>()
   // ConversationParser ids (msg-<line>-<block>) can collide across multiple
   // expert sessions sharing the same chat; suffix on collision so React keys
   // stay unique without losing either message.
@@ -52,6 +53,7 @@ export function groupMessages(messages: Message[]): MessageGroup[] {
         agentId: agentId,
       }
       groups.push(currentGroup)
+      if (agentId) lastGroupByAgent.set(agentId, currentGroup)
     } else {
       if (!currentGroup && msg.type !== 'error') {
         currentGroup = {
@@ -62,19 +64,16 @@ export function groupMessages(messages: Message[]): MessageGroup[] {
           agentId: msg.agentId,
         }
         groups.push(currentGroup)
+        if (msg.agentId) lastGroupByAgent.set(msg.agentId, currentGroup)
       }
       if (currentGroup && currentGroup.agentId === msg.agentId) {
         currentGroup.agentMessages.push(msg)
       } else {
         // The merged Mission view interleaves messages from agents running in
         // parallel, so the current group often belongs to a different agent.
-        // Attach to the most recent group bound to this agent (the one that
-        // the user kicked off); otherwise open a new orphan group rather than
-        // silently dropping the message.
-        let target: MessageGroup | null = null
-        for (let i = groups.length - 1; i >= 0; i--) {
-          if (groups[i].agentId === msg.agentId) { target = groups[i]; break }
-        }
+        // Attach to the most recent group bound to this agent in O(1) instead
+        // of scanning all prior groups on every interleaved agent message.
+        const target = msg.agentId ? lastGroupByAgent.get(msg.agentId) ?? null : null
         if (target) {
           target.agentMessages.push(msg)
         } else if (msg.type !== 'error') {
@@ -86,6 +85,7 @@ export function groupMessages(messages: Message[]): MessageGroup[] {
             agentId: msg.agentId,
           }
           groups.push(orphan)
+          if (msg.agentId) lastGroupByAgent.set(msg.agentId, orphan)
           currentGroup = orphan
         }
       }

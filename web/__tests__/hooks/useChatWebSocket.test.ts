@@ -111,4 +111,32 @@ describe('canSkipWarmReplay', () => {
       },
     })).toBe(false)
   })
+
+  it('skips first resume when an evicted mission hydrates from a safe message snapshot', () => {
+    expect(canSkipWarmReplay({
+      resumeWarm: false,
+      hydratedFromMessageSnapshot: true,
+      snapshotReplaySafe: true,
+      cwdReady: true,
+      forceFullResume: false,
+      hasDispatchedResume: false,
+      agentMessages: {
+        lead: [{ id: 'm1', role: 'agent', content: 'cached', timestamp: 1, type: 'text' }],
+      },
+    })).toBe(true)
+  })
+
+  it('does not skip first resume from a snapshot for a running or unsafe mission', () => {
+    expect(canSkipWarmReplay({
+      resumeWarm: false,
+      hydratedFromMessageSnapshot: true,
+      snapshotReplaySafe: false,
+      cwdReady: true,
+      forceFullResume: false,
+      hasDispatchedResume: false,
+      agentMessages: {
+        lead: [{ id: 'm1', role: 'agent', content: 'cached', timestamp: 1, type: 'text' }],
+      },
+    })).toBe(false)
+  })
 })

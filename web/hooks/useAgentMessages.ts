@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import type { Message } from '../types/chat'
 
 /**
@@ -20,6 +20,7 @@ export interface AgentMessagesAPI {
   agentMessages: AgentMessagesMap
   agentMessagesRef: React.MutableRefObject<AgentMessagesMap>
   setAgentMessages: React.Dispatch<React.SetStateAction<AgentMessagesMap>>
+  hydratedFromSnapshotRef: React.MutableRefObject<boolean>
   /** Append a single message to one agent slot. Tags msg.agentId if missing. */
   addMessage: (agentId: string, msg: Message) => void
   /** Updater-form mutate for one agent slot. */
@@ -31,6 +32,36 @@ export interface AgentMessagesAPI {
 }
 
 export const SYSTEM_MESSAGE_AGENT = SYSTEM_AGENT_KEY
+
+const MESSAGE_SNAPSHOT_CACHE_MAX = 16
+const messageSnapshotCache = new Map<string, AgentMessagesMap>()
+
+const hasAnyMessages = (messages: AgentMessagesMap): boolean =>
+  Object.values(messages).some((slot) => slot.length > 0)
+
+const readMessageSnapshot = (chatId: string | undefined): AgentMessagesMap | null => {
+  if (!chatId) return null
+  const snapshot = messageSnapshotCache.get(chatId)
+  if (!snapshot) return null
+  messageSnapshotCache.delete(chatId)
+  messageSnapshotCache.set(chatId, snapshot)
+  return snapshot
+}
+
+const rememberMessageSnapshot = (chatId: string | undefined, messages: AgentMessagesMap): void => {
+  if (!chatId) return
+  if (!hasAnyMessages(messages)) {
+    messageSnapshotCache.delete(chatId)
+    return
+  }
+  if (messageSnapshotCache.has(chatId)) messageSnapshotCache.delete(chatId)
+  messageSnapshotCache.set(chatId, messages)
+  while (messageSnapshotCache.size > MESSAGE_SNAPSHOT_CACHE_MAX) {
+    const oldest = messageSnapshotCache.keys().next().value
+    if (!oldest) break
+    messageSnapshotCache.delete(oldest)
+  }
+}
 
 /**
  * Merge k already-sorted (ascending timestamp) lists into one sorted list.
@@ -68,10 +99,34 @@ const kWayMergeByTimestamp = (slots: Message[][]): Message[] => {
   return out
 }
 
-export const useAgentMessages = (): AgentMessagesAPI => {
-  const [agentMessages, setAgentMessages] = useState<AgentMessagesMap>({})
+export const useAgentMessages = (chatId?: string): AgentMessagesAPI => {
+  const initialSnapshotRef = useRef<{ chatId?: string; messages: AgentMessagesMap | null } | null>(null)
+  if (initialSnapshotRef.current === null) {
+    initialSnapshotRef.current = { chatId, messages: readMessageSnapshot(chatId) }
+  }
+
+  const [agentMessages, setAgentMessagesState] = useState<AgentMessagesMap>(() => initialSnapshotRef.current?.messages ?? {})
   const agentMessagesRef = useRef(agentMessages)
   agentMessagesRef.current = agentMessages
+  const chatIdRef = useRef(chatId)
+  chatIdRef.current = chatId
+  const hydratedFromSnapshotRef = useRef(hasAnyMessages(initialSnapshotRef.current?.messages ?? {}))
+
+  useEffect(() => {
+    const snapshot = readMessageSnapshot(chatId)
+    hydratedFromSnapshotRef.current = hasAnyMessages(snapshot ?? {})
+    setAgentMessagesState(snapshot ?? {})
+  }, [chatId])
+
+  const setAgentMessages = useCallback<React.Dispatch<React.SetStateAction<AgentMessagesMap>>>((updater) => {
+    setAgentMessagesState((prev) => {
+      const next = typeof updater === 'function'
+        ? (updater as (prev: AgentMessagesMap) => AgentMessagesMap)(prev)
+        : updater
+      if (next !== prev) rememberMessageSnapshot(chatIdRef.current, next)
+      return next
+    })
+  }, [])
 
   const addMessage = useCallback((agentId: string, msg: Message) => {
     const tagged: Message = msg.agentId ? msg : { ...msg, agentId }
@@ -97,21 +152,14 @@ export const useAgentMessages = (): AgentMessagesAPI => {
   const mergedMessages = useMemo(() => {
     const slots = Object.values(agentMessages)
     if (slots.length <= 1) return slots[0] ?? []
-    const merged = kWayMergeByTimestamp(slots)
-    if (import.meta.env.DEV) {
-      const reference = ([] as Message[]).concat(...slots).sort((a, b) => a.timestamp - b.timestamp)
-      if (reference.length !== merged.length || reference.some((m, i) => m.id !== merged[i].id)) {
-        // TODO(perf-rollout): remove after incremental-merge soak passes.
-        console.warn('[useAgentMessages] incremental merge diverged from full sort')
-      }
-    }
-    return merged
+    return kWayMergeByTimestamp(slots)
   }, [agentMessages])
 
   return {
     agentMessages,
     agentMessagesRef,
     setAgentMessages,
+    hydratedFromSnapshotRef,
     addMessage,
     updateAgent,
     getAgentMessages,

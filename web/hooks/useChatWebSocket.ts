@@ -57,6 +57,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
   resumeWarmRef.current = resumeWarm
   const cwdReadyRef = useRef(false)
   const forceFullResumeRef = useRef(false)
+  const missedWhileInactiveRef = useRef(false)
 
   const initialAgentSetRef = useRef(false)
   const isNewChatRef = useRef(isNewChat)
@@ -298,16 +299,17 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     let cancelled = false
     const h = wsHandlersRef.current
 
-    const onStructuredMessage = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.onExpertStructuredMessage(p as Parameters<typeof h.onExpertStructuredMessage>[0]) }
+    const markMissed = (p: unknown) => { if ((p as { chatId?: string })?.chatId === chatIdRef.current) missedWhileInactiveRef.current = true }
+    const onStructuredMessage = (p: unknown) => { if (!isActiveRef.current) { markMissed(p); return } wsHandlersRef.current.onExpertStructuredMessage(p as Parameters<typeof h.onExpertStructuredMessage>[0]) }
     const onError = (p: unknown) => wsHandlersRef.current.handleError(p as { message?: string; chatId?: string } | undefined)
     const onExpertError = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertError(p as Parameters<typeof h.handleExpertError>[0]) }
-    const onExpertActivity = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertActivity(p as Parameters<typeof h.handleExpertActivity>[0]) }
-    const onExpertExit = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertExit(p as Parameters<typeof h.handleExpertExit>[0]) }
+    const onExpertActivity = (p: unknown) => { if (!isActiveRef.current) { markMissed(p); return } wsHandlersRef.current.handleExpertActivity(p as Parameters<typeof h.handleExpertActivity>[0]) }
+    const onExpertExit = (p: unknown) => { if (!isActiveRef.current) { markMissed(p); return } wsHandlersRef.current.handleExpertExit(p as Parameters<typeof h.handleExpertExit>[0]) }
     const onExpertStarted = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertStarted(p as Parameters<typeof h.handleExpertStarted>[0]) }
     const onExpertResumeFailed = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertResumeFailed(p as Parameters<typeof h.handleExpertResumeFailed>[0]) }
     const onVersionBlocked = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleVersionBlocked(p as Parameters<typeof h.handleVersionBlocked>[0]) }
     const onExpertSlashCommands = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertSlashCommands(p as Parameters<typeof h.handleExpertSlashCommands>[0]) }
-    const onExpertPartialText = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertPartialText(p as Parameters<typeof h.handleExpertPartialText>[0]) }
+    const onExpertPartialText = (p: unknown) => { if (!isActiveRef.current) { markMissed(p); return } wsHandlersRef.current.handleExpertPartialText(p as Parameters<typeof h.handleExpertPartialText>[0]) }
     const onExpertPlanUpdate = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertPlanUpdate(p as Parameters<typeof h.handleExpertPlanUpdate>[0]) }
     const onExpertModeChange = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertModeChange(p as Parameters<typeof h.handleExpertModeChange>[0]) }
     const onExpertCommandsUpdate = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertCommandsUpdate(p as Parameters<typeof h.handleExpertCommandsUpdate>[0]) }
@@ -441,6 +443,10 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
   const prevIsActiveRef = useRef(isActive)
   useEffect(() => {
     if (isActive && !prevIsActiveRef.current && chatId && wsClient.isConnected()) {
+      if (missedWhileInactiveRef.current) {
+        forceFullResumeRef.current = true
+        missedWhileInactiveRef.current = false
+      }
       wsHandlersRef.current.sendChatContext()
     }
     prevIsActiveRef.current = isActive

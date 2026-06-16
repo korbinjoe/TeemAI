@@ -20,7 +20,7 @@ import type { SessionRegistry } from './SessionRegistry'
 import { sendFrame } from '../ws/wsFrame'
 import type { ChatStore } from '../stores/ChatStore'
 import { resolveCliCommandAsync, resolveInterpreter } from '../lib/resolveCliCommand'
-import { isQoderVendor } from '../config/types'
+import { isQoderVendor, type CliProvider } from '../config/types'
 import { createLogger } from '../lib/logger'
 
 const log = createLogger('TerminalViewManager')
@@ -30,10 +30,12 @@ interface ViewPty {
   cwd: string
   agentId: string
   chatId: string
+  cliSessionId: string
   connectionId: string
   cols: number
   rows: number
   firstChunkSent: boolean
+  replayData: string
 }
 
 const keyOf = (connectionId: string, chatId: string, agentId: string): string =>
@@ -42,7 +44,8 @@ const keyOf = (connectionId: string, chatId: string, agentId: string): string =>
 // Grace window after `handleDetach` before we actually kill the PTY. Lets the
 // user toggle terminal mode off/on rapidly (or trigger a re-attach via WS
 // reconnect) without thrashing `claude --resume` spawns.
-const DETACH_GRACE_MS = 300
+const DETACH_GRACE_MS = 10_000
+const MAX_REPLAY_CHARS = 1024 * 1024
 
 export class TerminalViewManager {
   private views = new Map<string, ViewPty>()
@@ -84,8 +87,20 @@ export class TerminalViewManager {
     }
 
     if (this.views.has(key)) {
+      const view = this.views.get(key)!
       log.debug('Re-attach to existing view-PTY; resizing only', { key, cols, rows })
       this.handleResize({ chatId, agentId, cols, rows }, connectionId)
+      this.send(ws, 'agent:view-attached', { agentId, chatId, sessionId: view.cliSessionId, cwd: view.cwd })
+      if (view.replayData) {
+        this.send(ws, 'agent:data', {
+          agentId,
+          chatId,
+          sessionId: view.cliSessionId,
+          snapshot: true,
+          data: view.replayData,
+          ptySize: { cols: view.cols, rows: view.rows },
+        })
+      }
       return
     }
 
@@ -93,7 +108,7 @@ export class TerminalViewManager {
     const persisted = this.chatStore.get(chatId)?.expertSessions?.[agentId]
     const cliSessionId = live?.cliSessionId ?? persisted?.cliSessionId
     const cwd = live?.cwd ?? persisted?.cwd
-    const provider = persisted?.provider ?? 'claude'
+    const provider = (persisted?.provider ?? live?.streamManager.getProvider() ?? 'claude') as CliProvider
 
     if (!cliSessionId) {
       this.send(ws, 'agent:error', {
@@ -119,6 +134,9 @@ export class TerminalViewManager {
     if (provider === 'claude' || isQoderVendor(provider)) {
       command = isQoderVendor(provider) ? 'qodercli' : 'claude'
       args = ['--resume', cliSessionId]
+    } else if (provider === 'codex') {
+      command = 'codex'
+      args = ['resume', '--include-non-interactive', cliSessionId]
     } else {
       this.send(ws, 'agent:error', {
         agentId,
@@ -173,10 +191,12 @@ export class TerminalViewManager {
       cwd,
       agentId,
       chatId,
+      cliSessionId,
       connectionId,
       cols,
       rows,
       firstChunkSent: false,
+      replayData: '',
     }
     this.views.set(key, view)
     log.info('View-PTY spawned', { key, command, cliSessionId, cwd, pid: ptyProcess.pid })
@@ -184,18 +204,19 @@ export class TerminalViewManager {
     // Tell the web client the view-PTY is ready and which agent / cliSessionId
     // it is bound to. Web uses this to pre-populate the ExpertInfo entry (so
     // xterm has a slot to mount) before the first `expert:data` frame arrives.
-    this.send(ws, 'agent:view-attached', { agentId, chatId, sessionId: cliSessionId, cwd })
-
     ptyProcess.onData((data) => {
+      this.appendReplay(view, data)
+      const hasPrintableData = this.hasPrintableData(data)
+      const shouldSnapshot = !view.firstChunkSent && hasPrintableData
       this.send(ws, 'agent:data', {
         agentId,
         chatId,
         sessionId: cliSessionId,
-        snapshot: !view.firstChunkSent,
-        data,
+        snapshot: shouldSnapshot,
+        data: shouldSnapshot ? view.replayData : data,
         ptySize: { cols: view.cols, rows: view.rows },
       })
-      view.firstChunkSent = true
+      if (shouldSnapshot) view.firstChunkSent = true
     })
 
     ptyProcess.onExit(({ exitCode }) => {
@@ -203,6 +224,8 @@ export class TerminalViewManager {
       this.views.delete(key)
       this.send(ws, 'agent:exit', { agentId, chatId, exitCode: exitCode ?? 0 })
     })
+
+    this.send(ws, 'agent:view-attached', { agentId, chatId, sessionId: cliSessionId, cwd })
   }
 
   handleDetach(payload: { chatId: string; agentId: string }, connectionId: string): void {
@@ -281,5 +304,21 @@ export class TerminalViewManager {
     try { sendFrame(ws, { type, payload }) } catch (err) {
       log.warn('ws.send failed', { type, error: err instanceof Error ? err.message : String(err) })
     }
+  }
+
+  private appendReplay(view: ViewPty, data: string): void {
+    view.replayData += data
+    if (view.replayData.length > MAX_REPLAY_CHARS) {
+      view.replayData = view.replayData.slice(view.replayData.length - MAX_REPLAY_CHARS)
+    }
+  }
+
+  private hasPrintableData(data: string): boolean {
+    const stripped = data
+      .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '')
+      .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, '')
+      .replace(/\x1b[78=>]/g, '')
+      .replace(/[\u0000-\u001f\u007f]/g, '')
+    return stripped.trim().length > 0
   }
 }

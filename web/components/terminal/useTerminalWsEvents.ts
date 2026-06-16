@@ -33,6 +33,18 @@ interface UseTerminalWsEventsOptions {
   disposeTerminal: (agentId: string) => void
   setExperts: React.Dispatch<React.SetStateAction<ExpertInfo[]>>
   setActiveKey: React.Dispatch<React.SetStateAction<string>>
+  onViewAttached?: (agentId: string) => void
+  onViewOutput?: (agentId: string) => void
+  onViewEnded?: (agentId: string) => void
+}
+
+const hasPrintableTerminalData = (data: string): boolean => {
+  const stripped = data
+    .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '')
+    .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, '')
+    .replace(/\x1b[78=>]/g, '')
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+  return stripped.trim().length > 0
 }
 
 export const useTerminalWsEvents = ({
@@ -46,11 +58,15 @@ export const useTerminalWsEvents = ({
   disposeTerminal,
   setExperts,
   setActiveKey,
+  onViewAttached,
+  onViewOutput,
+  onViewEnded,
 }: UseTerminalWsEventsOptions) => {
   const activeKeyRef = useRef(activeKey)
   activeKeyRef.current = activeKey
   const chatIdRef = useRef(chatId)
   chatIdRef.current = chatId
+  const outputSeenRef = useRef<Map<string, string>>(new Map())
   /**  effect  chatId cleanup  chatId  */
   const prevChatIdRef = useRef(chatId)
 
@@ -103,6 +119,10 @@ export const useTerminalWsEvents = ({
         inst.resetAndWriteSnapshot(payload.data)
       } else {
         inst.write(payload.data)
+      }
+      if (hasPrintableTerminalData(payload.data)) {
+        outputSeenRef.current.set(payload.agentId, sessionId)
+        onViewOutput?.(payload.agentId)
       }
 
       // First-frame open: when terminal mode is entered for a live ACP agent,
@@ -157,6 +177,9 @@ export const useTerminalWsEvents = ({
     // newly-launched ACP session.
     const handleViewAttached = (payload: { agentId: string; chatId?: string; sessionId: string; cwd?: string }) => {
       if (!isCurrentChatEvent(payload)) return
+      if (outputSeenRef.current.get(payload.agentId) !== payload.sessionId) {
+        onViewAttached?.(payload.agentId)
+      }
       const existing = (expertsRef.current ?? []).find(e => e.agentId === payload.agentId)
       if (existing) {
         // For live ACP agents the expert:list entry carries the ACP sessionId,
@@ -188,6 +211,7 @@ export const useTerminalWsEvents = ({
 
     const handleExpertExit = (payload: { agentId: string; chatId?: string; exitCode?: number }) => {
       if (!isCurrentChatEvent(payload)) return
+      onViewEnded?.(payload.agentId)
       const inst = terminalsRef.current?.get(payload.agentId)
       if (inst) {
         const msg = payload.exitCode !== undefined
@@ -204,6 +228,7 @@ export const useTerminalWsEvents = ({
 
     const handleExpertStopped = (payload: { agentId: string; chatId?: string; exitCode?: number }) => {
       if (!isCurrentChatEvent(payload)) return
+      onViewEnded?.(payload.agentId)
       const inst = terminalsRef.current?.get(payload.agentId)
       if (inst) inst.write('\r\n\x1b[33m[Agent stopped manually]\x1b[0m\r\n')
       setExperts(prev => prev.map(e =>
@@ -234,18 +259,43 @@ export const useTerminalWsEvents = ({
       })
 
       if (shouldRemove) {
+        onViewEnded?.(payload.agentId)
         disposeTerminal(payload.agentId)
         if (nextActiveKey) setActiveKey(nextActiveKey)
       }
     }
 
-    const handleExpertError = (payload: { agentId?: string; chatId?: string; error?: string }) => {
+    const handleExpertError = (payload: { agentId?: string; chatId?: string; error?: string; message?: string }) => {
       if (!isCurrentChatEvent(payload)) return
       if (!payload?.agentId) return
+      onViewEnded?.(payload.agentId)
       // Terminal-view errors (resume-PTY spawn failure, missing CLI, unsupported
       // provider) are scoped to the view-PTY bridge — the underlying ACP agent
       // is still valid and should keep its slot in the experts list.
-      if (payload.error?.startsWith('terminal_view_')) return
+      if (payload.error?.startsWith('terminal_view_')) {
+        const existing = (expertsRef.current ?? []).find(e => e.agentId === payload.agentId)
+        if (!existing) {
+          const synthesized: ExpertInfo = {
+            agentId: payload.agentId,
+            sessionId: '',
+            agentName: payload.agentId,
+            agentIcon: '',
+            status: 'running',
+          }
+          setExperts(prev => prev.some(e => e.agentId === payload.agentId) ? prev : [...prev, synthesized])
+          expertsRef.current = [...(expertsRef.current ?? []), synthesized]
+        }
+        if (!activeKeyRef.current || activeKeyRef.current === '') {
+          setActiveKey(payload.agentId)
+        }
+        const inst = terminalsRef.current?.get(payload.agentId) ?? getOrCreateInstance(payload.agentId)
+        const detail = payload.message || payload.error || 'Unable to open terminal view'
+        inst.write(`\r\n\x1b[31m[Terminal view unavailable]\x1b[0m ${detail}\r\n`)
+        if (!inst.isOpened && !inst.isOpening && !inst.isDisposed) {
+          tryOpen(payload.agentId).catch(() => {})
+        }
+        return
+      }
       disposeTerminal(payload.agentId)
       let nextActiveKeyOnError: string | null = null
       setExperts(prev => {
@@ -261,6 +311,7 @@ export const useTerminalWsEvents = ({
     const handleExpertStartFailed = (payload: { agentId: string; chatId?: string; exitCode?: number; message?: string }) => {
       if (!isCurrentChatEvent(payload)) return
       if (!payload?.agentId) return
+      onViewEnded?.(payload.agentId)
       disposeTerminal(payload.agentId)
       let nextActiveKeyOnFail: string | null = null
       setExperts(prev => {
@@ -340,10 +391,11 @@ export const useTerminalWsEvents = ({
       wsClient.off('reconnected', handleReconnected)
       const nextChatId = chatIdRef.current
       if (nextChatId !== prevChatIdRef.current) {
+        outputSeenRef.current.clear()
         terminalsRef.current?.forEach((_, id) => disposeTerminal(id))
         setExperts([])
         setActiveKey('')
       }
     }
-  }, [wsClient, chatId, getOrCreateInstance, tryOpen, disposeTerminal, terminalsRef, expertsRef, setExperts, setActiveKey])
+  }, [wsClient, chatId, getOrCreateInstance, tryOpen, disposeTerminal, terminalsRef, expertsRef, setExperts, setActiveKey, onViewAttached, onViewOutput, onViewEnded])
 }

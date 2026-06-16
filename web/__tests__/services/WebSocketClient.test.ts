@@ -52,6 +52,15 @@ describe('WebSocketClient', () => {
     expect(client.isConnected()).toBe(true)
   })
 
+  it('emits connected on initial open', async () => {
+    const handler = vi.fn()
+    client.on('connected', handler)
+
+    await connectAndCapture()
+
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
   it('on/off event subscription and cancellation', async () => {
     await connectAndCapture()
     const handler = vi.fn()

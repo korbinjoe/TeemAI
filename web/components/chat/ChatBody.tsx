@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
 import type { Message, AgentActivity } from '../../types/chat'
@@ -12,6 +12,85 @@ import CompletionCeremony from './ceremonies/CompletionCeremony'
 
 const MESSAGES_AREA_STYLE: React.CSSProperties = { flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }
 const VIRTUOSO_STYLE: React.CSSProperties = { height: '100%' }
+const VIRTUOSO_REVEAL_EASING = 'cubic-bezier(0.16, 1, 0.3, 1)'
+
+const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value))
+
+const isCollapsedStructuredUserMessage = (content: string): boolean => {
+  const trimmed = content.trimStart()
+  if (content.startsWith('This session is being continued from a previous conversation')) return true
+  if (content.startsWith('<!--OT_SLASH:')) return true
+  if (content.startsWith('# AGENTS.md instructions for')) return true
+  if (content.startsWith('<user_instructions>') || content.startsWith('<command-name>')) return true
+  if (/^<[a-z][a-z0-9]*[-_][a-z0-9_-]*>/i.test(trimmed)) return true
+  if (content.length <= 500) return false
+  return (content.match(/^#{1,3}\s/gm) || []).length >= 2
+}
+
+const estimateWrappedLines = (content: string, charsPerLine = 92): number => {
+  if (!content) return 1
+  const physicalLines = content.split('\n').length
+  const wrappedLines = Math.ceil(content.length / charsPerLine)
+  return Math.max(physicalLines, wrappedLines, 1)
+}
+
+const estimateUserMessageHeight = (message: Message | null): number => {
+  if (!message) return 0
+  const content = message.content || ''
+  const imageHeight = message.images?.length ? 92 : 0
+  if (isCollapsedStructuredUserMessage(content)) return 58 + imageHeight
+  const bodyLines = clamp(estimateWrappedLines(content), 1, 12)
+  return 54 + bodyLines * 22 + imageHeight
+}
+
+const estimateExpandedAgentMessageHeight = (message: Message): number => {
+  switch (message.type) {
+    case 'text': {
+      const lines = clamp(estimateWrappedLines(message.content || '', 96), 1, 10)
+      return 32 + lines * 20
+    }
+    case 'thinking':
+      return 22
+    case 'toolUse': {
+      const toolName = message.toolUse?.toolName
+      if (toolName === 'AskUserQuestion' || toolName === 'ExitPlanMode') return 116
+      if (toolName === 'TodoWrite') return 92
+      return 23
+    }
+    case 'stats':
+      return 22
+    case 'error':
+      return 28
+    default:
+      return 0
+  }
+}
+
+const estimateAgentTurnHeight = (group: MessageGroup, expanded: boolean): number => {
+  if (group.agentMessages.length === 0) return 0
+  if (!expanded) {
+    const hasText = group.agentMessages.some((m) => m.type === 'text' && !!m.content)
+    const hasFileChange = group.agentMessages.some((m) => m.type === 'toolUse' && ['Write', 'Edit', 'MultiEdit'].includes(m.toolUse?.toolName || ''))
+    const hasError = group.agentMessages.some((m) => (m.type === 'toolResult' && m.toolResult?.isError) || m.type === 'error')
+    return 34 + (hasText || hasFileChange || hasError ? 58 : 0)
+  }
+
+  let detailHeight = 0
+  for (const message of group.agentMessages) {
+    detailHeight += estimateExpandedAgentMessageHeight(message)
+  }
+  return clamp(50 + detailHeight, 92, 4200)
+}
+
+const estimateGroupHeight = (group: MessageGroup, expanded: boolean, hasDivider: boolean): number => {
+  const dividerHeight = hasDivider ? 28 : 0
+  const orphanLabelHeight = group.userMessage ? 0 : 22
+  return clamp(
+    dividerHeight + orphanLabelHeight + estimateUserMessageHeight(group.userMessage) + estimateAgentTurnHeight(group, expanded) + 10,
+    72,
+    4600,
+  )
+}
 
 const TimeDivider = ({ label }: { label: string }) => (
   <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
@@ -65,6 +144,62 @@ const ChatBody = ({
 }: ChatBodyProps) => {
   const { t } = useTranslation('chat')
   const totalGroups = groups.length
+  const coldHydrationRef = useRef(messages.length === 0)
+  const revealTimerRef = useRef<number | null>(null)
+  const revealRafRef = useRef<number[]>([])
+  const [initialLayoutReady, setInitialLayoutReady] = useState(() => messages.length > 0)
+  const initialLayoutReadyRef = useRef(initialLayoutReady)
+
+  useEffect(() => {
+    initialLayoutReadyRef.current = initialLayoutReady
+  }, [initialLayoutReady])
+
+  const clearPendingReveal = useCallback(() => {
+    if (revealTimerRef.current != null) {
+      window.clearTimeout(revealTimerRef.current)
+      revealTimerRef.current = null
+    }
+    if (revealRafRef.current.length > 0) {
+      for (const raf of revealRafRef.current) window.cancelAnimationFrame(raf)
+      revealRafRef.current = []
+    }
+  }, [])
+
+  const scheduleInitialReveal = useCallback((delayMs = 72) => {
+    if (messages.length === 0 || initialLayoutReadyRef.current) return
+    clearPendingReveal()
+    revealTimerRef.current = window.setTimeout(() => {
+      revealTimerRef.current = null
+      const raf1 = window.requestAnimationFrame(() => {
+        const raf2 = window.requestAnimationFrame(() => {
+          revealRafRef.current = []
+          coldHydrationRef.current = false
+          initialLayoutReadyRef.current = true
+          setInitialLayoutReady(true)
+        })
+        revealRafRef.current.push(raf2)
+      })
+      revealRafRef.current.push(raf1)
+    }, delayMs)
+  }, [clearPendingReveal, messages.length])
+
+  useEffect(() => {
+    if (messages.length === 0) {
+      coldHydrationRef.current = true
+      clearPendingReveal()
+      if (initialLayoutReadyRef.current) {
+        initialLayoutReadyRef.current = false
+        setInitialLayoutReady(false)
+      }
+      return
+    }
+
+    if (coldHydrationRef.current && !initialLayoutReadyRef.current) {
+      scheduleInitialReveal(220)
+    }
+  }, [clearPendingReveal, messages.length, scheduleInitialReveal])
+
+  useEffect(() => () => clearPendingReveal(), [clearPendingReveal])
 
   // Timestamp of the most recent message — drives the running indicator's
   // "time since last message" so users can tell if a task has stalled.
@@ -77,6 +212,25 @@ const ChatBody = ({
   // Time-group dividers: anchor sections of the stream to a moment (今天/昨天/date)
   // so users can read the message timeline at a glance without per-message noise.
   const dividerLabels = useMemo(() => computeDividerLabels(groups), [groups])
+
+  const heightEstimates = useMemo(
+    () => groups.map((group, index) => estimateGroupHeight(group, index === totalGroups - 1, !!dividerLabels[index])),
+    [groups, totalGroups, dividerLabels],
+  )
+
+  const defaultItemHeight = useMemo(() => {
+    if (heightEstimates.length === 0) return 160
+    const sorted = [...heightEstimates].sort((a, b) => a - b)
+    return clamp(sorted[Math.floor(sorted.length * 0.75)] ?? sorted[sorted.length - 1] ?? 160, 120, 900)
+  }, [heightEstimates])
+
+  const handleInitialItemsRendered = useCallback(() => {
+    scheduleInitialReveal(72)
+  }, [scheduleInitialReveal])
+
+  const handleInitialTotalListHeightChanged = useCallback((height: number) => {
+    if (height > 0) scheduleInitialReveal(72)
+  }, [scheduleInitialReveal])
 
   const renderItem = useCallback((index: number, group: MessageGroup) => {
     const isLast = index === totalGroups - 1
@@ -116,6 +270,14 @@ const ChatBody = ({
   ), [thinking, currentAgentName, currentMergedActivity, expertActivities, agentNames, agentPersonalities, lastMessageTs])
 
   const components = useMemo(() => ({ Header, Footer }), [Header, Footer])
+  const shouldConcealInitialLayout = messages.length > 0 && coldHydrationRef.current && !initialLayoutReady
+  const virtuosoShellStyle = useMemo<React.CSSProperties>(() => ({
+    height: '100%',
+    visibility: shouldConcealInitialLayout ? 'hidden' : 'visible',
+    opacity: shouldConcealInitialLayout ? 0 : 1,
+    pointerEvents: shouldConcealInitialLayout ? 'none' : undefined,
+    transition: `opacity 140ms ${VIRTUOSO_REVEAL_EASING}`,
+  }), [shouldConcealInitialLayout])
 
   return (
     <div style={MESSAGES_AREA_STYLE}>
@@ -143,21 +305,26 @@ const ChatBody = ({
       {messages.length === 0 ? (
         <EmptyState connected={connected} hasSession={!!currentSessionId} reconnecting={reconnecting} />
       ) : (
-        <Virtuoso
-          key={viewKey ?? '__all__'}
-          ref={virtuosoRef}
-          style={VIRTUOSO_STYLE}
-          data={groups}
-          computeItemKey={computeKey}
-          itemContent={renderItem}
-          followOutput={followOutput}
-          atBottomStateChange={onAtBottomChange}
-          atBottomThreshold={50}
-          defaultItemHeight={60}
-          initialTopMostItemIndex={{ index: 'LAST', align: 'end' }}
-          increaseViewportBy={{ top: 600, bottom: 600 }}
-          components={components}
-        />
+        <div style={virtuosoShellStyle} aria-hidden={shouldConcealInitialLayout || undefined}>
+          <Virtuoso
+            key={viewKey ?? '__all__'}
+            ref={virtuosoRef}
+            style={VIRTUOSO_STYLE}
+            data={groups}
+            computeItemKey={computeKey}
+            itemContent={renderItem}
+            followOutput={followOutput}
+            atBottomStateChange={onAtBottomChange}
+            atBottomThreshold={50}
+            defaultItemHeight={defaultItemHeight}
+            heightEstimates={heightEstimates}
+            initialTopMostItemIndex={{ index: 'LAST', align: 'end' }}
+            increaseViewportBy={{ top: 600, bottom: 600 }}
+            itemsRendered={handleInitialItemsRendered}
+            totalListHeightChanged={handleInitialTotalListHeightChanged}
+            components={components}
+          />
+        </div>
       )}
     </div>
   )

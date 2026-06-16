@@ -45,6 +45,7 @@ import { missionSwitchPerf } from '../../lib/missionSwitchPerf'
 const ROOT_STYLE: React.CSSProperties = { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }
 const MAIN_CONTENT_STYLE: React.CSSProperties = { flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }
 const DIVIDER_BAR_STYLE: React.CSSProperties = { width: 4, flexShrink: 0, position: 'relative', zIndex: 20 }
+const TERMINAL_PREWARM_DELAY_MS = 250
 const RightPanel = lazy(() => import('../ide/RightPanel'))
 
 /**
@@ -178,6 +179,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     chatTitle, setChatTitle, currentWorkingDirectory, cwdReady,
     setLoading, thinking,
     allWorktreeSessions, wsRepositories,
+    resumableAgentIds,
     agentSlashCommands,
     chatAvailableCommands,
     chatModel, setChatModel, chatStatus,
@@ -205,6 +207,17 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     if (filterAgentId) return agentMessages[filterAgentId] ?? []
     return mergedMessages
   }, [singleAgentMode, lockedAgentKey, filterAgentId, agentMessages, mergedMessages])
+
+  const [terminalPrewarmEnabled, setTerminalPrewarmEnabled] = useState(false)
+  useEffect(() => {
+    if (!isActive || viewMode !== 'message' || !connected || !cwdReady || resumableAgentIds.length === 0) {
+      if (!isActive || resumableAgentIds.length === 0) setTerminalPrewarmEnabled(false)
+      return
+    }
+
+    const timer = setTimeout(() => setTerminalPrewarmEnabled(true), TERMINAL_PREWARM_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [isActive, viewMode, connected, cwdReady, resumableAgentIds.length])
 
   const dirPickerHistory = useMemo(() => currentWorkingDirectory ? [currentWorkingDirectory] : [], [currentWorkingDirectory])
   const dirPicker = useDirPicker(dirPickerHistory)
@@ -553,6 +566,8 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   )
 
   const canSend = connected && !!currentSessionId && cwdReady
+  const shouldRenderTerminalPanel = viewMode === 'terminal' || terminalPrewarmEnabled
+  const terminalPanelVisible = viewMode === 'terminal'
 
   // When external IDE is active, chat owns the full pane width.
   const rightPanelExternal = hideRightPanel
@@ -588,17 +603,20 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
           ) : (<>
           {/* TerminalPanel: rendered outside isActive gate so the view-PTY
               survives mission switches. Visibility is toggled via CSS. */}
-          {viewMode === 'terminal' && (
-            <div className={`flex-1 min-h-0${isActive ? '' : ' invisible'}`}
-                 aria-hidden={!isActive || undefined}>
+          {shouldRenderTerminalPanel && (
+            <div
+              className={`flex-1 min-h-0 flex flex-col${terminalPanelVisible ? (isActive ? '' : ' invisible') : ' hidden'}`}
+              aria-hidden={!isActive || !terminalPanelVisible || undefined}
+            >
               <TerminalPanel
                 ref={terminalPanelRef}
                 chatId={chatId}
                 gitStatus={primaryGitStatus}
-                agentActive={isActive && !!activeMergedActivity && !['completed', 'waiting_input', 'error', 'initializing'].includes(activeMergedActivity.phase)}
+                agentActive={terminalPanelVisible && isActive && !!activeMergedActivity && !['completed', 'waiting_input', 'error', 'initializing'].includes(activeMergedActivity.phase)}
                 connected={connected}
                 lockedAgentId={singleAgentMode ? lockedAgentKey : null}
-                inTerminalView
+                inTerminalView={terminalPanelVisible || terminalPrewarmEnabled}
+                prewarmOnly={!terminalPanelVisible}
               />
             </div>
           )}

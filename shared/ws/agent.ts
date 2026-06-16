@@ -44,6 +44,7 @@ export interface AgentListItem {
   status: 'running' | 'completed'
   exitCode?: number
   completedAt?: string
+  cwd?: string
 }
 
 export interface AgentListPayload {

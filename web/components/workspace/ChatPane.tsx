@@ -10,6 +10,12 @@ import { missionSwitchPerf } from '../../lib/missionSwitchPerf'
 const MAX_CACHED = 4
 const MAX_WS_CACHE = 5
 
+const cachedPaneStyle = (active: boolean): React.CSSProperties => ({
+  display: active ? 'flex' : 'none',
+  zIndex: active ? 1 : 0,
+  pointerEvents: active ? 'auto' : 'none',
+})
+
 interface CachedChat {
   chatId: string
   workspaceId: string
@@ -113,8 +119,9 @@ const ChatPane = () => {
         return (
           <div
             key={item.chatId}
-            className="absolute inset-0 flex flex-col"
-            style={{ visibility: active ? 'visible' : 'hidden', zIndex: active ? 1 : 0 }}
+            className="absolute inset-0 flex-col"
+            style={cachedPaneStyle(active)}
+            aria-hidden={!active || undefined}
           >
             <ChatInstance
               chatId={item.chatId}

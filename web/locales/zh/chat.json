@@ -172,6 +172,8 @@
     "reopenTooltip": "重新打开已关闭的终端",
     "openAll": "全部打开",
     "reconnecting": "连接中断，正在重连...",
+    "restoring": "正在恢复终端...",
+    "restoringSub": "正在启动交互会话",
     "emptyHint": "发送消息后，Agent 终端将在此显示",
     "emptyHintLocked": "等待 {{agent}} 启动…",
     "hiddenCount": "已关闭 {{count}} 个终端"

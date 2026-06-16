@@ -98,6 +98,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
   const [allWorktreeSessions, setAllWorktreeSessions] = useState<WorktreeSession[]>([])
   const [wsRepositories, setWsRepositories] = useState<Array<{ id: string; path: string; name: string }>>([])
   const [chatTokenSnapshot, setChatTokenSnapshot] = useState<{ totalCost?: number; totalTokens?: { input: number; output: number; cacheRead?: number; cacheCreation?: number } } | null>(null)
+  const [resumableAgentIds, setResumableAgentIds] = useState<string[]>([])
   const [agentSlashCommands, setAgentSlashCommands] = useState<Record<string, string[]>>({})
   const [chatAvailableCommands, setChatAvailableCommands] = useState<string[]>([])
   const [chatModel, setChatModel] = useState<string | null>(null)
@@ -297,9 +298,11 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
         }
 
         if (chat) {
-          expectedReplayAgentIdsRef.current = chat.expertSessions
+          const expertSessionIds = chat.expertSessions
             ? Object.keys(chat.expertSessions)
             : []
+          expectedReplayAgentIdsRef.current = expertSessionIds
+          setResumableAgentIds(expertSessionIds)
           if (chat.title) setChatTitle(chat.title)
           if (chat.status) setChatStatus(chat.status)
           setChatModel(chat.model || DEFAULT_MODEL)
@@ -309,6 +312,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
           }
         } else {
           expectedReplayAgentIdsRef.current = []
+          setResumableAgentIds([])
         }
       } catch (err) {
         console.error('[useChatWebSocket] Workspace init failed:', err)
@@ -536,6 +540,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     allWorktreeSessions,
     wsRepositories,
     chatTokenSnapshot,
+    resumableAgentIds,
     agentSlashCommands,
     chatAvailableCommands,
     chatModel, setChatModel,

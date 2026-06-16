@@ -172,6 +172,8 @@
     "reopenTooltip": "Reopen closed terminals",
     "openAll": "Open all",
     "reconnecting": "Connection lost, reconnecting...",
+    "restoring": "Restoring terminal...",
+    "restoringSub": "Starting interactive session",
     "emptyHint": "After sending a message, Agent terminals will appear here",
     "emptyHintLocked": "Waiting for {{agent}} to start…",
     "hiddenCount": "{{count}} terminals closed"

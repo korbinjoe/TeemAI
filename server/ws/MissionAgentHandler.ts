@@ -32,6 +32,7 @@ import type { WhiteboardManager } from '../whiteboard/WhiteboardManager'
 import { expandSlashCommand } from '../runtime/SlashCommandResolver'
 import { createLogger } from '../lib/logger'
 import { trackEvent } from '../lib/eventTracker'
+import type { CliProvider, ExpertSessionInfo } from '../config/types'
 
 const log = createLogger('MissionAgentHandler')
 
@@ -300,7 +301,7 @@ export class MissionAgentHandler {
 
   handleList(ws: WebSocket, connectionId: string, chatId?: string): void {
     const activeChatId = chatId || this.connectionActiveChatId.get(connectionId)
-    const expertList = this.store.getExpertListForConnection(connectionId, activeChatId)
+    const expertList = this.getAgentListForConnection(connectionId, activeChatId)
     sendFrame(ws, {
       type: 'agent:list',
       payload: { agents: expertList, chatId: activeChatId },
@@ -315,7 +316,43 @@ export class MissionAgentHandler {
   }
 
   getExpertListForConnection(connectionId: string, chatId?: string): MissionAgentListItem[] {
-    return this.store.getExpertListForConnection(connectionId, chatId)
+    return this.getAgentListForConnection(connectionId, chatId)
+  }
+
+  private getAgentListForConnection(connectionId: string, chatId?: string): MissionAgentListItem[] {
+    const runtimeList = this.store.getExpertListForConnection(connectionId, chatId)
+    if (!chatId) return runtimeList
+
+    const seen = new Set(runtimeList.map((item) => item.agentId))
+    const chat = this.chatStore.get(chatId)
+    if (!chat?.expertSessions) return runtimeList
+
+    const persistedList: MissionAgentListItem[] = []
+    for (const [agentId, sessionInfo] of Object.entries(chat.expertSessions)) {
+      if (seen.has(agentId)) continue
+      const normalized = this.normalizeExpertSessionInfo(sessionInfo)
+      if (!normalized?.cliSessionId) continue
+      const agent = this.agentStore.get(agentId)
+      persistedList.push({
+        agentId,
+        sessionId: normalized.cliSessionId,
+        agentName: agent?.name || agentId,
+        agentIcon: agent?.icon || '',
+        status: normalized.exitCode == null && chat.status === 'running' ? 'running' : 'completed',
+        ...(normalized.exitCode != null ? { exitCode: normalized.exitCode } : {}),
+        cwd: normalized.cwd,
+      })
+    }
+
+    return [...runtimeList, ...persistedList]
+  }
+
+  private normalizeExpertSessionInfo(sessionInfo: ExpertSessionInfo | string | undefined): ExpertSessionInfo | null {
+    if (!sessionInfo) return null
+    if (typeof sessionInfo === 'string') {
+      return { cliSessionId: sessionInfo, cwd: process.cwd() }
+    }
+    return sessionInfo
   }
 
   /**
@@ -575,13 +612,13 @@ export class MissionAgentHandler {
   }
 
   private persistAllExpertSessions(connectionId: string): void {
-    const byChatId = new Map<string, Array<{ agentId: string; cliSessionId: string; cwd: string }>>()
+    const byChatId = new Map<string, Array<{ agentId: string; cliSessionId: string; cwd: string; provider?: CliProvider }>>()
     for (const [key, entry] of this.store.runningEntries()) {
       if (entry.connectionId === connectionId && entry.cliSessionId) {
         const agentId = parseAgentId(key)
         let list = byChatId.get(entry.chatId)
         if (!list) { list = []; byChatId.set(entry.chatId, list) }
-        list.push({ agentId, cliSessionId: entry.cliSessionId, cwd: entry.cwd })
+        list.push({ agentId, cliSessionId: entry.cliSessionId, cwd: entry.cwd, provider: entry.provider })
       }
     }
 
@@ -589,8 +626,8 @@ export class MissionAgentHandler {
       const chat = this.chatStore.get(chatId)
       if (!chat) continue
       const expertSessions = { ...chat.expertSessions }
-      for (const { agentId, cliSessionId, cwd } of agents) {
-        expertSessions[agentId] = { cliSessionId, cwd }
+      for (const { agentId, cliSessionId, cwd, provider } of agents) {
+        expertSessions[agentId] = { cliSessionId, cwd, provider }
       }
       this.chatStore.update(chatId, { expertSessions }).catch((err) => {
         log.error('Failed to persist expert sessions', { chatId, error: err instanceof Error ? err.message : String(err) })

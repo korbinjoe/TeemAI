@@ -8,7 +8,7 @@
  * -  visible  open()
  * -  tab
  */
-import { useRef, useState, useEffect, useMemo, forwardRef, useImperativeHandle, lazy, Suspense } from 'react'
+import { useRef, useState, useEffect, useMemo, useCallback, forwardRef, useImperativeHandle, lazy, Suspense } from 'react'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
@@ -54,6 +54,10 @@ interface TerminalPanelProps {
    * the React composer in message mode.
    */
   inTerminalView?: boolean
+  /** Hidden prewarm mode starts the view-PTY early but avoids spawning every
+   *  historical agent in large missions before the user actually opens the
+   *  terminal surface. */
+  prewarmOnly?: boolean
 }
 
 interface ExpertInfo {
@@ -69,6 +73,8 @@ interface ExpertInfo {
 // ================== Constant ==================
 const CHANGES_TAB_KEY = '__changes__'
 const LAYOUT_STORAGE_KEY = 'teemai:terminal-layout'
+const PREWARM_AGENT_LIMIT = 1
+const VISIBLE_OPEN_RETRY_FRAMES = 12
 
 const hiddenStorageKey = (chatId?: string) => chatId ? `cc:terminal:hidden:${chatId}` : null
 
@@ -128,7 +134,7 @@ const PULSE_STYLE = `
 `
 
 const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
-  ({ chatId, gitStatus, agentActive = false, connected = true, lockedAgentId = null, inTerminalView = false }, ref) => {
+  ({ chatId, gitStatus, agentActive = false, connected = true, lockedAgentId = null, inTerminalView = false, prewarmOnly = false }, ref) => {
     const { t } = useTranslation('chat')
     const isLocked = !!lockedAgentId
     const [experts, setExperts] = useState<ExpertInfo[]>([])
@@ -141,6 +147,7 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
       const saved = localStorage.getItem(LAYOUT_STORAGE_KEY)
       return saved === 'split' ? 'split' : 'tabs'
     })
+    const [restoringAgents, setRestoringAgents] = useState<Set<string>>(() => new Set())
     const terminalAreaRef = useRef<HTMLDivElement>(null)
 
     const wsClient = getWebSocketClient()
@@ -149,7 +156,26 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
 
     useEffect(() => {
       setHiddenExperts(loadHiddenExperts(chatId))
+      setRestoringAgents(new Set())
     }, [chatId])
+
+    const markRestoring = useCallback((agentId: string) => {
+      setRestoringAgents(prev => {
+        if (prev.has(agentId)) return prev
+        const next = new Set(prev)
+        next.add(agentId)
+        return next
+      })
+    }, [])
+
+    const clearRestoring = useCallback((agentId: string) => {
+      setRestoringAgents(prev => {
+        if (!prev.has(agentId)) return prev
+        const next = new Set(prev)
+        next.delete(agentId)
+        return next
+      })
+    }, [])
 
     const isSplitActive = layoutMode === 'split' && activeKey !== CHANGES_TAB_KEY
 
@@ -264,21 +290,26 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
       disposeTerminal,
       setExperts,
       setActiveKey,
+      onViewAttached: markRestoring,
+      onViewOutput: clearRestoring,
+      onViewEnded: clearRestoring,
     })
 
     // ── WS ListSync ──
     useEffect(() => {
       const fetchExpertList = () => {
-        if (wsClient.isConnected()) wsClient.send('agent:list', { chatId })
+        if (connected && wsClient.isConnected()) wsClient.send('agent:list', { chatId })
       }
       const handleConnected = () => fetchExpertList()
       fetchExpertList()
       wsClient.on('reconnected', handleConnected)
+      wsClient.on('connected', handleConnected)
 
       return () => {
         wsClient.off('reconnected', handleConnected)
+        wsClient.off('connected', handleConnected)
       }
-    }, [wsClient, chatId, getOrCreateInstance])
+    }, [wsClient, chatId, connected, getOrCreateInstance])
 
     // Resume-PTY bridge: when the chat pane enters terminal view, ask the
     // server to spawn `claude --resume <cliSessionId>` (or codex equivalent).
@@ -316,12 +347,15 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
       if (isLocked && lockedAgentId) {
         desired.add(lockedAgentId)
       } else {
-        for (const e of experts) {
+        const attachableExperts = prewarmOnly
+          ? experts.slice(0, PREWARM_AGENT_LIMIT)
+          : experts
+        for (const e of attachableExperts) {
           if (e.agentId !== CHANGES_TAB_KEY) desired.add(e.agentId)
         }
       }
 
-      if (wsClient.isConnected()) {
+      if (connected && wsClient.isConnected()) {
         for (const agentId of desired) {
           if (!attachedRef.current.has(agentId)) {
             const est = estimateSize(terminalAreaRef.current)
@@ -336,7 +370,7 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
           }
         }
       }
-    }, [inTerminalView, chatId, experts, isLocked, lockedAgentId, wsClient])
+    }, [inTerminalView, prewarmOnly, chatId, experts, isLocked, lockedAgentId, connected, wsClient])
 
     // On unmount only: detach all attached view-PTYs. Chat switches no longer
     // send detach — server-side view-PTYs stay alive so re-entering the chat
@@ -410,10 +444,53 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
     const hiddenCount = hiddenList.length
     const gridCols = getGridCols(visibleExperts.length)
     const gridRows = Math.ceil(visibleExperts.length / gridCols)
+    const visibleExpertIdKey = visibleExperts.map(e => e.agentId).join('\u0000')
+
+    useEffect(() => {
+      if (!inTerminalView || prewarmOnly) return
+
+      const targetIds = isSplitActive
+        ? visibleExpertIdKey.split('\u0000').filter(Boolean)
+        : (activeKey && activeKey !== CHANGES_TAB_KEY ? [activeKey] : [])
+      if (targetIds.length === 0) return
+
+      let cancelled = false
+      let rafId = 0
+      let attempts = 0
+
+      const openVisibleTargets = () => {
+        if (cancelled) return
+        attempts += 1
+        let hasPending = false
+
+        for (const agentId of targetIds) {
+          const inst = terminalsRef.current.get(agentId)
+          if (!inst || inst.isDisposed) continue
+          if (inst.isOpened) {
+            if (attempts === 1) inst.reactivate()
+            continue
+          }
+          if (!inst.isOpening) {
+            tryOpen(agentId).catch(() => {})
+          }
+          hasPending = true
+        }
+
+        if (hasPending && attempts < VISIBLE_OPEN_RETRY_FRAMES) {
+          rafId = requestAnimationFrame(openVisibleTargets)
+        }
+      }
+
+      rafId = requestAnimationFrame(openVisibleTargets)
+      return () => {
+        cancelled = true
+        if (rafId) cancelAnimationFrame(rafId)
+      }
+    }, [inTerminalView, prewarmOnly, isSplitActive, activeKey, visibleExpertIdKey, terminalsRef, tryOpen])
 
     return (
       <TooltipProvider delayDuration={300}>
-        <div className="flex-1 min-h-0 flex flex-col bg-bg-primary overflow-hidden">
+        <div className="flex-1 min-h-0 h-full flex flex-col bg-bg-primary overflow-hidden">
           <style>{TABS_STYLE}</style>
           <Tabs
             className="unified-terminal-tabs"
@@ -665,6 +742,7 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
             )}
             {scopedExperts.map((expert) => {
               const isHidden = !isLocked && hiddenExperts.has(expert.agentId)
+              const isRestoring = restoringAgents.has(expert.agentId)
               return (
               <div
                 key={expert.agentId}
@@ -674,7 +752,7 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
                     ? 'absolute inset-0 invisible z-0'
                     : isSplitActive
                       ? cn(
-                          'flex flex-col min-h-0 overflow-hidden',
+                          'relative flex flex-col min-h-0 overflow-hidden',
                           activeKey === expert.agentId && 'ring-1 ring-accent-brand/50 ring-inset z-10',
                         )
                       : cn(
@@ -714,6 +792,15 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
                   ref={getContainerRefCallback(expert.agentId)}
                   className={isSplitActive ? 'flex-1 min-h-0' : 'h-full'}
                 />
+                {isRestoring && !isHidden && (
+                  <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-start px-3 pt-3">
+                    <div className="inline-flex max-w-[calc(100%-24px)] items-center gap-2 rounded-md border border-border-subtle bg-bg-primary/85 px-2.5 py-1.5 font-mono text-xs leading-none text-text-secondary shadow-sm backdrop-blur">
+                      <span className="size-1.5 shrink-0 rounded-full bg-accent-brand animate-[pulse_1.2s_ease-in-out_infinite]" />
+                      <span className="truncate">{t('terminal.restoring')}</span>
+                      <span className="hidden truncate text-text-muted sm:inline">{t('terminal.restoringSub')}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )})}
 

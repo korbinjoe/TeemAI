@@ -35,10 +35,11 @@ export interface WsReceiveEventMap {
   'agent:exit': { agentId: string; chatId: string; exitCode?: number }
   'agent:stopped': { agentId: string; chatId: string; exitCode?: number; exitReason?: 'user_stop' | 'timeout' | 'model_switch' }
   'agent:data': { agentId: string; chatId: string; sessionId?: string; seq?: number; snapshot?: boolean; data: string; ptySize?: { cols: number; rows: number } }
+  'agent:view-attached': { agentId: string; chatId: string; sessionId: string; cwd?: string }
   'agent:partial-text': { agentId: string; chatId: string; sessionId?: string; blockIndex: number; text: string }
   'agent:resume-failed': { agentId: string; chatId: string; agentName: string; reason: string; sessionId?: string; message?: string }
-  'agent:list': { chatId?: string; agents: Array<{ agentId: string; sessionId: string; agentName: string; agentIcon: string; status: 'running' | 'completed'; exitCode?: number; completedAt?: string }> }
-  'agent:list-updated': { chatId?: string; agents: Array<{ agentId: string; sessionId: string; agentName: string; agentIcon: string; status: 'running' | 'completed'; exitCode?: number; completedAt?: string }> }
+  'agent:list': { chatId?: string; agents: Array<{ agentId: string; sessionId: string; agentName: string; agentIcon: string; status: 'running' | 'completed'; exitCode?: number; completedAt?: string; cwd?: string }> }
+  'agent:list-updated': { chatId?: string; agents: Array<{ agentId: string; sessionId: string; agentName: string; agentIcon: string; status: 'running' | 'completed'; exitCode?: number; completedAt?: string; cwd?: string }> }
   'agent:already-running': { agentId: string; agentName: string; sessionId: string }
   'agent:start-failed': { agentId: string; chatId: string; exitCode?: number; message?: string }
   'agent:slash-commands': { agentId: string; chatId: string; commands: string[] }
@@ -185,6 +186,8 @@ export interface WsSendEventMap {
   'mission:resume-agents': { chatId: string | undefined; skipReplay?: boolean }
   'agent:direct-input': { chatId: string; agentId: string; message: string; images?: Array<{ data: string; mediaType: string }>; autoStart?: boolean; cwd?: string; cols?: number; rows?: number }
   'agent:input': { chatId: string; agentId: string; data: string }
+  'agent:cli-attach': { chatId: string; agentId: string; cols: number; rows: number }
+  'agent:cli-detach': { chatId: string; agentId: string }
   'agent:stop': { chatId: string; agentId: string }
   'agent:resize': { chatId: string; agentId: string; cols: number; rows: number }
   'agent:list': { chatId: string | undefined }

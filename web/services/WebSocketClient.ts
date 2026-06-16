@@ -62,6 +62,7 @@ export class WebSocketClient {
           this.wasConnected = true
           this.connectPromise = null
           resolve()
+          this.emit('connected')
           if (isReconnect) {
             this.emit('reconnected')
           }

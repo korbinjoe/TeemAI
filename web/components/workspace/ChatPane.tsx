@@ -5,6 +5,7 @@ import { API_BASE, authFetch } from '@/config/api'
 import ChatInstance from '../chat/ChatInstance'
 import type { PrefetchedWorkspaceData } from '../chat/ChatInstance'
 import WorkspaceHome from './WorkspaceHome'
+import { missionSwitchPerf } from '../../lib/missionSwitchPerf'
 
 const MAX_CACHED = 4
 const MAX_WS_CACHE = 5
@@ -17,13 +18,27 @@ interface CachedChat {
 }
 
 const ChatPane = () => {
-  const { workspaceId, activeChatId, ideMountNode } = useWorkspace()
+  const { workspaceId, activeChatId } = useWorkspace()
   const location = useLocation()
   const navState = location.state as { isNew?: boolean; agentId?: string } | null
 
   const cacheRef = useRef<CachedChat[]>([])
   const wsDataCacheRef = useRef<Map<string, PrefetchedWorkspaceData>>(new Map())
   const [wsDataVersion, setWsDataVersion] = useState(0)
+  const prevActiveChatRef = useRef<string | null>(null)
+  const warmHitRef = useRef(false)
+
+  useEffect(() => {
+    if (!activeChatId || activeChatId === prevActiveChatRef.current) return
+    prevActiveChatRef.current = activeChatId
+    if (!missionSwitchPerf.getActive()) {
+      missionSwitchPerf.start(activeChatId, 'other')
+    }
+    missionSwitchPerf.mark('chat-pane-active', activeChatId, {
+      cached: warmHitRef.current,
+      warm: warmHitRef.current,
+    })
+  }, [activeChatId])
 
   useEffect(() => {
     if (!workspaceId) return
@@ -83,6 +98,8 @@ const ChatPane = () => {
     return <WorkspaceHome />
   }
 
+  const warmBeforeEnsure = new Set(cacheRef.current.map((c) => c.chatId))
+  warmHitRef.current = warmBeforeEnsure.has(activeChatId)
   ensureCached(activeChatId, workspaceId, navState?.isNew, navState?.agentId)
   const cached = cacheRef.current
 
@@ -105,8 +122,8 @@ const ChatPane = () => {
               isActive={active}
               isNewChat={item.isNew}
               initAgentId={item.agentId}
+              resumeWarm={warmBeforeEnsure.has(item.chatId) && !item.isNew}
               hideRightPanel
-              rightPanelMountNode={active ? ideMountNode : null}
               prefetchedWorkspace={wsDataCacheRef.current.get(item.workspaceId) ?? null}
             />
           </div>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useReducer, useCallback, useEffect, useMemo, useState, useRef, startTransition, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { buildMissionUrl, buildWorkspaceUrl } from '../components/workspace/urls'
 
@@ -57,11 +57,6 @@ interface WorkspaceContextValue extends WorkspaceState, ResizeState {
   // Transient per-mission target index for @target cycle in group chat input.
   missionChatTargetIndex: number
   cycleTargetAgent: (agentCount: number) => void
-
-  /** DOM node where V2 IDEPanel wants ChatInstance's RightPanel to portal. Null when
-   *  IDE column is showing a non-chat tab (e.g. War Room) or no chat is active. */
-  ideMountNode: HTMLElement | null
-  setIdeMountNode: (node: HTMLElement | null) => void
 
   // Navigation helpers — all write to the URL, never to local state.
   selectAgent: (agentId: string) => void
@@ -294,12 +289,16 @@ export const WorkspaceProvider = ({
   // is then read back as props by the layout and threaded into this provider.
   const selectAgent = useCallback((agentId: string) => {
     if (!workspaceId || !activeChatId) return
-    navigate(buildMissionUrl(workspaceId, activeChatId, agentId))
+    startTransition(() => {
+      navigate(buildMissionUrl(workspaceId, activeChatId, agentId))
+    })
   }, [navigate, workspaceId, activeChatId])
 
   const openMissionOverview = useCallback((missionId: string) => {
     if (!workspaceId) return
-    navigate(buildMissionUrl(workspaceId, missionId))
+    startTransition(() => {
+      navigate(buildMissionUrl(workspaceId, missionId))
+    })
   }, [navigate, workspaceId])
 
   const setLayoutMode = useCallback((mode: LayoutMode) => dispatch({ type: 'SET_LAYOUT_MODE', mode }), [])
@@ -316,10 +315,6 @@ export const WorkspaceProvider = ({
   const setIdeTab = useCallback((tab: IdeTab) => dispatch({ type: 'SET_IDE_TAB', tab }), [])
   const toggleMission = useCallback((missionId: string) => dispatch({ type: 'TOGGLE_MISSION', missionId }), [])
   const toggleIde = useCallback(() => dispatch({ type: 'TOGGLE_IDE' }), [])
-
-  // IDE portal target: V2 IDEPanel registers a DOM node when its IDE tab is active;
-  // ChatInstance reads this and createPortal()s RightPanel into it.
-  const [ideMountNode, setIdeMountNode] = useState<HTMLElement | null>(null)
 
   // Main context value — does NOT depend on resize widths. Changes to
   // sidebarWidth/idePanelWidth/chatSplitWidth during drag do not trigger
@@ -339,8 +334,6 @@ export const WorkspaceProvider = ({
     viewMode,
     missionChatTargetIndex,
     cycleTargetAgent,
-    ideMountNode,
-    setIdeMountNode,
     selectAgent,
     openMissionOverview,
     setLayoutMode,
@@ -358,7 +351,6 @@ export const WorkspaceProvider = ({
   }), [
     state, workspaceId, activeChatId, selectedAgentId, viewMode,
     missionChatTargetIndex, cycleTargetAgent,
-    ideMountNode,
     selectAgent, openMissionOverview,
     setLayoutMode, cycleLayoutMode, togglePanel, collapsePanel, expandPanel,
     toggleTerminal, setIdeTab, toggleMission, toggleIde,

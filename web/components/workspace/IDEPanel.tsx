@@ -1,5 +1,6 @@
-import { useCallback } from 'react'
+import { lazy, Suspense } from 'react'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
+import { useChatIDEOutletSnapshot } from '../../contexts/ChatIDEOutletContext'
 import { Folder, Flag, FolderGit } from './icons'
 import { cn } from '../../lib/utils'
 import { useWarRoomCounts } from './WarRoomPanel'
@@ -7,8 +8,7 @@ import { useWorkspaceMeta } from '../../hooks/useWorkspaceMeta'
 import useMultiRepoGitStatus from '../../hooks/useMultiRepoGitStatus'
 
 // V2 IDE column is a thin wrapper:
-//   • Expanded → portals ChatInstance's native WebIDEPanel (which owns the single
-//     File|War room|Browser|Changes + Terminal tab bar — no second outer tab bar).
+//   • Expanded → single stable RightPanel fed by ChatIDEOutlet (no portal remount).
 //   • Collapsed → 36px peripheral strip with quick-jump icons.
 //
 // The IDE collapse/expand control lives in the unified WorkspaceToolbar so the
@@ -36,6 +36,14 @@ const STRIP_BADGE_TONE: Record<NonNullable<StripMeta['badge']>['tone'], string> 
   green: 'bg-accent-green text-white',
   red:   'bg-accent-red text-white',
 }
+
+const RightPanel = lazy(() => import('../ide/RightPanel'))
+
+const IDE_LOADING = (
+  <div className="flex-1 flex items-center justify-center text-text-secondary text-sm select-none">
+    IDE Loading…
+  </div>
+)
 
 const useStripMeta = (): Record<StripTab, StripMeta> => {
   const { open: warRoomOpen } = useWarRoomCounts()
@@ -108,26 +116,23 @@ const CollapsedStrip = () => {
   )
 }
 
-// Expanded panel is a pure mount point — WebIDEPanel (portalled from
-// ChatInstance) owns the only tab bar in this column.
+// Expanded panel hosts a single stable RightPanel instance fed by ChatIDEOutlet
+// (active ChatInstance publishes props). Avoids portal remount on mission switch.
 const ExpandedPanel = () => {
-  const { activeChatId, setIdeMountNode } = useWorkspace()
+  const { activeChatId } = useWorkspace()
+  const snapshot = useChatIDEOutletSnapshot(activeChatId)
   const hasChat = !!activeChatId
-
-  // Callback ref handles both attach (newNode) and detach (null on unmount).
-  // Do NOT add a useEffect cleanup that also clears the node — passive cleanup
-  // runs AFTER the new component's ref attach on layout switches, so it would
-  // overwrite the freshly attached mount node and blank the IDE portal.
-  const mountRef = useCallback((node: HTMLDivElement | null) => {
-    setIdeMountNode(node)
-  }, [setIdeMountNode])
 
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-hidden border-l border-border-subtle">
-      {hasChat ? (
-        <div ref={mountRef} className="flex-1 min-h-0 overflow-hidden flex flex-col" />
-      ) : (
+      {!hasChat ? (
         <EmptyState />
+      ) : snapshot ? (
+        <Suspense fallback={IDE_LOADING}>
+          <RightPanel {...snapshot} />
+        </Suspense>
+      ) : (
+        IDE_LOADING
       )}
     </div>
   )

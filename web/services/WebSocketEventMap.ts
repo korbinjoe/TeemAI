@@ -182,7 +182,7 @@ export interface WsReceiveEventMap {
 
 export interface WsSendEventMap {
   'mission:set-context': { chatId: string | undefined }
-  'mission:resume-agents': { chatId: string | undefined }
+  'mission:resume-agents': { chatId: string | undefined; skipReplay?: boolean }
   'agent:direct-input': { chatId: string; agentId: string; message: string; images?: Array<{ data: string; mediaType: string }>; autoStart?: boolean; cwd?: string; cols?: number; rows?: number }
   'agent:input': { chatId: string; agentId: string; data: string }
   'agent:stop': { chatId: string; agentId: string }

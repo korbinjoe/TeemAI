@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback, startTransition } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { WorkspaceProvider, useWorkspace } from '../contexts/WorkspaceContext'
+import { ChatIDEOutletProvider } from '../contexts/ChatIDEOutletContext'
 import { DialogProvider, useDialog } from '../contexts/DialogContext'
 import { buildMissionUrl } from '../components/workspace/urls'
 import { useChatTabs } from '../contexts/ChatTabContext'
@@ -14,6 +15,7 @@ import NewChatFullDialog from '../components/chat/modals/NewChatFullDialog'
 import { persistLastWorkspace } from '../components/workspace/WorkspaceRedirect'
 import useResponsiveLayout from '../components/workspace/useResponsiveLayout'
 import DevPanel from '../components/dev/DevPanel'
+import { missionSwitchPerf } from '../lib/missionSwitchPerf'
 
 const WorkspaceLayoutInner = () => {
   const {
@@ -110,7 +112,10 @@ const WorkspaceLayoutInner = () => {
         const chatId = quickJumpChats[idx]
         if (chatId && workspaceId) {
           e.preventDefault()
-          navigate(buildMissionUrl(workspaceId, chatId))
+          missionSwitchPerf.start(chatId, 'keyboard')
+          startTransition(() => {
+            navigate(buildMissionUrl(workspaceId, chatId))
+          })
         }
       }
     }
@@ -183,9 +188,11 @@ const WorkspaceLayout = () => {
       activeChatId={missionId ?? null}
       selectedAgentId={agentId}
     >
-      <DialogProvider>
-        <WorkspaceLayoutInner />
-      </DialogProvider>
+      <ChatIDEOutletProvider>
+        <DialogProvider>
+          <WorkspaceLayoutInner />
+        </DialogProvider>
+      </ChatIDEOutletProvider>
     </WorkspaceProvider>
   )
 }

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo, lazy, Suspense } from 'react'
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Files, GitBranch, Terminal, ChevronDown, ClipboardList, Globe, Maximize2, Minimize2 } from 'lucide-react'
@@ -10,6 +10,7 @@ import { getWebSocketClient } from '@/services/WebSocketClient'
 import type { GitStatusData } from '@/hooks/useGitStatus'
 import type { MultiRepoGitStatus } from '@/hooks/useMultiRepoGitStatus'
 import { buildChangeMap, buildDirAggregate } from '@/lib/changeTree'
+import { missionSwitchPerf } from '@/lib/missionSwitchPerf'
 import TerminalSkeleton from './TerminalSkeleton'
 import { emptySearchCache, type SearchCache } from './SearchPanel'
 
@@ -90,6 +91,11 @@ const WebIDEPanel = ({ chatId, roots, gitStatus, multiGitStatus, onMultiOptimist
   }, [fontSize])
 
   const { tabs, activeTabPath, setActiveTabPath, openFile, closeTab, updateContent, saveFile, pendingLine, pendingKeyword, clearPendingLine, pruneDeletedTabs, refreshOpenTabs, refreshTab } = useWebIDEState(worktreePath)
+
+  useLayoutEffect(() => {
+    if (!chatId || !primaryRoot) return
+    missionSwitchPerf.markIdeReady(chatId, { root: primaryRoot.split('/').pop() ?? primaryRoot })
+  }, [chatId, primaryRoot])
 
   const homeDirRef = useRef('')
   useEffect(() => {

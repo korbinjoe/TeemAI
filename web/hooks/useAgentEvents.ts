@@ -4,6 +4,7 @@ import type { Message, AgentActivity } from '../types/chat'
 import { buildContentKey, buildMessageInstanceKey } from '../utils/messageDedup'
 import type { AgentMessagesMap } from './useAgentMessages'
 import { SYSTEM_MESSAGE_AGENT } from './useAgentMessages'
+import { missionSwitchPerf } from '../lib/missionSwitchPerf'
 
 export interface AgentEventContext {
   isCurrentChatEvent: (payload?: { chatId?: string }) => boolean
@@ -122,6 +123,12 @@ const applyAgentReplay = (base: Message[], tagged: Message[], agentId: string): 
 
   // Drop residual streaming entries for this agent — a full replay supersedes them.
   return result.filter((m) => !(m.streaming && m.agentId === agentId))
+}
+
+const messagesSignature = (msgs: Message[]): string => {
+  if (msgs.length === 0) return '0'
+  const last = msgs[msgs.length - 1]
+  return `${msgs.length}:${last.id}:${last.timestamp}`
 }
 
 export const createAgentEventHandlers = (ctx: AgentEventContext) => {
@@ -432,12 +439,20 @@ export const createAgentEventHandlers = (ctx: AgentEventContext) => {
     const tagged = payload.messages.map((m) => ({ ...m, agentId: payload.agentId }))
     if (tagged.length === 0) return
 
+    const replayT0 = performance.now()
     setAgentMessages((prev) => {
       const base = prev[payload.agentId] ?? []
       const next = applyAgentReplay(base, tagged, payload.agentId)
-      if (next === base) return prev
+      if (next === base || messagesSignature(next) === messagesSignature(base)) return prev
       return { ...prev, [payload.agentId]: next }
     })
+    if (payload.chatId) {
+      missionSwitchPerf.markReplay(
+        payload.chatId,
+        tagged.length,
+        performance.now() - replayT0,
+      )
+    }
   }
 
   const handleExpertPartialText = (payload: { agentId: string; chatId?: string; sessionId?: string; blockIndex: number; text: string }) => {

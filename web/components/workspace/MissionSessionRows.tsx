@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState, startTransition } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ChevronRight, Pin, PinOff, Archive, Plus, Trash } from './icons'
@@ -8,6 +8,7 @@ import { removeAgentFromChat, deleteChatWithJsonl, formatPurgeFailures } from '.
 import { ApiError } from '../../services/api'
 import type { Chat, MissionAgent, MissionAgentStatus } from '../workspace/types'
 import { parseInstanceId } from '../../../shared/utils'
+import { missionSwitchPerf } from '../../lib/missionSwitchPerf'
 
 // Server returns 409 with a JSON body { error: "Cannot purge a running chat..." }
 // when the chat or agent is still running. Surface that text to the user so they
@@ -121,7 +122,12 @@ export const MissionRow = memo(({ chat, isSelected, agentNames, onPin, onArchive
     setExpanded((prev) => !prev)
   }, [])
 
-  const handleOpen = () => navigate(buildMissionOpenUrl(chat))
+  const handleOpen = () => {
+    missionSwitchPerf.start(chat.id, 'sidebar')
+    startTransition(() => {
+      navigate(buildMissionOpenUrl(chat))
+    })
+  }
 
   const handleDeleteTask = useCallback(async () => {
     if (!window.confirm(
@@ -184,6 +190,7 @@ export const MissionRow = memo(({ chat, isSelected, agentNames, onPin, onArchive
   return (
     <div className="flex flex-col">
       <div
+        data-mission-id={chat.id}
         onClick={handleOpen}
         title={chat.title}
         role="button"
@@ -276,7 +283,9 @@ export const AgentRow = memo(({ agentId, agentName, isLead, chat, member, isSele
   // Agent 1:1 navigation: includes ?agent= so viewMode becomes 'agent'.
   const handleOpen = (e: React.MouseEvent) => {
     e.stopPropagation()
-    navigate(buildMissionUrl(chat.workspaceId, chat.id, agentId))
+    startTransition(() => {
+      navigate(buildMissionUrl(chat.workspaceId, chat.id, agentId))
+    })
   }
   // Per-member status when available; fall back to parent chat rollup so legacy
   // payloads (no members[]) still light up.
@@ -381,7 +390,12 @@ export const CompletedRow = memo(({ chat, isSelected, archived, agentNames, onPi
   onUnarchive?: (chatId: string) => void
 }) => {
   const navigate = useNavigate()
-  const handleOpen = () => navigate(buildMissionOpenUrl(chat))
+  const handleOpen = () => {
+    missionSwitchPerf.start(chat.id, 'sidebar')
+    startTransition(() => {
+      navigate(buildMissionOpenUrl(chat))
+    })
+  }
   const handleDeleteTask = useCallback(async () => {
     if (!window.confirm(
       `Delete mission "${chat.title}" and all its local CLI session files?\n\nThis cannot be undone.`,
@@ -402,6 +416,7 @@ export const CompletedRow = memo(({ chat, isSelected, archived, agentNames, onPi
   }, [chat.id, chat.title])
   return (
     <button
+      data-mission-id={chat.id}
       onClick={handleOpen}
       title={`${chat.title} · ${agentNames[chat.primaryAgentId] ?? chat.primaryAgentId}${archived ? ' · archived' : ''}`}
       className={cn(

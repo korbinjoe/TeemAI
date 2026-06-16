@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, startTransition } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ChatInstance from '../chat/ChatInstance'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
@@ -48,13 +48,17 @@ const QuadAgentTile = ({ member, parentChat, shortcutKey }: Props) => {
 
   const handleFocus = useCallback(() => {
     if (!workspaceId) return
-    navigate(buildMissionUrl(workspaceId, parentChat.id, member.agentId))
+    startTransition(() => {
+      navigate(buildMissionUrl(workspaceId, parentChat.id, member.agentId))
+    })
   }, [workspaceId, parentChat.id, member.agentId, navigate])
 
   const handleZoom = useCallback(() => {
     if (!workspaceId) return
-    navigate(buildMissionUrl(workspaceId, parentChat.id, member.agentId))
-    setLayoutMode('single')
+    startTransition(() => {
+      navigate(buildMissionUrl(workspaceId, parentChat.id, member.agentId))
+      setLayoutMode('single')
+    })
   }, [workspaceId, parentChat.id, member.agentId, navigate, setLayoutMode])
 
   if (!workspaceId || !activeChatId) return null

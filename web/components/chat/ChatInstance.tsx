@@ -6,7 +6,6 @@
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
-import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -35,11 +34,13 @@ import { useAgents } from '../../hooks/useAgents'
 import { useChatWebSocket } from '../../hooks/useChatWebSocket'
 import { useChatActions } from '../../hooks/useChatActions'
 import { useChatTabs } from '../../contexts/ChatTabContext'
+import { useChatIDEOutletRegister } from '../../contexts/ChatIDEOutletContext'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
 import DirPickerDialog from '../home/DirPickerDialog'
 import { useDirPicker } from '../../hooks/useDirPicker'
 import { API_BASE, authFetch } from '@/config/api'
 import { getModelsForProvider } from '@/lib/models'
+import { missionSwitchPerf } from '../../lib/missionSwitchPerf'
 
 const ROOT_STYLE: React.CSSProperties = { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }
 const MAIN_CONTENT_STYLE: React.CSSProperties = { flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }
@@ -79,14 +80,8 @@ export interface ChatInstanceProps {
   isNewChat?: boolean
   initAgentId?: string | null
   initialMessage?: string | null
-  /** When true, hide the chat <-> RightPanel divider and the embedded RightPanel.
-   *  Used by V2 workspace where IDEPanel lives at the layout level, so the chat
-   *  pane shouldn't host a second one. */
+  /** When true, hide the embedded RightPanel; workspace IDEPanel renders via ChatIDEOutlet. */
   hideRightPanel?: boolean
-  /** When provided, render RightPanel into this DOM node via React Portal instead of
-   *  inline. Lets V2 IDEPanel host the real IDE in its own column without
-   *  re-instantiating the chat-bound data hooks. */
-  rightPanelMountNode?: HTMLElement | null
   /** Override the workspace-scoped selectedAgentId for this instance. Used by Quad
    *  mode where multiple ChatInstance tiles share one chat but each locks to a
    *  different agent. `undefined` = inherit from useWorkspace(); `null` = explicit
@@ -95,9 +90,11 @@ export interface ChatInstanceProps {
   /** Pre-fetched workspace+agents data from ChatPane cache. Skips redundant
    *  /api/workspaces/:id and /api/agents fetches on same-workspace mission switch. */
   prefetchedWorkspace?: PrefetchedWorkspaceData | null
+  /** ChatPane LRU hit — skip JSONL replay when re-activating this instance. */
+  resumeWarm?: boolean
 }
 
-const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAgentId = null, initialMessage = null, hideRightPanel = false, rightPanelMountNode = null, agentScopeOverride, prefetchedWorkspace }: ChatInstanceProps) => {
+const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAgentId = null, initialMessage = null, hideRightPanel = false, agentScopeOverride, prefetchedWorkspace, resumeWarm = false }: ChatInstanceProps) => {
   const msgSeqRef = useRef(0)
   const uid = useCallback((prefix: string) => `${prefix}-${Date.now()}-${++msgSeqRef.current}`, [])
 
@@ -196,6 +193,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     isActive,
     onInitError,
     prefetchedWorkspace,
+    resumeWarm,
   })
 
   // Single-agent surfaces (Quad tile, ?agent=X route) and the toolbar agent
@@ -248,6 +246,28 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     if (chatTitle) updateTabTitle(chatId, chatTitle)
   }, [chatTitle, chatId, updateTabTitle])
 
+  const prevIsActiveRef = useRef(false)
+  useEffect(() => {
+    if (!isActive) {
+      prevIsActiveRef.current = false
+      return
+    }
+    if (prevIsActiveRef.current) return
+    prevIsActiveRef.current = true
+    missionSwitchPerf.mark('instance-active', chatId)
+    let cancelled = false
+    const raf1 = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!cancelled) missionSwitchPerf.markInteractive(chatId)
+      })
+    })
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(raf1)
+      prevIsActiveRef.current = false
+    }
+  }, [isActive, chatId])
+
   useEffect(() => {
     if (currentSessionInfo?.title && !chatTitle) {
       setChatTitle(currentSessionInfo.title)
@@ -278,6 +298,37 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   const handleViewChanges = useCallback(() => {
     setChangesTabRequest((n) => n + 1)
   }, [])
+
+  const ideAgentActive = !!activeMergedActivity
+    && !['completed', 'waiting_input', 'error', 'initializing'].includes(activeMergedActivity.phase)
+
+  const ideOutletSnapshot = useMemo(() => ({
+    chatId,
+    gitStatus: primaryGitStatus,
+    multiGitStatus,
+    onMultiOptimisticUpdate: multiOptimisticUpdate,
+    agentActive: ideAgentActive,
+    workingDirectory: currentWorkingDirectory,
+    repositories: wsRepositories,
+    worktreePath: allWorktreeSessions[0]?.worktreePath,
+    changesTabRequest,
+  }), [
+    chatId,
+    primaryGitStatus,
+    multiGitStatus,
+    multiOptimisticUpdate,
+    ideAgentActive,
+    currentWorkingDirectory,
+    wsRepositories,
+    allWorktreeSessions,
+    changesTabRequest,
+  ])
+
+  useChatIDEOutletRegister(
+    hideRightPanel && isActive && !agentScopeOverride,
+    chatId,
+    ideOutletSnapshot,
+  )
 
   const groups = useMemo(() => groupMessages(visibleMessages), [visibleMessages])
   const activeAgentIds = useMemo(
@@ -326,7 +377,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   }, [lastUserGroupId])
 
   useEffect(() => {
-    if (groups.length === 0) return
+    if (!isActive || groups.length === 0) return
     // Activity only ever changes for the currently-running group(s): the last
     // group per agent, plus the last group with no agentId. Older groups are
     // closed out by the prev-group effect above, so we never re-scan them.
@@ -361,7 +412,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
       }
       return changed ? next : prev
     })
-  }, [groups, expertActivities, activeMergedActivity])
+  }, [isActive, groups, expertActivities, activeMergedActivity])
 
   useEffect(() => {
     if (!isActive) return
@@ -499,8 +550,8 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
 
   const canSend = connected && !!currentSessionId && cwdReady
 
-  // When portal mode is active, chat owns the full pane just like hideRightPanel.
-  const rightPanelExternal = hideRightPanel || rightPanelMountNode !== null
+  // When external IDE is active, chat owns the full pane width.
+  const rightPanelExternal = hideRightPanel
   const chatPanelStyle = useMemo<React.CSSProperties>(() => ({
     width: rightPanelExternal ? '100%' : (chatCollapsed ? 0 : `${100 - terminalWidth}%`),
     display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden',
@@ -530,6 +581,8 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
                 <div className="h-2 w-24 rounded bg-bg-tertiary animate-pulse" />
               </div>
             </div>
+          ) : !isActive ? (
+            <div className="flex-1 min-h-0" aria-hidden />
           ) : (<>
           {allWorktreeSessions.length > 0 && <WorktreePanel sessions={allWorktreeSessions} repositories={wsRepositories} />}
           {viewMode === 'message' ? (
@@ -610,25 +663,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
           </>)}
         </div>
 
-        {rightPanelMountNode && createPortal(
-          <Suspense fallback={<div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgb(var(--text-muted))', fontSize: 12 }}>Loading...</div>}>
-            <RightPanel
-              chatId={chatId}
-              gitStatus={primaryGitStatus}
-              multiGitStatus={multiGitStatus}
-              onMultiOptimisticUpdate={multiOptimisticUpdate}
-              agentActive={!!activeMergedActivity && !['completed', 'waiting_input', 'error', 'initializing'].includes(activeMergedActivity.phase)}
-              connected={connected}
-              workingDirectory={currentWorkingDirectory}
-              repositories={wsRepositories}
-              worktreePath={allWorktreeSessions[0]?.worktreePath}
-              changesTabRequest={changesTabRequest}
-            />
-          </Suspense>,
-          rightPanelMountNode,
-        )}
-
-        {!hideRightPanel && !rightPanelMountNode && (
+        {!hideRightPanel && (
           <>
             <div style={DIVIDER_BAR_STYLE}>
               <div
@@ -654,7 +689,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
                   gitStatus={primaryGitStatus}
                   multiGitStatus={multiGitStatus}
                   onMultiOptimisticUpdate={multiOptimisticUpdate}
-                  agentActive={!!activeMergedActivity && !['completed', 'waiting_input', 'error', 'initializing'].includes(activeMergedActivity.phase)}
+                  agentActive={ideAgentActive}
                   connected={connected}
                   workingDirectory={currentWorkingDirectory}
                   repositories={wsRepositories}

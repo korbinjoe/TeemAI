@@ -235,6 +235,7 @@ export class GitWatchManager extends EventEmitter {
     const payload = await computeWorkingChanges(path)
 
     if (entry.subscribers.size === 0) return
+    if (payload.changedFiles === 0 && payload.untrackedFiles === 0 && payload.diffEntries.length === 0) return
 
     for (const chatId of entry.subscribers) {
       const event: GitChangeEvent = { chatId, path, payload }

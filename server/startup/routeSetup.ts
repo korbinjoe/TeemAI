@@ -39,6 +39,7 @@ import { PreflightChecker, type PreflightResult } from '../services/PreflightChe
 import { getDatabase } from '../stores'
 import { errorResponder } from '../middleware/errorResponder'
 import { getLastWsMessageAt } from '../lib/wsHealthBeat'
+import type { AiAssetsHealth } from '../../scripts/check-ai-assets-integrity.mjs'
 
 const log = createLogger('RouteSetup')
 
@@ -76,6 +77,7 @@ interface RouteDeps {
   getPreflightResult: () => PreflightResult | null
   setPreflightResult: (r: PreflightResult) => void
   getEnvCheckResult: () => { npmAvailable: boolean } | null
+  getAiAssetsHealth: () => AiAssetsHealth
 }
 
 export const setupRoutes = (app: Express, d: RouteDeps) => {
@@ -113,6 +115,7 @@ export const setupRoutes = (app: Express, d: RouteDeps) => {
       version: serverVersion,
       timestamp: Date.now(),
       lastWsMessageAt: getLastWsMessageAt(),
+      aiAssets: d.getAiAssetsHealth(),
     })
   })
 

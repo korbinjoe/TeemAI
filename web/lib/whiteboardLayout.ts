@@ -236,6 +236,7 @@ export const layoutWhiteboardDag = (
         source: sourceEntry.id,
         target: e.id,
         type: 'handoff',
+        label: 'Handoff',
         isCritical: false,
       })
     }
@@ -622,6 +623,7 @@ export interface WorkflowDagTaskNode {
 const WORKFLOW_DAG = {
   NODE_W: 240,
   NODE_H: 80,
+  NODE_RUNNING_H: 104,
   GAP_X: 60,
   GAP_Y: 24,
   PADDING_X: 40,
@@ -666,7 +668,9 @@ export const layoutWorkflowDag = (
       const task = taskIndex.get(taskId)
       if (!task) continue
 
-      const h = WORKFLOW_DAG.NODE_H
+      const h = task.status === 'running'
+        ? WORKFLOW_DAG.NODE_RUNNING_H
+        : WORKFLOW_DAG.NODE_H
 
       taskPositions.set(taskId, { x, y, h })
 

@@ -21,6 +21,7 @@ export class WorkflowEngine extends EventEmitter {
   private taskTimers = new Map<string, ReturnType<typeof setTimeout>>()
   private workflowDir: string
   private statePath: string
+  private destroyed = false
 
   constructor(
     dag: WorkflowDAG,
@@ -58,6 +59,7 @@ export class WorkflowEngine extends EventEmitter {
     engine.workflowDir = workflowDir
     engine.statePath = join(workflowDir, 'state.json')
     engine.taskTimers = new Map()
+    engine.destroyed = false
     engine.state = stateData
     return engine
   }
@@ -452,10 +454,19 @@ export class WorkflowEngine extends EventEmitter {
   }
 
   async persistCheckpoint(): Promise<void> {
+    if (this.destroyed) return
     const data = JSON.stringify(this.state, null, 2)
     const tmpPath = this.statePath + '.tmp'
-    await writeFile(tmpPath, data)
-    await rename(tmpPath, this.statePath)
+    try {
+      await mkdir(this.workflowDir, { recursive: true })
+      if (this.destroyed) return
+      await writeFile(tmpPath, data)
+      if (this.destroyed) return
+      await rename(tmpPath, this.statePath)
+    } catch (err) {
+      if (this.destroyed) return
+      throw err
+    }
   }
 
   private async persistResult(result: WorkflowResult): Promise<void> {
@@ -464,6 +475,7 @@ export class WorkflowEngine extends EventEmitter {
   }
 
   destroy(): void {
+    this.destroyed = true
     for (const timer of this.taskTimers.values()) {
       clearTimeout(timer)
     }

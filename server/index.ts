@@ -67,6 +67,12 @@ import { healStaleChatStatuses, watchAiAssetsDev } from './startup/StartupHealer
 import { runAsyncBoot, getExternalDirWatcher, type AsyncBootResult } from './startup/AsyncBoot'
 import { setupRoutes } from './startup/routeSetup'
 import { setupWebSocket } from './startup/wsSetup'
+import {
+  formatAiAssetsReport,
+  toAiAssetsHealth,
+  validateAiAssets,
+  type AiAssetsHealth,
+} from '../scripts/check-ai-assets-integrity.mjs'
 
 const log = createLogger('Server')
 
@@ -244,6 +250,7 @@ const wsRouter = new WSRouter({ expertHandler, gitWatchManager, terminalViewMana
 
 let serverPort = PORTS.DEV_SERVER
 let asyncBootResult: AsyncBootResult | null = null
+let aiAssetsHealth: AiAssetsHealth = { status: 'ok', missing: [] }
 
 setupRoutes(app, {
   agentRegistry, agentStore, skillManager, senseiPromptPaths,
@@ -260,6 +267,7 @@ setupRoutes(app, {
   getPreflightResult: () => asyncBootResult?.preflightResult ?? null,
   setPreflightResult: (r) => { if (asyncBootResult) asyncBootResult.preflightResult = r },
   getEnvCheckResult: () => asyncBootResult?.envCheckResult ?? null,
+  getAiAssetsHealth: () => aiAssetsHealth,
 })
 
 const { heartbeatTimer } = setupWebSocket({
@@ -276,6 +284,19 @@ export async function startServer(port?: number): Promise<number> {
     await new WorkspaceSeeder(bundledAssetsDir, TEEMAI_HOME).seed()
 
     await skillManager.loadBuiltinSkills()
+    const aiAssetsReport = validateAiAssets({
+      root: TEEMAI_HOME,
+      availableSkillNames: skillManager.listSkills().map((skill) => skill.name),
+    })
+    aiAssetsHealth = toAiAssetsHealth(aiAssetsReport)
+    if (aiAssetsHealth.status === 'degraded') {
+      log.error('ai-assets integrity check failed', {
+        missingSkills: aiAssetsReport.missingSkills,
+        missingAgents: aiAssetsReport.missingAgents,
+        malformedSkills: aiAssetsReport.malformedSkills,
+        report: formatAiAssetsReport(aiAssetsReport),
+      })
+    }
     await skillManager.syncBuiltinToClaudeHome()
     await agentRegistry.load()
 

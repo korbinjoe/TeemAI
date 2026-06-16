@@ -4,6 +4,7 @@ import { createServer, type Server } from 'http'
 import { AddressInfo } from 'net'
 import { WhiteboardManager } from '../whiteboard/WhiteboardManager'
 import { createWhiteboardRoutes } from '../routes/chat/whiteboardRoutes'
+import { WHITEBOARD_SUMMARY_MAX } from '../../shared/whiteboard-types'
 
 const makeChatStore = (existingChatId?: string) => {
   const store = new Map<string, Record<string, unknown>>()
@@ -114,7 +115,7 @@ describe('whiteboardRoutes (HTTP smoke)', () => {
     const r = await fetch(`${baseUrl}/api/chats/${chatId}/whiteboard/entries`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'goal', by: 'lead', summary: 'x'.repeat(81) }),
+      body: JSON.stringify({ type: 'goal', by: 'lead', summary: 'x'.repeat(WHITEBOARD_SUMMARY_MAX + 1) }),
     })
     expect(r.status).toBe(400)
     const body = await r.json() as { error: string }

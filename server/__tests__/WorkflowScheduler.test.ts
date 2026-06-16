@@ -66,7 +66,7 @@ function createMockDeps(engineMap: Map<string, WorkflowEngine>, sessions: Record
       handleStart: vi.fn().mockResolvedValue(undefined),
     },
     chatStore: { get: () => ({ workspaceId: 'ws-1' }) },
-    workspaceStore: { get: () => ({ repositories: [{ path: '/tmp/repo' }] }) },
+    workspaceStore: { get: () => ({ repositories: [] }) },
     sessionRegistry: {
       findByChat: (_chatId: string, agentId: string) => sessions[agentId] ?? null,
     },

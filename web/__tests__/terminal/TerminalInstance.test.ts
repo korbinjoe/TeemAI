@@ -131,20 +131,16 @@ describe('TerminalInstance rendering risk fixes', () => {
     vi.clearAllMocks()
   })
 
-  describe('R-02: resetAndWriteSnapshot — clear before write', () => {
-    it('calls clear() then write() in order when already opened', () => {
+  describe('R-02: resetAndWriteSnapshot — full viewport and scrollback reset', () => {
+    it('writes a full clear escape sequence with the snapshot when already opened', () => {
       const inst = new TerminalInstance()
       injectOpenedState(inst)
       const t = (inst as any).terminal
 
-      const order: string[] = []
-      t.clear.mockImplementation(() => order.push('clear'))
-      t.write.mockImplementation(() => order.push('write'))
-
       inst.resetAndWriteSnapshot('\x1b[2J\x1b[Hsnapshot')
 
-      expect(order).toEqual(['clear', 'write'])
-      expect(t.write).toHaveBeenCalledWith('\x1b[2J\x1b[Hsnapshot')
+      expect(t.clear).not.toHaveBeenCalled()
+      expect(t.write).toHaveBeenCalledWith('\x1b[2J\x1b[3J\x1b[H\x1b[2J\x1b[Hsnapshot')
     })
 
     it('replaces pendingData when not yet opened (no clear/write on terminal)', () => {

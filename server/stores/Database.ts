@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS chats (
 );
 CREATE INDEX IF NOT EXISTS idx_chats_workspace ON chats(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_chats_last_message ON chats(last_message_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chats_workspace_last_message ON chats(workspace_id, last_message_at DESC);
 
 -- execution_logs
 CREATE TABLE IF NOT EXISTS execution_logs (

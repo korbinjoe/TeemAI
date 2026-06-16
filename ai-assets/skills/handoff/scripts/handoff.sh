@@ -30,7 +30,7 @@ if [ -z "$PAYLOAD" ]; then
   exit 1
 fi
 
-RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${API_BASE}/api/expert/handoff" \
+RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${API_BASE}/api/agent/handoff" \
   -H "Content-Type: application/json" \
   -d "$PAYLOAD")
 

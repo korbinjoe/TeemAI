@@ -34,6 +34,23 @@ interface UseChatWebSocketOptions {
   prefetchedWorkspace?: PrefetchedWorkspaceData | null
 }
 
+export const canSkipWarmReplay = (args: {
+  resumeWarm: boolean
+  cwdReady: boolean
+  forceFullResume: boolean
+  hasDispatchedResume: boolean
+  agentMessages: Record<string, Message[]>
+  expectedAgentIds?: string[]
+}): boolean => {
+  if (!args.resumeWarm || !args.cwdReady || args.forceFullResume || !args.hasDispatchedResume) {
+    return false
+  }
+  if (args.expectedAgentIds && args.expectedAgentIds.length > 0) {
+    return args.expectedAgentIds.every((agentId) => (args.agentMessages[agentId]?.length ?? 0) > 0)
+  }
+  return Object.values(args.agentMessages).some((messages) => messages.length > 0)
+}
+
 /**
  * ChatPage  WebSocket Workspace
  *
@@ -58,6 +75,8 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
   const cwdReadyRef = useRef(false)
   const forceFullResumeRef = useRef(false)
   const missedWhileInactiveRef = useRef(false)
+  const hasDispatchedResumeRef = useRef(false)
+  const expectedReplayAgentIdsRef = useRef<string[]>([])
 
   const initialAgentSetRef = useRef(false)
   const isNewChatRef = useRef(isNewChat)
@@ -143,8 +162,15 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
   const sendContextTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const shouldSkipReplay = useCallback((): boolean => {
-    return resumeWarmRef.current && cwdReadyRef.current && !forceFullResumeRef.current
-  }, [])
+    return canSkipWarmReplay({
+      resumeWarm: resumeWarmRef.current,
+      cwdReady: cwdReadyRef.current,
+      forceFullResume: forceFullResumeRef.current,
+      hasDispatchedResume: hasDispatchedResumeRef.current,
+      agentMessages: agentMessagesRef.current,
+      expectedAgentIds: expectedReplayAgentIdsRef.current,
+    })
+  }, [agentMessagesRef])
 
   const dispatchChatContext = useCallback(() => {
     const cid = chatIdRef.current
@@ -161,6 +187,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       if (skipReplay) missionSwitchPerf.mark('ws-resume-warm', cid)
     }
 
+    hasDispatchedResumeRef.current = true
     if (!skipReplay) forceFullResumeRef.current = false
   }, [wsClient, shouldSkipReplay])
 
@@ -270,6 +297,9 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
         }
 
         if (chat) {
+          expectedReplayAgentIdsRef.current = chat.expertSessions
+            ? Object.keys(chat.expertSessions)
+            : []
           if (chat.title) setChatTitle(chat.title)
           if (chat.status) setChatStatus(chat.status)
           setChatModel(chat.model || DEFAULT_MODEL)
@@ -277,6 +307,8 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
           if (chat.totalTokens || chat.totalCost != null) {
             setChatTokenSnapshot({ totalCost: chat.totalCost, totalTokens: chat.totalTokens })
           }
+        } else {
+          expectedReplayAgentIdsRef.current = []
         }
       } catch (err) {
         console.error('[useChatWebSocket] Workspace init failed:', err)
@@ -443,7 +475,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
   const prevIsActiveRef = useRef(isActive)
   useEffect(() => {
     if (isActive && !prevIsActiveRef.current && chatId && wsClient.isConnected()) {
-      if (missedWhileInactiveRef.current) {
+      if (missedWhileInactiveRef.current || !hasDispatchedResumeRef.current) {
         forceFullResumeRef.current = true
         missedWhileInactiveRef.current = false
       }

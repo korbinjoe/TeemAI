@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
+import { canSkipWarmReplay } from '../../hooks/useChatWebSocket'
 
 const handlers = new Map<string, Array<(data: unknown) => void>>()
 const mockWsClient = {
@@ -46,5 +47,68 @@ describe('useChatWebSocket (WS event routing)', () => {
     mockWsClient.off('agent:stopped', handler)
     mockWsClient._emit('agent:stopped', { agentId: 'a1', chatId: 'c1' })
     expect(handler).not.toHaveBeenCalled()
+  })
+})
+
+describe('canSkipWarmReplay', () => {
+  it('does not skip replay for a warm instance with an empty message cache', () => {
+    expect(canSkipWarmReplay({
+      resumeWarm: true,
+      cwdReady: true,
+      forceFullResume: false,
+      hasDispatchedResume: true,
+      agentMessages: {},
+    })).toBe(false)
+  })
+
+  it('only skips replay when the warm cache already has local messages', () => {
+    expect(canSkipWarmReplay({
+      resumeWarm: true,
+      cwdReady: true,
+      forceFullResume: false,
+      hasDispatchedResume: true,
+      agentMessages: {
+        lead: [{ id: 'm1', role: 'agent', content: 'cached', timestamp: 1, type: 'text' }],
+      },
+    })).toBe(true)
+  })
+
+  it('does not skip replay when one expected agent slot is still empty', () => {
+    expect(canSkipWarmReplay({
+      resumeWarm: true,
+      cwdReady: true,
+      forceFullResume: false,
+      hasDispatchedResume: true,
+      expectedAgentIds: ['lead', 'worker'],
+      agentMessages: {
+        lead: [{ id: 'm1', role: 'agent', content: 'cached', timestamp: 1, type: 'text' }],
+      },
+    })).toBe(false)
+  })
+
+  it('skips replay when every expected agent slot has cached messages', () => {
+    expect(canSkipWarmReplay({
+      resumeWarm: true,
+      cwdReady: true,
+      forceFullResume: false,
+      hasDispatchedResume: true,
+      expectedAgentIds: ['lead', 'worker'],
+      agentMessages: {
+        lead: [{ id: 'm1', role: 'agent', content: 'cached', timestamp: 1, type: 'text' }],
+        worker: [{ id: 'm2', role: 'agent', content: 'cached', timestamp: 2, type: 'text' }],
+      },
+    })).toBe(true)
+  })
+
+  it('forces replay before the first resume dispatch even if messages exist', () => {
+    expect(canSkipWarmReplay({
+      resumeWarm: true,
+      cwdReady: true,
+      forceFullResume: false,
+      hasDispatchedResume: false,
+      agentMessages: {
+        lead: [{ id: 'm1', role: 'agent', content: 'cached', timestamp: 1, type: 'text' }],
+      },
+    })).toBe(false)
   })
 })

@@ -443,8 +443,12 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   useEffect(() => {
     if (!isActive) return
     const raf = requestAnimationFrame(() => {
-      if (viewMode === 'terminal') terminalPanelRef.current?.focusActive()
-      else inputAreaRef.current?.focus()
+      if (viewMode === 'terminal') {
+        terminalPanelRef.current?.reactivateAll?.()
+        terminalPanelRef.current?.focusActive()
+      } else {
+        inputAreaRef.current?.focus()
+      }
     })
     return () => cancelAnimationFrame(raf)
   }, [viewMode, isActive])
@@ -582,7 +586,21 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
               </div>
             </div>
           ) : !isActive ? (
-            <div className="flex-1 min-h-0" aria-hidden />
+            viewMode === 'terminal' ? (
+              <div className="flex-1 min-h-0 invisible" aria-hidden>
+                <TerminalPanel
+                  ref={terminalPanelRef}
+                  chatId={chatId}
+                  gitStatus={primaryGitStatus}
+                  agentActive={false}
+                  connected={connected}
+                  lockedAgentId={singleAgentMode ? lockedAgentKey : null}
+                  inTerminalView
+                />
+              </div>
+            ) : (
+              <div className="flex-1 min-h-0" aria-hidden />
+            )
           ) : (<>
           {allWorktreeSessions.length > 0 && <WorktreePanel sessions={allWorktreeSessions} repositories={wsRepositories} />}
           {viewMode === 'message' ? (

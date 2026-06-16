@@ -585,25 +585,28 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
                 <div className="h-2 w-24 rounded bg-bg-tertiary animate-pulse" />
               </div>
             </div>
-          ) : !isActive ? (
-            viewMode === 'terminal' ? (
-              <div className="flex-1 min-h-0 invisible" aria-hidden>
-                <TerminalPanel
-                  ref={terminalPanelRef}
-                  chatId={chatId}
-                  gitStatus={primaryGitStatus}
-                  agentActive={false}
-                  connected={connected}
-                  lockedAgentId={singleAgentMode ? lockedAgentKey : null}
-                  inTerminalView
-                />
-              </div>
-            ) : (
-              <div className="flex-1 min-h-0" aria-hidden />
-            )
           ) : (<>
+          {/* TerminalPanel: rendered outside isActive gate so the view-PTY
+              survives mission switches. Visibility is toggled via CSS. */}
+          {viewMode === 'terminal' && (
+            <div className={`flex-1 min-h-0${isActive ? '' : ' invisible'}`}
+                 aria-hidden={!isActive || undefined}>
+              <TerminalPanel
+                ref={terminalPanelRef}
+                chatId={chatId}
+                gitStatus={primaryGitStatus}
+                agentActive={isActive && !!activeMergedActivity && !['completed', 'waiting_input', 'error', 'initializing'].includes(activeMergedActivity.phase)}
+                connected={connected}
+                lockedAgentId={singleAgentMode ? lockedAgentKey : null}
+                inTerminalView
+              />
+            </div>
+          )}
+          {!isActive && viewMode !== 'terminal' ? (
+            <div className="flex-1 min-h-0" aria-hidden />
+          ) : isActive ? (<>
           {allWorktreeSessions.length > 0 && <WorktreePanel sessions={allWorktreeSessions} repositories={wsRepositories} />}
-          {viewMode === 'message' ? (
+          {viewMode === 'message' && (
             <>
               <ChatPaneToolbarRow
                 filterAgentId={filterAgentId}
@@ -633,16 +636,6 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
                 <PlanCard entries={currentPlan.entries} />
               )}
             </>
-          ) : (
-            <TerminalPanel
-              ref={terminalPanelRef}
-              chatId={chatId}
-              gitStatus={primaryGitStatus}
-              agentActive={!!activeMergedActivity && !['completed', 'waiting_input', 'error', 'initializing'].includes(activeMergedActivity.phase)}
-              connected={connected}
-              lockedAgentId={singleAgentMode ? lockedAgentKey : null}
-              inTerminalView
-            />
           )}
           {viewMode === 'terminal' && queuedMessages.length > 0 && (
             <div className="shrink-0 px-3 py-1.5 text-xs text-text-secondary bg-bg-secondary border-t border-border-subtle">
@@ -678,6 +671,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
                 isActive={isActive} />
             </>
           )}
+          </>) : null}
           </>)}
         </div>
 

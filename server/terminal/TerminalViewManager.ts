@@ -8,9 +8,8 @@
  * keeps running in the background — handoff / orchestration / scheduling stay
  * on ACP. Terminal mode only serves the user's optional native CLI experience.
  *
- * Lifetime keying: (connectionId, chatId, agentId). A given (chat, agent) can
- * have at most one view-PTY per WebSocket connection. Disconnecting the WS
- * (or sending `expert:cli-detach`) kills the PTY.
+ * Lifetime keying: (chatId, agentId). Browser connections attach to the same
+ * view-PTY so duplicate tabs/reconnects do not spawn duplicate resume CLIs.
  */
 
 import * as pty from 'node-pty'
@@ -31,15 +30,15 @@ interface ViewPty {
   agentId: string
   chatId: string
   cliSessionId: string
-  connectionId: string
+  clients: Map<string, WebSocket>
   cols: number
   rows: number
   firstChunkSent: boolean
   replayData: string
 }
 
-const keyOf = (connectionId: string, chatId: string, agentId: string): string =>
-  `${connectionId}::${chatId}::${agentId}`
+const keyOf = (chatId: string, agentId: string): string =>
+  `${chatId}::${agentId}`
 
 // Grace window after `handleDetach` before we actually kill the PTY. Lets the
 // user toggle terminal mode off/on rapidly (or trigger a re-attach via WS
@@ -65,11 +64,11 @@ export class TerminalViewManager {
   }
 
   /**
-   * True iff this (connectionId, chatId, agentId) has an active view-PTY that
+   * True iff this connection is attached to an active view-PTY that
    * should receive input/resize events instead of the ACP adapter.
    */
   has(connectionId: string, chatId: string, agentId: string): boolean {
-    return this.views.has(keyOf(connectionId, chatId, agentId))
+    return this.views.get(keyOf(chatId, agentId))?.clients.has(connectionId) === true
   }
 
   async handleAttach(
@@ -80,7 +79,7 @@ export class TerminalViewManager {
     const { chatId, agentId } = payload
     const cols = payload.cols && payload.cols > 0 ? payload.cols : 80
     const rows = payload.rows && payload.rows > 0 ? payload.rows : 24
-    const key = keyOf(connectionId, chatId, agentId)
+    const key = keyOf(chatId, agentId)
 
     if (this.cancelPendingDetach(key)) {
       log.debug('Re-attach cancelled pending detach; reusing PTY', { key })
@@ -88,7 +87,8 @@ export class TerminalViewManager {
 
     if (this.views.has(key)) {
       const view = this.views.get(key)!
-      log.debug('Re-attach to existing view-PTY; resizing only', { key, cols, rows })
+      view.clients.set(connectionId, ws)
+      log.debug('Re-attach to shared view-PTY; resizing only', { key, cols, rows, clients: view.clients.size })
       this.handleResize({ chatId, agentId, cols, rows }, connectionId)
       this.send(ws, 'agent:view-attached', { agentId, chatId, sessionId: view.cliSessionId, cwd: view.cwd })
       if (view.replayData) {
@@ -192,7 +192,7 @@ export class TerminalViewManager {
       agentId,
       chatId,
       cliSessionId,
-      connectionId,
+      clients: new Map([[connectionId, ws]]),
       cols,
       rows,
       firstChunkSent: false,
@@ -208,7 +208,7 @@ export class TerminalViewManager {
       this.appendReplay(view, data)
       const hasPrintableData = this.hasPrintableData(data)
       const shouldSnapshot = !view.firstChunkSent && hasPrintableData
-      this.send(ws, 'agent:data', {
+      this.sendToView(view, 'agent:data', {
         agentId,
         chatId,
         sessionId: cliSessionId,
@@ -222,16 +222,21 @@ export class TerminalViewManager {
     ptyProcess.onExit(({ exitCode }) => {
       log.info('View-PTY exited', { key, exitCode })
       this.views.delete(key)
-      this.send(ws, 'agent:exit', { agentId, chatId, exitCode: exitCode ?? 0 })
+      this.sendToView(view, 'agent:exit', { agentId, chatId, exitCode: exitCode ?? 0 })
     })
 
     this.send(ws, 'agent:view-attached', { agentId, chatId, sessionId: cliSessionId, cwd })
   }
 
   handleDetach(payload: { chatId: string; agentId: string }, connectionId: string): void {
-    const key = keyOf(connectionId, payload.chatId, payload.agentId)
+    const key = keyOf(payload.chatId, payload.agentId)
     const view = this.views.get(key)
     if (!view) return
+    view.clients.delete(connectionId)
+    if (view.clients.size > 0) {
+      log.debug('View-PTY client detached; shared PTY remains attached', { key, clients: view.clients.size })
+      return
+    }
     if (this.pendingDetach.has(key)) return
     log.debug('View-PTY detach scheduled', { key, graceMs: DETACH_GRACE_MS })
     const timer = setTimeout(() => {
@@ -253,8 +258,8 @@ export class TerminalViewManager {
    * back to the normal ACP path.
    */
   forwardInput(payload: { chatId: string; agentId: string; data: string }, connectionId: string): boolean {
-    const view = this.views.get(keyOf(connectionId, payload.chatId, payload.agentId))
-    if (!view) return false
+    const view = this.views.get(keyOf(payload.chatId, payload.agentId))
+    if (!view || !view.clients.has(connectionId)) return false
     try { view.pty.write(payload.data) } catch (err) {
       log.warn('view.pty.write failed', { connectionId, error: err instanceof Error ? err.message : String(err) })
     }
@@ -265,8 +270,8 @@ export class TerminalViewManager {
     payload: { chatId: string; agentId: string; cols: number; rows: number },
     connectionId: string,
   ): boolean {
-    const view = this.views.get(keyOf(connectionId, payload.chatId, payload.agentId))
-    if (!view) return false
+    const view = this.views.get(keyOf(payload.chatId, payload.agentId))
+    if (!view || !view.clients.has(connectionId)) return false
     const cols = payload.cols > 0 ? payload.cols : view.cols
     const rows = payload.rows > 0 ? payload.rows : view.rows
     view.cols = cols
@@ -287,7 +292,8 @@ export class TerminalViewManager {
   handleDisconnect(connectionId: string): void {
     const toKill: string[] = []
     for (const [key, view] of this.views) {
-      if (view.connectionId === connectionId) toKill.push(key)
+      if (!view.clients.delete(connectionId)) continue
+      if (view.clients.size === 0) toKill.push(key)
     }
     for (const key of toKill) {
       this.cancelPendingDetach(key)
@@ -296,6 +302,12 @@ export class TerminalViewManager {
       try { view.pty.kill() } catch { /* best effort */ }
       this.views.delete(key)
       log.info('View-PTY cleaned up on WS disconnect', { key })
+    }
+  }
+
+  private sendToView(view: ViewPty, type: string, payload: Record<string, unknown>): void {
+    for (const ws of view.clients.values()) {
+      this.send(ws, type, payload)
     }
   }
 

@@ -12,7 +12,7 @@ import type { MultiRepoGitStatus } from '@/hooks/useMultiRepoGitStatus'
 import { buildChangeMap, buildDirAggregate } from '@/lib/changeTree'
 import { missionSwitchPerf } from '@/lib/missionSwitchPerf'
 import TerminalSkeleton from './TerminalSkeleton'
-import { emptySearchCache, type SearchCache } from './SearchPanel'
+import { emptySearchCache, type SearchCache } from './SearchPanelState'
 
 const EditorTabs = lazy(() => import('./EditorTabs'))
 const ChangesTab = lazy(() => import('@/components/changes/ChangesTab'))

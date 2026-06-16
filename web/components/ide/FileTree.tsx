@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import {
@@ -59,6 +59,8 @@ interface RootState {
 
 const STATUS_LETTER: Record<ChangeStatus, string> = { added: 'A', modified: 'M', deleted: 'D', renamed: 'R' }
 const STATUS_COLOR: Record<ChangeStatus, string> = { added: 'text-green-500', modified: 'text-amber-500', deleted: 'text-red-500', renamed: 'text-blue-500' }
+const MAX_EXPANDED_REFRESH_DIRS = 80
+const EXPANDED_REFRESH_CONCURRENCY = 4
 
 const fetchEntries = async (dirPath: string, showIgnored = false): Promise<TreeNode[]> => {
   const params = new URLSearchParams({ path: dirPath })
@@ -99,6 +101,45 @@ const updateNodeChildren = (
     if (n.children) return { ...n, children: updateNodeChildren(n.children, targetPath, updater) }
     return n
   })
+}
+
+const collectExpandedDirs = (nodes: TreeNode[]): string[] => {
+  const paths: string[] = []
+  for (const n of nodes) {
+    if (n.type === 'directory' && n.isExpanded && n.children) {
+      paths.push(n.path)
+      paths.push(...collectExpandedDirs(n.children))
+    }
+  }
+  return paths
+}
+
+const refreshExpandedDirs = async (
+  rootPath: string,
+  dirPaths: string[],
+  showIgnored: boolean,
+  setRootsState: Dispatch<SetStateAction<Record<string, RootState>>>,
+): Promise<void> => {
+  const limited = dirPaths.slice(0, MAX_EXPANDED_REFRESH_DIRS)
+  let cursor = 0
+  const workers = Array.from({ length: Math.min(EXPANDED_REFRESH_CONCURRENCY, limited.length) }, async () => {
+    for (;;) {
+      const dirPath = limited[cursor++]
+      if (!dirPath) return
+      try {
+        const children = await fetchEntries(dirPath, showIgnored)
+        setRootsState(prev => {
+          const rs = prev[rootPath]
+          if (!rs) return prev
+          return { ...prev, [rootPath]: { ...rs, nodes: updateNodeChildren(rs.nodes, dirPath, n => {
+            const merged = n.children ? mergeExpandedState(children, n.children) : children
+            return { ...n, children: merged }
+          }) } }
+        })
+      } catch { /* ignore */ }
+    }
+  })
+  await Promise.all(workers)
 }
 
 const getDeletedChildren = (
@@ -653,34 +694,11 @@ const FileTree = ({ roots, onFileSelect, selectedFile, changeMap, dirAggregate, 
   }, [rootsState, loadRoot])
 
   const handleRefresh = useCallback(() => {
-    const collectExpanded = (nodes: TreeNode[]): string[] => {
-      const paths: string[] = []
-      for (const n of nodes) {
-        if (n.type === 'directory' && n.isExpanded && n.children) {
-          paths.push(n.path)
-          paths.push(...collectExpanded(n.children))
-        }
-      }
-      return paths
-    }
-
     rootsRef.current.forEach(root => {
       const state = rootsState[root.path]
       if (!state?.expanded || !state.loaded) return
       loadRoot(root.path)
-      const expandedDirs = collectExpanded(state.nodes)
-      for (const dirPath of expandedDirs) {
-        fetchEntries(dirPath, showIgnoredRef.current).then(children => {
-          setRootsState(prev => {
-            const rs = prev[root.path]
-            if (!rs) return prev
-            return { ...prev, [root.path]: { ...rs, nodes: updateNodeChildren(rs.nodes, dirPath, n => {
-              const merged = n.children ? mergeExpandedState(children, n.children) : children
-              return { ...n, children: merged }
-            }) } }
-          })
-        }).catch(() => { /* ignore */ })
-      }
+      void refreshExpandedDirs(root.path, collectExpandedDirs(state.nodes), showIgnoredRef.current, setRootsState)
     })
   }, [rootsState, loadRoot])
 
@@ -689,35 +707,12 @@ const FileTree = ({ roots, onFileSelect, selectedFile, changeMap, dirAggregate, 
     if (showIgnoredPrevRef.current === showIgnored) return
     showIgnoredPrevRef.current = showIgnored
 
-    const collectExpanded = (nodes: TreeNode[]): string[] => {
-      const paths: string[] = []
-      for (const n of nodes) {
-        if (n.type === 'directory' && n.isExpanded && n.children) {
-          paths.push(n.path)
-          paths.push(...collectExpanded(n.children))
-        }
-      }
-      return paths
-    }
-
     rootsRef.current.forEach(root => {
       const state = rootsState[root.path]
       if (!state?.loaded) return
       loadRoot(root.path)
       if (!state.expanded) return
-      const expandedDirs = collectExpanded(state.nodes)
-      for (const dirPath of expandedDirs) {
-        fetchEntries(dirPath, showIgnoredRef.current).then(children => {
-          setRootsState(prev => {
-            const rs = prev[root.path]
-            if (!rs) return prev
-            return { ...prev, [root.path]: { ...rs, nodes: updateNodeChildren(rs.nodes, dirPath, n => {
-              const merged = n.children ? mergeExpandedState(children, n.children) : children
-              return { ...n, children: merged }
-            }) } }
-          })
-        }).catch(() => { /* ignore */ })
-      }
+      void refreshExpandedDirs(root.path, collectExpandedDirs(state.nodes), showIgnoredRef.current, setRootsState)
     })
   }, [showIgnored, rootsState, loadRoot])
 
@@ -725,33 +720,11 @@ const FileTree = ({ roots, onFileSelect, selectedFile, changeMap, dirAggregate, 
   useEffect(() => {
     if (refreshTrigger === undefined || refreshTrigger === refreshTriggerRef.current) return
     refreshTriggerRef.current = refreshTrigger
-    const collectExpanded = (nodes: TreeNode[]): string[] => {
-      const paths: string[] = []
-      for (const n of nodes) {
-        if (n.type === 'directory' && n.isExpanded && n.children) {
-          paths.push(n.path)
-          paths.push(...collectExpanded(n.children))
-        }
-      }
-      return paths
-    }
     rootsRef.current.forEach(root => {
       const state = rootsState[root.path]
       if (!state?.expanded || !state.loaded) return
       loadRoot(root.path)
-      const expandedDirs = collectExpanded(state.nodes)
-      for (const dirPath of expandedDirs) {
-        fetchEntries(dirPath, showIgnoredRef.current).then(children => {
-          setRootsState(prev => {
-            const rs = prev[root.path]
-            if (!rs) return prev
-            return { ...prev, [root.path]: { ...rs, nodes: updateNodeChildren(rs.nodes, dirPath, n => {
-              const merged = n.children ? mergeExpandedState(children, n.children) : children
-              return { ...n, children: merged }
-            }) } }
-          })
-        }).catch(() => { /* ignore */ })
-      }
+      void refreshExpandedDirs(root.path, collectExpandedDirs(state.nodes), showIgnoredRef.current, setRootsState)
     })
   }, [refreshTrigger, rootsState, loadRoot])
 

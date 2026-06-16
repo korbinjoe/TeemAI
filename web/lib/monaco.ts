@@ -5,7 +5,7 @@
  *  Monaco  import
  */
 import { loader } from '@monaco-editor/react'
-import * as monaco from 'monaco-editor'
+import * as monaco from 'monaco-editor/esm/vs/editor/editor.api'
 
 const { typescriptDefaults, javascriptDefaults } = monaco.languages.typescript as any
 typescriptDefaults.setDiagnosticsOptions({

@@ -13,7 +13,7 @@
 
 import { execFile } from 'child_process'
 import { resolve, join } from 'path'
-import { readFile } from 'fs/promises'
+import { readFile, stat } from 'fs/promises'
 
 export interface WorkingChangeEntry {
   file: string
@@ -42,6 +42,10 @@ const gitExec = (args: string[], cwd: string): Promise<string> =>
       else res(stdout)
     })
   })
+
+const MAX_UNTRACKED_LINE_COUNT_FILES = 50
+const MAX_UNTRACKED_LINE_COUNT_BYTES = 256 * 1024
+const UNTRACKED_LINE_COUNT_CONCURRENCY = 8
 
 const mapXY = (xy: string, pos: 0 | 1): WorkingChangeEntry['status'] => {
   const c = xy[pos]
@@ -154,12 +158,22 @@ export async function computeWorkingChanges(repoPath: string): Promise<WorkingCh
 
   const untrackedEntries = diffEntries.filter(e => e.insertions === 0 && e.deletions === 0 && e.status === 'added' && !e.staged)
   if (untrackedEntries.length > 0) {
-    await Promise.all(untrackedEntries.map(async (entry) => {
-      try {
-        const content = await readFile(join(cwd, entry.file), 'utf-8')
-        entry.insertions = content.split('\n').length
-      } catch { /* binary or unreadable */ }
-    }))
+    const entriesToMeasure = untrackedEntries.slice(0, MAX_UNTRACKED_LINE_COUNT_FILES)
+    let cursor = 0
+    const workers = Array.from({ length: Math.min(UNTRACKED_LINE_COUNT_CONCURRENCY, entriesToMeasure.length) }, async () => {
+      for (;;) {
+        const entry = entriesToMeasure[cursor++]
+        if (!entry) return
+        try {
+          const absPath = join(cwd, entry.file)
+          const fileStat = await stat(absPath)
+          if (fileStat.size > MAX_UNTRACKED_LINE_COUNT_BYTES) continue
+          const content = await readFile(absPath, 'utf-8')
+          entry.insertions = content.split('\n').length
+        } catch { /* binary, directory, deleted, or unreadable */ }
+      }
+    })
+    await Promise.all(workers)
   }
 
   const filtered = diffEntries.filter(

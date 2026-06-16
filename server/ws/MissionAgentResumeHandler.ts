@@ -8,15 +8,17 @@
  */
 
 import type { WebSocket } from 'ws'
-import { existsSync, readdirSync, readFileSync } from 'fs'
+import { existsSync } from 'fs'
+import { readFile, stat } from 'fs/promises'
 import { homedir } from 'os'
 import { join } from 'path'
 import type { ChatStore } from '../stores/ChatStore'
 import type { WorkspaceStore } from '../stores/WorkspaceStore'
 import type { AgentStore } from '../stores/AgentStore'
 import type { SessionRegistry } from '../terminal/SessionRegistry'
-import { parseConversationFile, createParserState, type ParsedMessage } from '../terminal/ConversationParser'
+import { createParserState, parseConversationLines, type ParsedMessage } from '../terminal/ConversationParser'
 import { codexOutputParser } from '../terminal/CodexParser'
+import { locateCodexRollout } from '../terminal/CodexRolloutLocator'
 import { MissionAgentSessionStore, compositeKey, parseAgentId, parseChatId } from './MissionAgentSessionStore'
 import { StreamJsonManager } from '../terminal/StreamJsonManager'
 import { acpUpdateToWSMessage } from '../acp/ACPToFrontendBridge'
@@ -50,6 +52,50 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
   const spawnFailures = new Map<string, { count: number; lastFailedAt: number }>()
   const SPAWN_FAILURE_MAX = 2
   const SPAWN_FAILURE_COOLDOWN_MS = 60_000
+  const JSONL_PARSE_CACHE_MAX = 50
+  const parsedJsonlCache = new Map<string, { kind: 'conversation' | 'codex'; mtimeMs: number; size: number; messages: ParsedMessage[] }>()
+
+  const rememberParsedJsonl = (
+    path: string,
+    entry: { kind: 'conversation' | 'codex'; mtimeMs: number; size: number; messages: ParsedMessage[] },
+  ): ParsedMessage[] | null => {
+    parsedJsonlCache.set(path, entry)
+    if (parsedJsonlCache.size > JSONL_PARSE_CACHE_MAX) {
+      const oldest = parsedJsonlCache.keys().next().value
+      if (oldest) parsedJsonlCache.delete(oldest)
+    }
+    return entry.messages.length > 0 ? entry.messages : null
+  }
+
+  const parseJsonlFile = async (path: string, kind: 'conversation' | 'codex'): Promise<ParsedMessage[] | null> => {
+    try {
+      const fileStat = await stat(path)
+      const cached = parsedJsonlCache.get(path)
+      if (cached && cached.kind === kind && cached.mtimeMs === fileStat.mtimeMs && cached.size === fileStat.size) {
+        return cached.messages.length > 0 ? cached.messages : null
+      }
+
+      const started = Date.now()
+      const raw = await readFile(path, 'utf8')
+      const lines = raw.split('\n')
+      let messages: ParsedMessage[]
+      if (kind === 'codex') {
+        const state = createParserState()
+        const { newMessages } = codexOutputParser.parseNewLines(lines, 0, state)
+        messages = state.messages.length > 0 ? state.messages : newMessages
+      } else {
+        messages = parseConversationLines(lines).messages
+      }
+      const elapsedMs = Date.now() - started
+      if (elapsedMs > 250) {
+        log.info('Parsed JSONL replay file', { path, kind, size: fileStat.size, messages: messages.length, elapsedMs })
+      }
+      return rememberParsedJsonl(path, { kind, mtimeMs: fileStat.mtimeMs, size: fileStat.size, messages })
+    } catch (err) {
+      log.warn('Failed to parse JSONL replay file', { path, kind, err: err instanceof Error ? err.message : String(err) })
+      return null
+    }
+  }
 
   /**
    *  provider  JSONL
@@ -60,85 +106,21 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
     cwd: string,
     cliSessionId: string,
     provider: CliProvider = 'claude',
-  ): ParsedMessage[] | null => {
+  ): Promise<ParsedMessage[] | null> => {
     if (provider === 'codex') {
-      return readCodexRollout(cliSessionId)
+      const rollout = locateCodexRollout(cliSessionId)
+      return rollout ? parseJsonlFile(rollout, 'codex') : Promise.resolve(null)
     }
     if (isQoderVendor(provider)) {
       const projectKey = cwdToCliProjectKey(cwd)
       const jsonlPath = join(homedir(), '.qoder', 'projects', projectKey, 'transcript', `${cliSessionId}.jsonl`)
-      if (!existsSync(jsonlPath)) return null
-      const msgs = parseConversationFile(jsonlPath)
-      return msgs.length > 0 ? msgs : null
+      if (!existsSync(jsonlPath)) return Promise.resolve(null)
+      return parseJsonlFile(jsonlPath, 'conversation')
     }
     const projectKey = cwdToCliProjectKey(cwd)
     const jsonlPath = join(homedir(), '.claude', 'projects', projectKey, `${cliSessionId}.jsonl`)
-    if (!existsSync(jsonlPath)) return null
-    const msgs = parseConversationFile(jsonlPath)
-    return msgs.length > 0 ? msgs : null
-  }
-
-  /**
-   *  Codex rollout JSONL
-   * rollout-<ISO-timestamp>-<threadId>.jsonlthreadId  cliSessionId
-   * exec  7  +
-   */
-  const readCodexRollout = (threadId: string): ParsedMessage[] | null => {
-    if (!threadId) return null
-    const sessionsRoot = join(homedir(), '.codex', 'sessions')
-    if (!existsSync(sessionsRoot)) return null
-
-    const now = Date.now()
-    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-      const d = new Date(now - dayOffset * 86_400_000)
-      const yyyy = String(d.getUTCFullYear())
-      const mm = String(d.getUTCMonth() + 1).padStart(2, '0')
-      const dd = String(d.getUTCDate()).padStart(2, '0')
-      const dayDir = join(sessionsRoot, yyyy, mm, dd)
-      const found = findRolloutInDir(dayDir, threadId)
-      if (found) return parseCodexFile(found)
-    }
-
-    try {
-      for (const year of readdirSync(sessionsRoot)) {
-        const yearDir = join(sessionsRoot, year)
-        for (const month of readdirSync(yearDir)) {
-          const monthDir = join(yearDir, month)
-          for (const day of readdirSync(monthDir)) {
-            const dayDir = join(monthDir, day)
-            const found = findRolloutInDir(dayDir, threadId)
-            if (found) return parseCodexFile(found)
-          }
-        }
-      }
-    } catch {
-    }
-    return null
-  }
-
-  const findRolloutInDir = (dir: string, threadId: string): string | null => {
-    if (!existsSync(dir)) return null
-    try {
-      const files = readdirSync(dir)
-      const match = files.find((f) => f.startsWith('rollout-') && f.endsWith(`-${threadId}.jsonl`))
-      return match ? join(dir, match) : null
-    } catch {
-      return null
-    }
-  }
-
-  const parseCodexFile = (path: string): ParsedMessage[] | null => {
-    try {
-      const raw = readFileSync(path, 'utf8')
-      const lines = raw.split('\n')
-      const state = createParserState()
-      const { newMessages } = codexOutputParser.parseNewLines(lines, 0, state)
-      const all = state.messages.length > 0 ? state.messages : newMessages
-      return all.length > 0 ? all : null
-    } catch (err) {
-      log.warn('Failed to parse Codex rollout', { path, err: err instanceof Error ? err.message : String(err) })
-      return null
-    }
+    if (!existsSync(jsonlPath)) return Promise.resolve(null)
+    return parseJsonlFile(jsonlPath, 'conversation')
   }
 
   const buildMessageMergeKey = (msg: ParsedMessage): string => {
@@ -226,7 +208,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
    * Agent  JSONL
    *  completed  tab +
    */
-  const replayHistoryForDeadSession = (
+  const replayHistoryForDeadSession = async (
     connectionId: string,
     agentId: string,
     chatId: string,
@@ -234,8 +216,8 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
     cwd: string,
     provider: CliProvider = 'claude',
     exitCode?: number,
-  ): boolean => {
-    const messages = readMessagesFromJsonl(cwd, cliSessionId, provider)
+  ): Promise<boolean> => {
+    const messages = await readMessagesFromJsonl(cwd, cliSessionId, provider)
     if (!messages || messages.length === 0) {
       log.warn('No JSONL history for dead session', { agentId, cliSessionId, provider, cwd })
       return false
@@ -364,7 +346,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
         const sessionProvider = existingSession.streamManager.getProvider()
         const memoryMessages = existingSession.streamManager.getCurrentMessages()
         const historyMessages = existingSession.cliSessionId && existingSession.cwd
-          ? readMessagesFromJsonl(existingSession.cwd, existingSession.cliSessionId, sessionProvider)
+          ? await readMessagesFromJsonl(existingSession.cwd, existingSession.cliSessionId, sessionProvider)
           : null
         const messages = mergeReplayMessages(historyMessages, memoryMessages, {
           agentId,
@@ -472,7 +454,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
           const sessionProvider = existingSession.streamManager.getProvider()
           const memoryMessages = existingSession.streamManager.getCurrentMessages()
           const historyMessages = existingSession.cliSessionId && existingSession.cwd
-            ? readMessagesFromJsonl(existingSession.cwd, existingSession.cliSessionId, sessionProvider)
+            ? await readMessagesFromJsonl(existingSession.cwd, existingSession.cliSessionId, sessionProvider)
             : null
           const reAttachMessages = mergeReplayMessages(historyMessages, memoryMessages, {
             agentId,
@@ -520,7 +502,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
         continue
       }
 
-      if (replayHistoryForDeadSession(connectionId, agentId, chatId, cliSessionId, cwd, provider, storedExitCode)) {
+      if (await replayHistoryForDeadSession(connectionId, agentId, chatId, cliSessionId, cwd, provider, storedExitCode)) {
         log.info('Replayed from JSONL, skipping --resume spawn', { agentId, chatId, provider })
         pushPluginCommands(agentId)
         continue
@@ -601,7 +583,7 @@ export const createMissionAgentResumeHandler = (deps: MissionAgentResumeDeps) =>
             continue
           }
 
-          const replayed = replayHistoryForDeadSession(connectionId, agentId, chatId, cliSessionId, cwd, failedProvider)
+          const replayed = await replayHistoryForDeadSession(connectionId, agentId, chatId, cliSessionId, cwd, failedProvider)
           if (!replayed) {
             sendTo(connectionId, {
               type: 'agent:resume-failed',

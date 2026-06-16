@@ -13,7 +13,7 @@ import { toast } from 'sonner'
 import { Lock, Pencil, Save, Loader2, FileCode, FileDiff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { API_BASE, authFetch } from '@/config/api'
-import type { editor as MonacoEditor } from 'monaco-editor'
+import type { editor as MonacoEditor } from 'monaco-editor/esm/vs/editor/editor.api'
 
 interface InlineDiffViewerProps {
   worktreePath: string

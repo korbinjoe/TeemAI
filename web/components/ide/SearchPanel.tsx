@@ -2,17 +2,7 @@ import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, Loader2, ChevronRight, ChevronDown, File, Folder, ArrowLeft, FolderOpen } from 'lucide-react'
 import { useContentSearch, type ContentResult } from '@/hooks/useContentSearch'
-
-export interface SearchCache {
-  inputValue: string
-  activeQuery: string
-  results: ContentResult[]
-  truncated: boolean
-}
-
-export const emptySearchCache: SearchCache = {
-  inputValue: '', activeQuery: '', results: [], truncated: false,
-}
+import type { SearchCache } from './SearchPanelState'
 
 interface SearchPanelProps {
   roots: string

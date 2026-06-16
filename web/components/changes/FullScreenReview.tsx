@@ -15,7 +15,7 @@ import {
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { API_BASE, authFetch } from '@/config/api'
 import FileChangeList from './FileChangeList'
-import type { editor as MonacoEditor } from 'monaco-editor'
+import type { editor as MonacoEditor } from 'monaco-editor/esm/vs/editor/editor.api'
 
 interface DiffEntry {
   file: string

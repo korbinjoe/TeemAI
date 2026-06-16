@@ -5,6 +5,7 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 
 const execFileAsync = promisify(execFile)
+const CHECK_IGNORE_CHUNK_SIZE = 200
 
 /**
  *  git check-ignore  .gitignore
@@ -12,23 +13,28 @@ const execFileAsync = promisify(execFile)
  */
 const getGitIgnoredNames = async (dirPath: string, entryNames: string[]): Promise<Set<string> | null> => {
   if (entryNames.length === 0) return new Set()
+  const ignored = new Set<string>()
   try {
-    const fullPaths = entryNames.map(name => join(dirPath, name))
-    const { stdout } = await execFileAsync('git', ['check-ignore', '--', ...fullPaths], {
-      cwd: dirPath,
-      timeout: 5000,
-    })
-    const ignored = new Set<string>()
-    for (const line of stdout.trim().split('\n')) {
-      if (!line) continue
-      ignored.add(basename(line))
+    for (let i = 0; i < entryNames.length; i += CHECK_IGNORE_CHUNK_SIZE) {
+      const fullPaths = entryNames.slice(i, i + CHECK_IGNORE_CHUNK_SIZE).map(name => join(dirPath, name))
+      try {
+        const { stdout } = await execFileAsync('git', ['check-ignore', '--', ...fullPaths], {
+          cwd: dirPath,
+          timeout: 5000,
+        })
+        for (const line of stdout.trim().split('\n')) {
+          if (!line) continue
+          ignored.add(basename(line))
+        }
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'code' in err && (err as { code: number }).code === 1) {
+          continue
+        }
+        throw err
+      }
     }
     return ignored
   } catch (err: unknown) {
-    // Exit code 1 = none ignored → empty set
-    if (err && typeof err === 'object' && 'code' in err && (err as { code: number }).code === 1) {
-      return new Set()
-    }
     // Not in git repo or git not installed → fallback
     return null
   }

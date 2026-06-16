@@ -105,4 +105,26 @@ describe('TerminalViewManager replay snapshots', () => {
       ptySize: { cols: 100, rows: 30 },
     })
   })
+
+  it('shares one view PTY across connections and keeps it alive until the last detach', async () => {
+    const manager = makeManager()
+    const first = makeWs()
+    const second = makeWs()
+
+    await manager.handleAttach(first.ws, { chatId: 'chat-1', agentId: 'lead', cols: 80, rows: 24 }, 'conn-1')
+    await manager.handleAttach(second.ws, { chatId: 'chat-1', agentId: 'lead', cols: 90, rows: 28 }, 'conn-2')
+
+    expect(ptyMock.spawn).toHaveBeenCalledTimes(1)
+    expect(manager.has('conn-1', 'chat-1', 'lead')).toBe(true)
+    expect(manager.has('conn-2', 'chat-1', 'lead')).toBe(true)
+
+    ptyMock.ptys[0].emitData('shared')
+    expect(first.sent.some(frame => frame.type === 'agent:data' && frame.payload.data.includes('shared'))).toBe(true)
+    expect(second.sent.some(frame => frame.type === 'agent:data' && frame.payload.data.includes('shared'))).toBe(true)
+
+    manager.handleDetach({ chatId: 'chat-1', agentId: 'lead' }, 'conn-1')
+    expect(manager.has('conn-1', 'chat-1', 'lead')).toBe(false)
+    expect(manager.has('conn-2', 'chat-1', 'lead')).toBe(true)
+    expect(ptyMock.ptys[0].kill).not.toHaveBeenCalled()
+  })
 })

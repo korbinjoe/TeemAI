@@ -11,9 +11,10 @@
  */
 
 import { execFile } from 'child_process'
-import { existsSync, readdirSync, readFileSync, openSync, readSync, closeSync, realpathSync } from 'fs'
+import { existsSync, readdirSync, readFileSync, openSync, readSync, closeSync, realpathSync, unlinkSync } from 'fs'
 import { dirname, join } from 'path'
-import { homedir } from 'os'
+import { homedir, tmpdir } from 'os'
+import { randomUUID } from 'crypto'
 import { createLogger } from './logger'
 
 const log = createLogger('resolveCliCommand')
@@ -89,26 +90,41 @@ const runLoginShellPath = (): Promise<string | null> => {
 
 const runLoginShellEnv = (): Promise<Record<string, string> | null> => {
   const shell = process.env.SHELL || '/bin/zsh'
+  // An interactive login shell (-i sources ~/.zshrc) intermittently dies with
+  // SIGPIPE when its large env dump streams through the Node stdout pipe, which
+  // silently drops every profile-only var (e.g. provider API tokens). Redirect
+  // env to a temp file so the shell's stdout never touches the pipe.
+  const dumpPath = join(tmpdir(), `teemai-shell-env-${process.pid}-${randomUUID()}`)
+  const parseDump = (): Record<string, string> | null => {
+    let out: string
+    try {
+      out = readFileSync(dumpPath, 'utf-8')
+    } catch {
+      return null
+    }
+    const parsed: Record<string, string> = {}
+    for (const line of out.split('\n')) {
+      const idx = line.indexOf('=')
+      if (idx <= 0) continue
+      const k = line.slice(0, idx).trim()
+      if (!k) continue
+      parsed[k] = line.slice(idx + 1)
+    }
+    return parsed
+  }
   return new Promise((resolve) => {
-    execFile(shell, ['-ilc', 'env'], {
+    execFile(shell, ['-ilc', `env > "${dumpPath}"`], {
       timeout: 7000,
       env: { HOME: homedir(), USER: process.env.USER || '' },
-      maxBuffer: 1024 * 1024 * 8,
-    }, (err, stdout) => {
-      if (err) {
-        log.warn('Failed to recover shell env', { error: err.message })
+    }, (err) => {
+      // Best-effort: the file may be fully written even if the shell later exits
+      // non-zero, so always try parsing before treating it as a failure.
+      const parsed = parseDump()
+      try { unlinkSync(dumpPath) } catch { /* ignore */ }
+      if (!parsed || Object.keys(parsed).length === 0) {
+        if (err) log.warn('Failed to recover shell env', { error: err.message })
         resolve(null)
         return
-      }
-      const out = stdout.toString()
-      const parsed: Record<string, string> = {}
-      for (const line of out.split('\n')) {
-        const idx = line.indexOf('=')
-        if (idx <= 0) continue
-        const k = line.slice(0, idx).trim()
-        const v = line.slice(idx + 1)
-        if (!k) continue
-        parsed[k] = v
       }
       resolve(parsed)
     })
@@ -127,7 +143,9 @@ let cachedShellEnv: Record<string, string> | null | undefined
 const getLoginShellEnvAsync = (): Promise<Record<string, string> | null> => {
   if (cachedShellEnv !== undefined) return Promise.resolve(cachedShellEnv)
   return runLoginShellEnv().then((envMap) => {
-    cachedShellEnv = envMap
+    // Only cache a successful recovery — caching null would turn one transient
+    // SIGPIPE failure into a permanent one for the whole server lifetime.
+    if (envMap) cachedShellEnv = envMap
     return envMap
   })
 }

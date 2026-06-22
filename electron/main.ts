@@ -18,6 +18,9 @@ import { PORTS } from '../shared/ports'
 
 import { existsSync, readlinkSync } from 'fs'
 import { TEEMAI_HOME } from '../shared/teemai-home'
+import { ensureConfigFile } from '../server/config/modelConfig.js'
+
+ensureConfigFile()
 
 const isDev = !app.isPackaged
 if (isDev) {

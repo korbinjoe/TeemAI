@@ -11,6 +11,9 @@ import { configCommand } from '../commands/config.js'
 import { updateCommand } from '../commands/update.js'
 import { daemonCommand } from '../commands/daemon.js'
 import { runCommand } from '../commands/run.js'
+import { ensureConfigFile } from '../../server/config/modelConfig.js'
+
+ensureConfigFile()
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const { version } = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf8'))

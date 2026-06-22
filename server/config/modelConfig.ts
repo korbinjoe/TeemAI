@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import { TEEMAI_HOME } from './paths'
 
@@ -64,4 +64,27 @@ const HARDCODED_DEFAULT_AGENT = 'lead'
 export const getDefaultAgent = (): string => {
   const config = loadConfig()
   return config.defaultAgent || HARDCODED_DEFAULT_AGENT
+}
+
+/**
+ * Ensure `~/.teemai/config.json` exists on first install.
+ * Seeds the default model list, default model, and default agent so the user
+ * immediately sees the built-in model picker without any manual setup.
+ */
+export const ensureConfigFile = (): void => {
+  if (existsSync(CONFIG_PATH)) return
+
+  try {
+    if (!existsSync(TEEMAI_HOME)) mkdirSync(TEEMAI_HOME, { recursive: true })
+
+    const defaults: ConfigFile = {
+      models: HARDCODED_MODELS,
+      defaultModel: HARDCODED_DEFAULT_MODEL,
+      defaultAgent: HARDCODED_DEFAULT_AGENT,
+    }
+
+    writeFileSync(CONFIG_PATH, JSON.stringify(defaults, null, 2), 'utf-8')
+  } catch (err) {
+    console.error('[Config] Failed to create config.json:', err)
+  }
 }

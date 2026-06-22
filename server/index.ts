@@ -19,6 +19,7 @@ import { AgentRegistry } from './config/AgentRegistry'
 import { SkillManager } from './config/SkillManager'
 import { agentDefToAgent } from './config/types'
 import { TEEMAI_HOME } from './config/paths'
+import { ensureConfigFile } from './config/modelConfig'
 
 import { ConfigCompiler } from './runtime/ConfigCompiler'
 import { HooksConfigManager } from './runtime/HooksConfigManager'
@@ -292,6 +293,8 @@ const { heartbeatTimer } = setupWebSocket({
 
 export async function startServer(port?: number): Promise<number> {
   const finalPort = port ?? (Number(process.env.PORT) || PORTS.DEV_SERVER)
+
+  ensureConfigFile()
 
   try {
     await new WorkspaceSeeder(bundledAssetsDir, TEEMAI_HOME).seed()

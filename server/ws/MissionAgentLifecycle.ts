@@ -12,6 +12,8 @@
 import type { WebSocket } from 'ws'
 import { sendFrame } from './wsFrame'
 import { StreamJsonManager } from '../terminal/StreamJsonManager'
+import { CodexAppServerManager } from '../terminal/CodexAppServerManager'
+import type { StreamDriver } from '../terminal/StreamDriver'
 import { ConfigCompiler } from '../runtime/ConfigCompiler'
 import type { AgentRegistry } from '../config/AgentRegistry'
 import type { AgentStore } from '../stores/AgentStore'
@@ -30,7 +32,7 @@ import { wireMissionAgentStreamHandlers } from './MissionAgentEventWiring'
 import { expandSlashCommand } from '../runtime/SlashCommandResolver'
 import type { WhiteboardManager } from '../whiteboard/WhiteboardManager'
 import { ContextBriefing } from '../whiteboard/ContextBriefing'
-import { isWhiteboardOnDemandEnabled } from '../runtime/featureFlags'
+import { isWhiteboardOnDemandEnabled, isCodexAppServerEnabled } from '../runtime/featureFlags'
 import { createLogger } from '../lib/logger'
 import { trackEvent } from '../lib/eventTracker'
 import { isAllowedCwd } from '../lib/validateCwd'
@@ -254,7 +256,9 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
       }
 
       const provider = agent.provider || 'claude'
-      const streamManager = new StreamJsonManager()
+      const streamManager: StreamDriver = provider === 'codex' && isCodexAppServerEnabled()
+        ? new CodexAppServerManager()
+        : new StreamJsonManager()
       const sessionId = streamManager.getSessionId()
 
       let cwd = payload.cwd
@@ -397,6 +401,7 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
         cwd: compiled.cwd,
         env: compiled.env,
         provider,
+        codex: compiled.codex,
       })
 
       acpClient.markReady()

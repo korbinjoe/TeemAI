@@ -18,7 +18,7 @@ import type { EpisodicMemoryService } from '../services/agent-evolution/Episodic
 import type { EpisodeSearchResult } from '../stores/EpisodeStore'
 import type { WhiteboardManager } from '../whiteboard/WhiteboardManager'
 import { ContextBriefing } from '../whiteboard/ContextBriefing'
-import { isWhiteboardOnDemandEnabled } from './featureFlags'
+import { isWhiteboardOnDemandEnabled, isCodexAppServerEnabled } from './featureFlags'
 import { HooksConfigManager } from './HooksConfigManager'
 import { resolveCliCommandAsync } from '../lib/resolveCliCommand'
 import { resolveCodexProviderEnv } from '../lib/codexConfigEnv'
@@ -34,6 +34,8 @@ export interface CompiledAgentConfig {
   cwd: string
   settingsPath?: string
   presetSessionId?: string
+  /** Codex app-server spawn config; present only when the app-server driver is selected. */
+  codex?: import('../terminal/StreamDriver').CodexAppServerSpawnConfig
   cleanup: () => Promise<void>
 }
 
@@ -321,18 +323,26 @@ export class ConfigCompiler {
   private async compileForCodex(agent: Agent, context: CompileContext): Promise<CompiledAgentConfig> {
     const args: string[] = []
     const cleanupFns: Array<() => Promise<void>> = []
+    const appServer = isCodexAppServerEnabled()
 
-    if (context.resumeSessionId) {
-      args.push('exec', 'resume', context.resumeSessionId, '-')
+    if (appServer) {
+      // Long-lived stdio JSON-RPC server: spawn params (model, resume, sandbox)
+      // are passed at the protocol layer (CodexAppServerManager), not as argv.
+      args.push('app-server', '--stdio')
+      args.push('-c', 'skills.include_instructions=false')
     } else {
-      args.push('exec')
-    }
-    args.push('--json')
-    args.push('--dangerously-bypass-approvals-and-sandbox')
-    args.push('-c', 'skills.include_instructions=false')
+      if (context.resumeSessionId) {
+        args.push('exec', 'resume', context.resumeSessionId, '-')
+      } else {
+        args.push('exec')
+      }
+      args.push('--json')
+      args.push('--dangerously-bypass-approvals-and-sandbox')
+      args.push('-c', 'skills.include_instructions=false')
 
-    if (agent.model) {
-      args.push('--model', agent.model)
+      if (agent.model) {
+        args.push('--model', agent.model)
+      }
     }
 
     const promptContent = this.buildPromptContent(agent, context)
@@ -435,6 +445,7 @@ export class ConfigCompiler {
       args,
       env,
       cwd,
+      ...(appServer ? { codex: { model: agent.model } } : {}),
       cleanup: async () => {
         for (const fn of cleanupFns) {
           await silentlyIgnore(fn, 'config compile cleanup')

@@ -20,7 +20,6 @@ import { createParserState, parseConversationLines, type ParsedMessage } from '.
 import { codexOutputParser } from '../terminal/CodexParser'
 import { locateCodexRollout } from '../terminal/CodexRolloutLocator'
 import { MissionAgentSessionStore, compositeKey, parseAgentId, parseChatId } from './MissionAgentSessionStore'
-import { StreamJsonManager } from '../terminal/StreamJsonManager'
 import { acpUpdateToWSMessage } from '../acp/ACPToFrontendBridge'
 import type { CliProvider, ExpertSessionInfo } from '../config/types'
 import { isQoderVendor } from '../config/types'

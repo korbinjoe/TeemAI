@@ -47,6 +47,9 @@ vi.mock('../whiteboard/ContextBriefing', () => ({
 
 vi.mock('../runtime/featureFlags', () => ({
   isWhiteboardOnDemandEnabled: () => false,
+  // Keep codex on the mocked exec driver (StreamJsonManager); the app-server
+  // driver is exercised separately in CodexAppServerParser tests.
+  isCodexAppServerEnabled: () => false,
 }))
 
 vi.mock('../lib/logger', () => ({

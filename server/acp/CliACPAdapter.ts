@@ -15,7 +15,7 @@
  */
 
 import { EventEmitter } from 'events'
-import type { StreamJsonManager, StreamJsonOptions } from '../terminal/StreamJsonManager'
+import type { StreamDriver, StreamJsonOptions } from '../terminal/StreamDriver'
 import type { ParsedMessage } from '../terminal/ConversationParser'
 import type { ActivityState } from '../terminal/ActivityDeriver'
 import type { ACPAgentAdapter, AdapterState, ACPAdapterInspect, ACPUpdateEntry } from './ACPAgentAdapter'
@@ -128,7 +128,7 @@ export class CliACPAdapter extends EventEmitter implements ACPAgentAdapter {
   }
 
   constructor(
-    private streamManager: StreamJsonManager,
+    private streamManager: StreamDriver,
     private options: CliACPAdapterOptions,
   ) {
     super()

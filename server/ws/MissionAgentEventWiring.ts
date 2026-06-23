@@ -7,7 +7,7 @@
  */
 
 import type { WebSocket } from 'ws'
-import { StreamJsonManager } from '../terminal/StreamJsonManager'
+import type { StreamDriver } from '../terminal/StreamDriver'
 import { FileOperationCollector, type FileOperationEvent } from '../terminal/FileOperationCollector'
 import type { SessionRegistry } from '../terminal/SessionRegistry'
 import type { ChatStore } from '../stores/ChatStore'
@@ -25,7 +25,7 @@ import { scanPluginSlashCommands, scanProjectSlashCommands, scanUserSkills } fro
 const log = createLogger('ExpertEventWiring')
 
 export interface MissionAgentEventWiringDeps {
-  streamManager: StreamJsonManager
+  streamManager: StreamDriver
   acpClient: ACPClient
   sessionRegistry: SessionRegistry
   store: MissionAgentSessionStore

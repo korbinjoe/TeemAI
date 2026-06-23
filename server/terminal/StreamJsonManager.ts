@@ -23,18 +23,13 @@ import type { CliProvider } from '../config/types'
 import { createLogger } from '../lib/logger'
 import { trackEvent } from '../lib/eventTracker'
 import { resolveCliCommandAsync, resolveInterpreter } from '../lib/resolveCliCommand'
+import type { StreamDriver, StreamJsonOptions } from './StreamDriver'
 
 const log = createLogger('StreamJsonManager')
 
-export interface StreamJsonOptions {
-  command: string
-  args: string[]
-  cwd?: string
-  env?: Record<string, string>
-  provider?: CliProvider
-}
+export type { StreamJsonOptions } from './StreamDriver'
 
-export class StreamJsonManager extends EventEmitter {
+export class StreamJsonManager extends EventEmitter implements StreamDriver {
   private child: ChildProcess | null = null
   private readline: ReadlineInterface | null = null
   private sessionId: string

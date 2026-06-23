@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest'
 import { readFile, writeFile, mkdir, rm } from 'fs/promises'
 import { join } from 'path'
 import { homedir } from 'os'
@@ -38,6 +38,10 @@ describe('ConfigCompiler envOverrides flow into --settings', () => {
     const sm = new SkillManager(BUILTIN_SKILLS_DIR)
     await sm.loadBuiltinSkills()
     compiler = new ConfigCompiler(sm, new HooksConfigManager(), undefined, undefined, ROOT)
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
   })
 
   it('agent.model writes settings.env.ANTHROPIC_MODEL (double insurance)', async () => {
@@ -147,6 +151,9 @@ env_key = "OPENCODE_GO_API_KEY"
   })
 
   it('codex exec resume passes stdin marker for multi-turn', async () => {
+    // exec fallback driver: the stdin-marker resume args only apply when the
+    // app-server driver is off.
+    vi.stubEnv('CODEX_APP_SERVER', '0')
     const compiled = await compiler.compile(
       makeAgent({ model: 'gpt-5-codex' }),
       { repositories: [{ path: ROOT }], serverPort: 3210, resumeSessionId: 'codex-thread-1' },

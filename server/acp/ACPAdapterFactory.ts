@@ -6,7 +6,7 @@
  */
 
 import type { CliProvider } from '../config/types'
-import type { StreamJsonManager } from '../terminal/StreamJsonManager'
+import type { StreamDriver } from '../terminal/StreamDriver'
 import type { ACPAgentAdapter } from './ACPAgentAdapter'
 import { CliACPAdapter } from './CliACPAdapter'
 
@@ -19,7 +19,7 @@ export interface CreateAdapterOptions {
 
 export const createACPAdapter = (
   provider: CliProvider,
-  streamManager: StreamJsonManager,
+  streamManager: StreamDriver,
   options: CreateAdapterOptions,
 ): ACPAgentAdapter => {
   switch (provider) {

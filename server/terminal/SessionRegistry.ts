@@ -12,7 +12,7 @@
 
 import type { WebSocket } from 'ws'
 import { outboundFrames } from '../ws/wsFrame'
-import type { StreamJsonManager } from './StreamJsonManager'
+import type { StreamDriver } from './StreamDriver'
 import type { ActivityState } from './ActivityDeriver'
 import { HooksConfigManager } from '../runtime/HooksConfigManager'
 import type { ChatStore } from '../stores/ChatStore'
@@ -44,7 +44,7 @@ const codexTurnExitSnapshot = (snapshot: ActivityState | null): ActivityState =>
 
 export interface ManagedSession {
   sessionId: string
-  streamManager: StreamJsonManager
+  streamManager: StreamDriver
   acpClient?: import('../acp/ACPClient').ACPClient
   chatId: string
   agentId?: string

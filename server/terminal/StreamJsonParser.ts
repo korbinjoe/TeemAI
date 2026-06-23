@@ -47,6 +47,8 @@ export interface StreamParserState {
    *  Drives whether the `result` event synthesizes final text. */
   emittedTextSinceResult: boolean
   codexUsage: { input: number; output: number } | null
+  /** Streaming block index for codex app-server agent-message deltas. */
+  codexBlockIndex: number
   idPrefix: string
 }
 
@@ -67,6 +69,7 @@ export const createStreamParserState = (): StreamParserState => ({
   streamedApiCalls: new Set(),
   emittedTextSinceResult: false,
   codexUsage: null,
+  codexBlockIndex: 0,
   idPrefix: `s${Math.random().toString(36).slice(2, 8)}`,
 })
 

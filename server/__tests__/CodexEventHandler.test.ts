@@ -13,6 +13,7 @@ const makeState = (): StreamParserState => ({
   streamedApiCalls: new Set(),
   emittedTextSinceResult: false,
   codexUsage: null,
+  codexBlockIndex: 0,
   idPrefix: 's-test',
 })
 

@@ -264,7 +264,7 @@ export const createAgentEventHandlers = (ctx: AgentEventContext) => {
     })
   }
 
-  const handleExpertExit = (payload: { agentId: string; chatId?: string; finalActivity?: AgentActivity; exitReason?: AgentActivity['exitReason'] }) => {
+  const handleExpertExit = (payload: { agentId: string; chatId?: string; finalActivity?: AgentActivity; exitReason?: AgentActivity['exitReason']; turnExit?: boolean }) => {
     if (!isCurrentChatEvent(payload)) return
     if (!payload?.agentId) return
     setExpertActivities((prev) => {
@@ -279,7 +279,9 @@ export const createAgentEventHandlers = (ctx: AgentEventContext) => {
         ...prev,
         [payload.agentId]: {
           ...base,
-          phase: 'completed' as const,
+          phase: payload.turnExit
+            ? ((payload.finalActivity?.phase as AgentActivity['phase'] | undefined) ?? existing?.phase ?? 'waiting_input')
+            : 'completed',
           ...(payload.exitReason ? { exitReason: payload.exitReason } : {}),
           updatedAt: Date.now(),
         },

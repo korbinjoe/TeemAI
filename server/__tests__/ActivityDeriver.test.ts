@@ -205,6 +205,14 @@ describe('ActivityDeriver', () => {
     expect(deriver.getState().phase).toBe('completed')
   })
 
+  it('onProcessExit(0) with turn-complete option stays waiting_input', () => {
+    deriver.onDeltaMessages([userMsg(), agentTextMsg(), statsMsg(true)])
+    vi.runAllTimers()
+    expect(deriver.getState().phase).toBe('waiting_input')
+    deriver.onProcessExit(0, { treatSuccessAsTurnComplete: true })
+    expect(deriver.getState().phase).toBe('waiting_input')
+  })
+
   it('onProcessExit(1) from initializing → error', () => {
     deriver.onProcessExit(1)
     expect(deriver.getState().phase).toBe('error')

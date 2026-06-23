@@ -329,6 +329,7 @@ export class ConfigCompiler {
     }
     args.push('--json')
     args.push('--dangerously-bypass-approvals-and-sandbox')
+    args.push('-c', 'skills.include_instructions=false')
 
     if (agent.model) {
       args.push('--model', agent.model)

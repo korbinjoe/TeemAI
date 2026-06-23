@@ -169,6 +169,22 @@ describe('AgentEventHandlers', () => {
       expect(ctx._activities['eng-1'].exitReason).toBe('user_stop')
     })
 
+    it('Codex turn exit preserves waiting_input instead of completed', () => {
+      const ctx = createMockCtx()
+      const { handleExpertStarted, handleExpertExit } = createAgentEventHandlers(ctx)
+
+      handleExpertStarted({ agentId: 'eng-1', chatId: 'chat-1', agentName: 'Eng', sessionId: 's1' })
+      handleExpertExit({
+        agentId: 'eng-1',
+        chatId: 'chat-1',
+        turnExit: true,
+        finalActivity: mkActivity('waiting_input', { toolCompleted: 4 }),
+      })
+
+      expect(ctx._activities['eng-1'].phase).toBe('waiting_input')
+      expect(ctx._activities['eng-1'].toolCompleted).toBe(4)
+    })
+
     it('chatId mismatch → event is dropped', () => {
       const ctx = createMockCtx('chat-1')
       const { handleExpertStarted, handleExpertExit } = createAgentEventHandlers(ctx)

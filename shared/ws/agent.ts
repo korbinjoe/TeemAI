@@ -21,7 +21,12 @@ export interface AgentDataPayload {
 export interface AgentExitPayload {
   agentId: string
   chatId: string
+  sessionId?: string
   exitCode?: number
+  signal?: number
+  exitReason?: 'user_stop' | 'timeout' | 'model_switch'
+  finalActivity?: unknown
+  turnExit?: boolean
 }
 
 export interface AgentActivityPayload {

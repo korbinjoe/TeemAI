@@ -151,7 +151,20 @@ export class ActivityDeriver extends EventEmitter {
     })
   }
 
-  onProcessExit(exitCode: number): void {
+  onProcessExit(exitCode: number, options?: { treatSuccessAsTurnComplete?: boolean }): void {
+    if (exitCode === 0 && options?.treatSuccessAsTurnComplete) {
+      const phase = this.state.phase === 'waiting_confirmation'
+        ? 'waiting_confirmation'
+        : 'waiting_input'
+      this.transition({
+        ...this.state,
+        phase,
+        currentTool: undefined,
+        updatedAt: Date.now(),
+      })
+      return
+    }
+
     // If the agent finished its turn (waiting_input), a non-zero exit code is
     // process cleanup noise (kill signal, timeout), not a task failure.
     const taskDone = this.state.phase === 'waiting_input' || this.state.phase === 'completed'

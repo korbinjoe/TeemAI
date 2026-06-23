@@ -19,8 +19,28 @@ import type { ChatStore } from '../stores/ChatStore'
 import { ActivityAggregator } from './ActivityAggregator'
 import { createLogger } from '../lib/logger'
 import { silentlyIgnore } from '../lib/silentlyIgnore'
+import type { CliProvider } from '../config/types'
 
 const log = createLogger('SessionRegistry')
+
+const codexTurnExitSnapshot = (snapshot: ActivityState | null): ActivityState => {
+  const phase = snapshot?.phase === 'waiting_confirmation'
+    ? 'waiting_confirmation'
+    : 'waiting_input'
+  return {
+    phase,
+    background: snapshot?.background ?? false,
+    currentTool: undefined,
+    toolCount: snapshot?.toolCount ?? 0,
+    toolCompleted: snapshot?.toolCompleted ?? 0,
+    hasText: snapshot?.hasText ?? false,
+    cost: snapshot?.cost,
+    tokens: snapshot?.tokens,
+    modelUsage: snapshot?.modelUsage,
+    recentTools: snapshot?.recentTools,
+    updatedAt: Date.now(),
+  }
+}
 
 export interface ManagedSession {
   sessionId: string
@@ -30,6 +50,8 @@ export interface ManagedSession {
   agentId?: string
   agentName: string
   agentIcon?: string
+  provider?: CliProvider
+  model?: string
   cliSessionId?: string
   cwd: string
   connectedWs: WebSocket | null
@@ -141,11 +163,17 @@ export class SessionRegistry {
       queueMicrotask(() => {
         const current = this.sessions.get(sessionId)
         if (!current) return
+        const isCodexTurnExit = current.provider === 'codex' && exitCode === 0 && !current.killReason
 
         if (current.chatId) {
           if (this.activity.hasActivityListeners()) {
-            const finalPayload = this.activity.buildFinalPayload(current.chatId, current)
-            this.activity.notifyActivity(finalPayload)
+            if (isCodexTurnExit) {
+              current.activitySnapshot = codexTurnExitSnapshot(current.activitySnapshot)
+              this.activity.broadcastChatActivity(current.chatId)
+            } else {
+              const finalPayload = this.activity.buildFinalPayload(current.chatId, current)
+              this.activity.notifyActivity(finalPayload)
+            }
           }
 
           if (this.chatStore) {
@@ -161,15 +189,23 @@ export class SessionRegistry {
                 : current.killReason === 'user_stop' ? 'interrupted' as const
                 : exitCode === 0 ? 'success' as const
                 : 'error' as const
-              this.chatStore.update(current.chatId, {
-                status: 'stopped',
-                taskStatus,
-                taskSummary: {
-                  durationSec: Math.round((Date.now() - current.createdAt) / 1000),
-                },
-              })
+              const update = isCodexTurnExit
+                ? {
+                    status: 'idle' as const,
+                    taskStatus: current.activitySnapshot?.phase === 'waiting_confirmation'
+                      ? 'waiting_confirm' as const
+                      : 'waiting_input' as const,
+                  }
+                : {
+                    status: 'stopped' as const,
+                    taskStatus,
+                    taskSummary: {
+                      durationSec: Math.round((Date.now() - current.createdAt) / 1000),
+                    },
+                  }
+              this.chatStore.update(current.chatId, update)
                 .then(() => {
-                  this.activity.notifyChatStatus(current.chatId, 'stopped')
+                  this.activity.notifyChatStatus(current.chatId, isCodexTurnExit ? 'idle' : 'stopped')
                 })
                 .catch((err) => {
                   log.warn('Failed to update chat status', { chatId: current.chatId, error: String(err) })

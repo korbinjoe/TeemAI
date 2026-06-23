@@ -141,7 +141,9 @@ export class StreamJsonManager extends EventEmitter {
           this.readline.close()
           this.readline = null
         }
-        this.activityDeriver.onProcessExit(exitCode ?? 1)
+        this.activityDeriver.onProcessExit(exitCode ?? 1, {
+          treatSuccessAsTurnComplete: this.provider === 'codex' && exitCode === 0,
+        })
         this.emit('exit', { exitCode, signal })
         this.child = null
       })

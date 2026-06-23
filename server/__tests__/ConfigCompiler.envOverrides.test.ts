@@ -133,6 +133,9 @@ env_key = "OPENCODE_GO_API_KEY"
       'codex',
     )
     expect(compiled.env.OPENCODE_GO_API_KEY).toBe('codex-test-key')
+    const skillConfigIdx = compiled.args.indexOf('skills.include_instructions=false')
+    expect(skillConfigIdx).toBeGreaterThan(0)
+    expect(compiled.args[skillConfigIdx - 1]).toBe('-c')
     await compiled.cleanup()
 
     if (originalConfig !== null) {
@@ -155,6 +158,9 @@ env_key = "OPENCODE_GO_API_KEY"
     expect(compiled.args).toContain('codex-thread-1')
     expect(compiled.args).toContain('-')
     expect(compiled.args).not.toContain('--resume')
+    const skillConfigIdx = compiled.args.indexOf('skills.include_instructions=false')
+    expect(skillConfigIdx).toBeGreaterThan(0)
+    expect(compiled.args[skillConfigIdx - 1]).toBe('-c')
     await compiled.cleanup()
   })
 })

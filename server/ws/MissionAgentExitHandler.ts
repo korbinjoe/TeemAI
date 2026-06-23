@@ -289,6 +289,11 @@ export const createMissionAgentExitHandler = (deps: ExitHandlerDeps) => {
 
     trackEvent('agent', 'agent.exited', { agentId, exitCode, chatId: expertInfo.chatId, connectionId: currentConnectionId })
 
+    const runtimeSession = sessionRegistry.get(sessionId)
+    const isCodexTurnExit = expertInfo.provider === 'codex'
+      && exitCode === 0
+      && !runtimeSession?.killReason
+      && finalActivity?.phase !== 'error'
     const taskCompleted = finalActivity?.phase !== 'error'
 
     // Codex `exec` runs one turn per process. If stream parsing missed assistant
@@ -384,7 +389,7 @@ export const createMissionAgentExitHandler = (deps: ExitHandlerDeps) => {
 
     sessionRegistry.sendToSession(sessionId, {
       type: 'agent:exit',
-      payload: { agentId, chatId, sessionId, exitCode, signal, finalActivity },
+      payload: { agentId, chatId, sessionId, exitCode, signal, finalActivity, ...(isCodexTurnExit ? { turnExit: true } : {}) },
     })
 
     store.cleanup(currentKey)

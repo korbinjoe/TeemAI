@@ -341,6 +341,7 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
         agentId,
         agentName: agent.name,
         agentIcon: agent.icon,
+        provider,
         cwd,
         connectedWs: ws,
         connectionId,

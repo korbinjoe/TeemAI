@@ -32,7 +32,7 @@ export interface WsReceiveEventMap {
   // Expert Agent
   'agent:activity': { agentId: string; chatId: string; startedAt?: number; activity: AgentActivity }
   'agent:started': { agentId: string; chatId: string; agentName: string; sessionId: string; agentIcon: string; status: 'running' | 'completed'; exitCode?: number }
-  'agent:exit': { agentId: string; chatId: string; exitCode?: number }
+  'agent:exit': { agentId: string; chatId: string; sessionId?: string; exitCode?: number; signal?: number; finalActivity?: AgentActivity; exitReason?: AgentActivity['exitReason']; turnExit?: boolean }
   'agent:stopped': { agentId: string; chatId: string; exitCode?: number; exitReason?: 'user_stop' | 'timeout' | 'model_switch' }
   'agent:data': { agentId: string; chatId: string; sessionId?: string; seq?: number; snapshot?: boolean; data: string; ptySize?: { cols: number; rows: number } }
   'agent:view-attached': { agentId: string; chatId: string; sessionId: string; cwd?: string }

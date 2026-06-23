@@ -1,7 +1,8 @@
 /**
  * Drain the pending-task queue for a given key and dispatch each entry
- * to the agent via `acpClient.prompt`. Used at provider-specific readiness
- * boundaries (Claude: `cli-session-id` event; Codex: after `markReady`).
+ * to the agent via `acpClient.prompt`. Used at the Claude readiness boundary
+ * (`cli-session-id`). Codex is one-shot, so startup-window messages are folded
+ * into its initial stdin prompt in MissionAgentLifecycle instead.
  *
  * Drain failures surface as `expert:error { error: 'pending_task_failed' }`
  * routed via the session registry so whoever is currently watching the
@@ -28,7 +29,7 @@ export interface FlushDeps {
   chatId: string
 }
 
-export const flushPendingTasks = (deps: FlushDeps): void => {
+export const flushPendingTasks = async (deps: FlushDeps): Promise<void> => {
   const { store, acpClient, sessionRegistry, sessionId, key, agentId, chatId } = deps
   const drained = store.drainPendingTasks(key)
   if (drained.length === 0) return
@@ -41,25 +42,24 @@ export const flushPendingTasks = (deps: FlushDeps): void => {
 
   for (const queued of drained) {
     const images = queued.images?.map(img => ({ data: img.data, mimeType: img.mediaType }))
-    const promptPromise = shouldExpand
-      ? expandSlashCommand(queued.task, cwd)
-      : Promise.resolve(queued.task)
-
-    promptPromise
-      .then((text) => acpClient.prompt(sessionId, text, images))
-      .catch((err: unknown) => {
-        const errorMsg = err instanceof Error ? err.message : String(err)
-        log.warn('Pending-task prompt failed', { agentId, chatId, error: errorMsg })
-        sessionRegistry.sendToSession(sessionId, {
-          type: 'agent:error',
-          payload: {
-            agentId,
-            chatId,
-            error: 'pending_task_failed',
-            task: queued.task,
-            message: `Failed to deliver queued message: ${errorMsg}`,
-          },
-        })
+    try {
+      const text = shouldExpand
+        ? await expandSlashCommand(queued.task, cwd)
+        : queued.task
+      await acpClient.prompt(sessionId, text, images)
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      log.warn('Pending-task prompt failed', { agentId, chatId, error: errorMsg })
+      sessionRegistry.sendToSession(sessionId, {
+        type: 'agent:error',
+        payload: {
+          agentId,
+          chatId,
+          error: 'pending_task_failed',
+          task: queued.task,
+          message: `Failed to deliver queued message: ${errorMsg}`,
+        },
       })
+    }
   }
 }

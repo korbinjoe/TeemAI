@@ -15,6 +15,7 @@ import { trackEvent } from '../lib/eventTracker'
 import { cwdToCliProjectKey } from '../../shared/projectKey'
 import { locateCodexRollout } from '../terminal/CodexRolloutLocator'
 import { isPlaceholderTitle } from '../../shared/placeholderTitles'
+import { codexResumeSessionId, isCodexOneShotPromptSpent } from './MissionAgentCodexSession'
 
 const log = createLogger('Expert')
 
@@ -91,6 +92,32 @@ export const createMissionAgentDirectInput = (deps: MissionAgentDirectInputDeps)
     if (existing && isExistingAlive) {
       const chatModelNow = chatId ? chatStore.get(chatId)?.model : undefined
       const modelChanged = chatModelNow && existing.model && chatModelNow !== existing.model
+
+      if (cleanMessage && isCodexOneShotPromptSpent(existing)) {
+        const persistedSession = chatStore.get(chatId)?.expertSessions?.[agentId]
+        const persistedSessionId = typeof persistedSession === 'string'
+          ? persistedSession
+          : persistedSession?.cliSessionId
+        const resumeSessionId = codexResumeSessionId(existing) || persistedSessionId
+        log.info('Codex one-shot turn already completed, restarting with resume', { agentId, chatId, resumeSessionId })
+        existing.acpClient.destroy()
+        deps.sessionRegistry.remove(existing.sessionId)
+        store.cleanup(key)
+        await handleStart(ws, {
+          agentId,
+          task: cleanMessage,
+          images,
+          cwd: payload.cwd || existing.cwd,
+          repositories: payload.repositories,
+          resumeSessionId,
+          chatId,
+          cols: payload.cols,
+          rows: payload.rows,
+          previousContext: payload.previousContext,
+        }, connectionId)
+        trackParticipant(agentId, connectionId, chatId)
+        return
+      }
 
       if (modelChanged) {
         log.info('Model changed, restarting agent', { agentId, chatId, oldModel: existing.model, newModel: chatModelNow })

@@ -70,7 +70,8 @@ export const wireMissionAgentStreamHandlers = (deps: MissionAgentEventWiringDeps
 
     // Claude readiness boundary: queue entries from `expert:input` during
     // the starting window or `expert:start` on an attached-no-cliSessionId
-    // expert are flushed here. Codex flushes from ExpertLifecycle instead.
+    // expert are flushed here. Codex is one-shot and folds startup-window
+    // messages into the initial prompt in MissionAgentLifecycle.
     if (provider === 'claude') {
       flushPendingTasks({ store, acpClient, sessionRegistry, sessionId, key: currentKey, agentId, chatId })
     }

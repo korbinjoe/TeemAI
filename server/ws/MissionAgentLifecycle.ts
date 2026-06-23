@@ -27,7 +27,6 @@ import { createMissionAgentAttacher, type MissionAgentAttacherDeps } from './Mis
 import { createMissionAgentExitHandler, type ExitHandlerDeps } from './MissionAgentExitHandler'
 import { createMissionAgentDirectInput } from './MissionAgentDirectInput'
 import { wireMissionAgentStreamHandlers } from './MissionAgentEventWiring'
-import { flushPendingTasks } from './MissionAgentPendingTaskFlush'
 import { expandSlashCommand } from '../runtime/SlashCommandResolver'
 import type { WhiteboardManager } from '../whiteboard/WhiteboardManager'
 import { ContextBriefing } from '../whiteboard/ContextBriefing'
@@ -39,6 +38,7 @@ import type { VersionGate } from '../services/update/VersionGate'
 import { ChatTitleService } from '../services/chat/ChatTitleService'
 import { ACPClient } from '../acp/ACPClient'
 import { createACPAdapter } from '../acp/ACPAdapterFactory'
+import { codexResumeSessionId, isCodexOneShotPromptSpent } from './MissionAgentCodexSession'
 
 const log = createLogger('Expert')
 
@@ -80,6 +80,19 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
 
   const exitDeps: ExitHandlerDeps = { sessionRegistry, executionLogStore, store, chatStore, agentStore, sendTo, onExited: onAgentExited }
   const { handleExit } = createMissionAgentExitHandler(exitDeps)
+
+  const buildCodexPrompt = (
+    primaryTask: string | undefined,
+    queuedTasks: Array<{ task: string }>,
+  ): string | undefined => {
+    const parts: string[] = []
+    if (primaryTask?.trim()) parts.push(primaryTask.trim())
+    queuedTasks.forEach((queued, index) => {
+      if (!queued.task.trim()) return
+      parts.push(`Queued user message ${index + 1} received while the agent was starting:\n${queued.task.trim()}`)
+    })
+    return parts.length > 0 ? parts.join('\n\n---\n\n') : undefined
+  }
 
   const handleStart = async (
     ws: WebSocket,
@@ -146,6 +159,23 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
       const existing = store.get(key)
       if (existing) {
         if (existing.acpClient.isAlive()) {
+          if (task?.trim() && isCodexOneShotPromptSpent(existing)) {
+            const persistedSession = chatStore.get(chatId)?.expertSessions?.[agentId]
+            const persistedSessionId = typeof persistedSession === 'string'
+              ? persistedSession
+              : persistedSession?.cliSessionId
+            const resumeSessionId = codexResumeSessionId(existing) || persistedSessionId
+            log.info('Codex one-shot turn already completed, restarting with resume', { agentId, chatId, resumeSessionId })
+            existing.acpClient.destroy()
+            sessionRegistry.remove(existing.sessionId)
+            store.cleanup(key)
+            return handleStart(ws, {
+              ...payload,
+              cwd: payload.cwd || existing.cwd,
+              resumeSessionId: resumeSessionId || payload.resumeSessionId,
+            }, connectionId)
+          }
+
           log.info('Agent already running, sending task via prompt', { agentId, sessionId: existing.sessionId })
           sendFrame(ws, {
             type: 'agent:already-running',
@@ -388,14 +418,26 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
         streamManager.emit('cli-session-id', payload.resumeSessionId)
       }
 
-      if (task && wrappedTask) {
-        const briefingInjected = wrappedTask !== task
+      const codexQueuedTasks = provider === 'codex'
+        ? store.drainPendingTasks(key)
+        : []
+      const promptText = provider === 'codex'
+        ? buildCodexPrompt(wrappedTask, codexQueuedTasks)
+        : wrappedTask
+
+      if (promptText) {
+        const briefingInjected = !!task && promptText !== task
         const initialImages = payload.images?.map(i => ({ data: i.data, mimeType: i.mediaType }))
-        if (provider === 'codex' && initialImages?.length) {
-          log.warn('Codex provider does not support image attachments on initial task; dropping images', { agentId, imageCount: initialImages.length })
+        const queuedImageCount = codexQueuedTasks.reduce((count, queued) => count + (queued.images?.length ?? 0), 0)
+        const promptImages = provider === 'codex' ? undefined : initialImages
+        if (provider === 'codex' && ((initialImages?.length ?? 0) > 0 || queuedImageCount > 0)) {
+          log.warn('Codex provider does not support image attachments on initial task; dropping images', {
+            agentId,
+            imageCount: (initialImages?.length ?? 0) + queuedImageCount,
+          })
         }
-        log.info('Sending task via ACP prompt', { agentId, task: task.substring(0, 50), briefingInjected, imageCount: initialImages?.length ?? 0, expanded: wrappedTask !== task, provider })
-        acpClient.prompt(sessionId, wrappedTask, initialImages).catch(err => {
+        log.info('Sending task via ACP prompt', { agentId, task: promptText.substring(0, 50), briefingInjected, imageCount: promptImages?.length ?? 0, expanded: !!task && promptText !== task, provider })
+        acpClient.prompt(sessionId, promptText, promptImages).catch(err => {
           const errorMsg = err instanceof Error ? err.message : String(err)
           log.warn('ACP initial prompt failed', { agentId, error: errorMsg })
           sendTo(connectionId, {
@@ -405,13 +447,10 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
         })
       }
 
-      // Codex readiness boundary: drain any messages enqueued during the
-      // starting window. Claude flushes from ExpertEventWiring's
-      // `cli-session-id` handler instead, since Claude prompts must wait
-      // until the CLI session ID is known.
-      if (provider === 'codex') {
-        flushPendingTasks({ store, acpClient, sessionRegistry, sessionId, key, agentId, chatId })
-      }
+      // Claude flushes from ExpertEventWiring's `cli-session-id` handler.
+      // Codex `exec` is one-shot, so startup-window messages are folded into
+      // the initial stdin prompt above instead of being sent as extra prompts
+      // to a process that has already consumed stdin.
 
       log.info('Expert started', { agentName: agent.name, agentId, sessionId, connectionId })
       trackEvent('agent', 'agent.started', { agentId, agentName: agent.name, chatId, connectionId })

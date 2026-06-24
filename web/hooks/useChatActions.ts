@@ -19,6 +19,7 @@ interface UseChatActionsParams {
   targetAgentId: string | null
   expertActivities: Record<string, AgentActivity>
   currentMergedActivity: AgentActivity | null
+  chatStatus?: string | null
   /** When set (Quad tile / ?agent=X route), busy-state and interrupt scope
    *  collapse to this single agent so a sibling's run does not freeze this view's input
    *  or cancel that sibling on interrupt. */
@@ -35,10 +36,24 @@ interface UseChatActionsParams {
   openDirPicker: () => void
 }
 
+export const shouldQueueForTargetActivity = (args: {
+  chatStatus?: string | null
+  targetAgentId: string | null
+  expertActivities: Record<string, AgentActivity>
+  currentMergedActivity: AgentActivity | null
+}): boolean => {
+  if (args.chatStatus != null && args.chatStatus !== 'running') return false
+  if (!args.targetAgentId) {
+    return !!args.currentMergedActivity && WORKING_PHASES.has(args.currentMergedActivity.phase)
+  }
+  const activity = args.expertActivities[args.targetAgentId]
+  return !!activity && WORKING_PHASES.has(activity.phase)
+}
+
 export const useChatActions = ({
   chatId, wsClient, currentSessionId, currentWorkingDirectory, wsRepositories,
   availableAgents, targetAgentId, expertActivities, currentMergedActivity,
-  lockedAgentId,
+  chatStatus, lockedAgentId,
   messages, addAgentMessage, uid, handleScrollToBottom,
   setExpertActivities, setTargetAgentId, setLoading, chatTitle, setChatTitle,
   openDirPicker,
@@ -56,6 +71,8 @@ export const useChatActions = ({
   expertActivitiesRef.current = expertActivities
   const currentMergedActivityRef = useRef(currentMergedActivity)
   currentMergedActivityRef.current = currentMergedActivity
+  const chatStatusRef = useRef(chatStatus)
+  chatStatusRef.current = chatStatus
 
   const dispatchMessage = useCallback((payload: {
     text: string
@@ -172,12 +189,20 @@ export const useChatActions = ({
     return popped
   }, [])
 
-  const isAnyWorking = !!currentMergedActivity && WORKING_PHASES.has(currentMergedActivity.phase)
+  const isAnyWorking = shouldQueueForTargetActivity({
+    chatStatus,
+    targetAgentId: null,
+    expertActivities,
+    currentMergedActivity,
+  })
 
   const isTargetAgentWorking = (agentId: string | null): boolean => {
-    if (!agentId) return isAnyWorking
-    const activity = expertActivities[agentId]
-    return !!activity && WORKING_PHASES.has(activity.phase)
+    return shouldQueueForTargetActivity({
+      chatStatus,
+      targetAgentId: agentId,
+      expertActivities,
+      currentMergedActivity,
+    })
   }
 
   const handleSend = (rawText: string, mentions: MentionInfo[] = [], images: PendingImage[] = []) => {
@@ -253,6 +278,10 @@ export const useChatActions = ({
     const activities = expertActivitiesRef.current
     const headActivity = headAgentId ? activities[headAgentId] : currentMergedActivityRef.current
     const phase = headActivity?.phase
+    if (chatStatusRef.current != null && chatStatusRef.current !== 'running') {
+      console.debug('[QueueFlush] canFlush=true chatStatus=%s overrides stale phase=%s', chatStatusRef.current, phase)
+      return true
+    }
     if (phase && WORKING_PHASES.has(phase)) {
       console.debug('[QueueFlush] blocked: headAgent=%s phase=%s (WORKING)', headAgentId, phase)
       return false
@@ -283,7 +312,7 @@ export const useChatActions = ({
       queuedMessages.length, can, currentMergedActivity?.phase,
       Object.fromEntries(Object.entries(expertActivities).map(([k, v]) => [k, v.phase])))
     if (can) flushNext()
-  }, [expertActivities, currentMergedActivity?.phase, queuedMessages.length, flushNext, canFlushHead])
+  }, [expertActivities, currentMergedActivity?.phase, chatStatus, queuedMessages.length, flushNext, canFlushHead])
 
   // Polling fallback: if the event-driven flush above misses a state transition
   // (e.g., due to batched updates or a reconnect gap), this interval catches it.

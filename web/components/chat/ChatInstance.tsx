@@ -500,6 +500,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     chatId, wsClient, currentSessionId, currentWorkingDirectory, wsRepositories,
     availableAgents, targetAgentId, expertActivities,
     currentMergedActivity: activeMergedActivity,
+    chatStatus,
     lockedAgentId: singleAgentMode ? lockedAgentKey : null,
     messages: mergedMessages, addAgentMessage, uid, handleScrollToBottom,
     setExpertActivities, setTargetAgentId, setLoading, chatTitle, setChatTitle,

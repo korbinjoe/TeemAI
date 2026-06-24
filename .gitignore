@@ -48,10 +48,6 @@ npm-debug.log*
 .teemai/
 
 .skill-archive/
-.cursor/
-.qoder/
-.claude/
-.codex/
 
 # Playwright CLI recordings (contain absolute paths and local task content)
 .playwright-cli/

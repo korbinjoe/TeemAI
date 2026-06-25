@@ -207,6 +207,16 @@ export const useTerminalWsEvents = ({
       if (!activeKeyRef.current || activeKeyRef.current === '') {
         setActiveKey(payload.agentId)
       }
+
+      const current = terminalsRef.current?.get(payload.agentId)
+      const inst = (!current || current.isDisposed)
+        ? getOrCreateInstance(payload.agentId)
+        : current
+      if (!inst.isOpened && !inst.isOpening && !inst.isDisposed) {
+        requestAnimationFrame(() => {
+          tryOpen(payload.agentId).catch(() => {})
+        })
+      }
     }
 
     const handleExpertExit = (payload: { agentId: string; chatId?: string; exitCode?: number }) => {

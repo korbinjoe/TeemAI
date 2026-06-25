@@ -124,4 +124,20 @@ describe('TerminalPanel prewarm visibility', () => {
 
     expect(terminalMock.tryOpen).toHaveBeenCalledWith('lead')
   })
+
+  it('opens a terminal instance as soon as the view PTY attaches', () => {
+    render(
+      <TerminalPanel chatId="chat-1" connected inTerminalView />,
+    )
+
+    act(() => {
+      emitWs('agent:view-attached', {
+        chatId: 'chat-1',
+        agentId: 'lead',
+        sessionId: 'cli-1',
+      })
+    })
+
+    expect(terminalMock.tryOpen).toHaveBeenCalledWith('lead')
+  })
 })

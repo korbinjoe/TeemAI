@@ -16,11 +16,15 @@ import * as pty from 'node-pty'
 import type { WebSocket } from 'ws'
 import { existsSync } from 'fs'
 import type { SessionRegistry } from './SessionRegistry'
+import { SessionFileWatcher } from './SessionFileWatcher'
+import type { ParsedMessage } from './ConversationParser'
+import { resolveSessionTranscript } from './SessionTranscript'
 import { sendFrame } from '../ws/wsFrame'
 import type { ChatStore } from '../stores/ChatStore'
 import { resolveCliCommandAsync, resolveInterpreter } from '../lib/resolveCliCommand'
 import { resolveCodexProviderEnv } from '../lib/codexConfigEnv'
 import { isQoderVendor, type CliProvider } from '../config/types'
+import { acpUpdateToWSMessage } from '../acp/ACPToFrontendBridge'
 import { createLogger } from '../lib/logger'
 
 const log = createLogger('TerminalViewManager')
@@ -36,6 +40,11 @@ interface ViewPty {
   rows: number
   firstChunkSent: boolean
   replayData: string
+  transcriptWatcher?: SessionFileWatcher
+  transcriptPath?: string
+  transcriptFallbackData?: string
+  transcriptFallbackSent: boolean
+  transcriptFallbackTimer?: NodeJS.Timeout
 }
 
 const keyOf = (chatId: string, agentId: string): string =>
@@ -46,6 +55,10 @@ const keyOf = (chatId: string, agentId: string): string =>
 // reconnect) without thrashing `claude --resume` spawns.
 const DETACH_GRACE_MS = 10_000
 const MAX_REPLAY_CHARS = 1024 * 1024
+const TRANSCRIPT_FALLBACK_DELAY_MS = 600
+const TRANSCRIPT_FALLBACK_MAX_MESSAGES = 80
+const TRANSCRIPT_FALLBACK_MAX_MESSAGE_CHARS = 1600
+const TRANSCRIPT_FALLBACK_MAX_CHARS = 120_000
 
 export class TerminalViewManager {
   private views = new Map<string, ViewPty>()
@@ -101,7 +114,17 @@ export class TerminalViewManager {
           data: view.replayData,
           ptySize: { cols: view.cols, rows: view.rows },
         })
+      } else if (view.transcriptFallbackData) {
+        this.send(ws, 'agent:data', {
+          agentId,
+          chatId,
+          sessionId: view.cliSessionId,
+          snapshot: true,
+          data: view.transcriptFallbackData,
+          ptySize: { cols: view.cols, rows: view.rows },
+        })
       }
+      this.sendTranscriptFullTo(ws, view)
       return
     }
 
@@ -202,9 +225,11 @@ export class TerminalViewManager {
       rows,
       firstChunkSent: false,
       replayData: '',
+      transcriptFallbackSent: false,
     }
     this.views.set(key, view)
     log.info('View-PTY spawned', { key, command, cliSessionId, cwd, pid: ptyProcess.pid })
+    this.startTranscriptSync(view, provider)
 
     // Tell the web client the view-PTY is ready and which agent / cliSessionId
     // it is bound to. Web uses this to pre-populate the ExpertInfo entry (so
@@ -213,6 +238,7 @@ export class TerminalViewManager {
       this.appendReplay(view, data)
       const hasPrintableData = this.hasPrintableData(data)
       const shouldSnapshot = !view.firstChunkSent && hasPrintableData
+      if (hasPrintableData) this.cancelTranscriptFallback(view)
       this.sendToView(view, 'agent:data', {
         agentId,
         chatId,
@@ -228,6 +254,14 @@ export class TerminalViewManager {
       log.info('View-PTY exited', { key, exitCode })
       this.views.delete(key)
       this.sendToView(view, 'agent:exit', { agentId, chatId, exitCode: exitCode ?? 0 })
+      const watcher = view.transcriptWatcher
+      this.cancelTranscriptFallback(view)
+      if (watcher) {
+        setTimeout(() => {
+          try { watcher.stop() } catch { /* best effort */ }
+          if (view.transcriptWatcher === watcher) view.transcriptWatcher = undefined
+        }, 1500)
+      }
     })
 
     this.send(ws, 'agent:view-attached', { agentId, chatId, sessionId: cliSessionId, cwd })
@@ -249,6 +283,8 @@ export class TerminalViewManager {
       const current = this.views.get(key)
       if (!current) return
       log.info('View-PTY detach (grace expired)', { key })
+      this.stopTranscriptSync(current)
+      this.cancelTranscriptFallback(current)
       try { current.pty.kill() } catch (err) {
         log.warn('view.pty.kill failed', { key, error: err instanceof Error ? err.message : String(err) })
       }
@@ -304,6 +340,8 @@ export class TerminalViewManager {
       this.cancelPendingDetach(key)
       const view = this.views.get(key)
       if (!view) continue
+      this.stopTranscriptSync(view)
+      this.cancelTranscriptFallback(view)
       try { view.pty.kill() } catch { /* best effort */ }
       this.views.delete(key)
       log.info('View-PTY cleaned up on WS disconnect', { key })
@@ -321,6 +359,182 @@ export class TerminalViewManager {
     try { sendFrame(ws, { type, payload }) } catch (err) {
       log.warn('ws.send failed', { type, error: err instanceof Error ? err.message : String(err) })
     }
+  }
+
+  private startTranscriptSync(view: ViewPty, provider: CliProvider): void {
+    const transcript = resolveSessionTranscript(view.cwd, view.cliSessionId, provider)
+    if (!transcript) {
+      log.warn('Terminal transcript sync unavailable; JSONL not found', {
+        agentId: view.agentId,
+        chatId: view.chatId,
+        cliSessionId: view.cliSessionId,
+        provider,
+        cwd: view.cwd,
+      })
+      return
+    }
+
+    const watcher = new SessionFileWatcher(transcript.filePath, transcript.parser)
+    view.transcriptWatcher = watcher
+    view.transcriptPath = transcript.filePath
+
+    watcher.on('message:full', (event: { messages: ParsedMessage[] }) => {
+      this.sendTranscriptBatch(view, 'full', event.messages, null)
+      this.scheduleTranscriptFallback(view, event.messages)
+    })
+    watcher.on('message:delta', (event: { newMessages: ParsedMessage[]; replacedStatsId?: string | null }) => {
+      this.sendTranscriptBatch(view, 'delta', event.newMessages, event.replacedStatsId ?? null)
+    })
+    watcher.on('file-timeout', () => {
+      log.warn('Terminal transcript watcher timed out', {
+        agentId: view.agentId,
+        chatId: view.chatId,
+        filePath: transcript.filePath,
+      })
+    })
+
+    watcher.start().catch((err) => {
+      log.warn('Terminal transcript watcher failed to start', {
+        agentId: view.agentId,
+        chatId: view.chatId,
+        filePath: transcript.filePath,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    })
+
+    log.info('Terminal transcript sync started', {
+      agentId: view.agentId,
+      chatId: view.chatId,
+      cliSessionId: view.cliSessionId,
+      filePath: transcript.filePath,
+    })
+  }
+
+  private stopTranscriptSync(view: ViewPty): void {
+    if (!view.transcriptWatcher) return
+    try { view.transcriptWatcher.stop() } catch (err) {
+      log.warn('Terminal transcript watcher stop failed', {
+        agentId: view.agentId,
+        chatId: view.chatId,
+        error: err instanceof Error ? err.message : String(err),
+      })
+    }
+    view.transcriptWatcher = undefined
+  }
+
+  private scheduleTranscriptFallback(view: ViewPty, messages: ParsedMessage[]): void {
+    if (view.transcriptFallbackSent || messages.length === 0) return
+    this.cancelTranscriptFallback(view)
+    view.transcriptFallbackTimer = setTimeout(() => {
+      view.transcriptFallbackTimer = undefined
+      if (view.firstChunkSent || this.hasPrintableData(view.replayData)) return
+      const data = this.formatTranscriptFallback(messages)
+      if (!data) return
+      view.transcriptFallbackData = data
+      view.transcriptFallbackSent = true
+      this.sendToView(view, 'agent:data', {
+        agentId: view.agentId,
+        chatId: view.chatId,
+        sessionId: view.cliSessionId,
+        snapshot: true,
+        data,
+        ptySize: { cols: view.cols, rows: view.rows },
+      })
+    }, TRANSCRIPT_FALLBACK_DELAY_MS)
+  }
+
+  private cancelTranscriptFallback(view: ViewPty): void {
+    if (!view.transcriptFallbackTimer) return
+    clearTimeout(view.transcriptFallbackTimer)
+    view.transcriptFallbackTimer = undefined
+  }
+
+  private sendTranscriptFullTo(ws: WebSocket, view: ViewPty): void {
+    const messages = view.transcriptWatcher?.getFullMessages() ?? []
+    if (messages.length === 0) return
+    const wsMsg = this.buildTranscriptWsMessage(view, 'full', messages, null)
+    if (wsMsg) this.send(ws, wsMsg.type, wsMsg.payload)
+  }
+
+  private sendTranscriptBatch(
+    view: ViewPty,
+    type: 'full' | 'delta',
+    messages: ParsedMessage[],
+    replacedStatsId: string | null,
+  ): void {
+    if (messages.length === 0) return
+    const wsMsg = this.buildTranscriptWsMessage(view, type, messages, replacedStatsId)
+    if (!wsMsg) return
+    this.sendToView(view, wsMsg.type, wsMsg.payload)
+  }
+
+  private buildTranscriptWsMessage(
+    view: ViewPty,
+    type: 'full' | 'delta',
+    messages: ParsedMessage[],
+    replacedStatsId: string | null,
+  ): { type: string; payload: Record<string, unknown> } | null {
+    const update = {
+      sessionUpdate: '_teemai/messages_batch',
+      messages,
+      replacedStatsId,
+      batchType: type,
+    } as unknown as Parameters<typeof acpUpdateToWSMessage>[0]
+    return acpUpdateToWSMessage(update, {
+      agentId: view.agentId,
+      sessionId: view.cliSessionId,
+      chatId: view.chatId,
+    })
+  }
+
+  private formatTranscriptFallback(messages: ParsedMessage[]): string {
+    const recent = messages.slice(-TRANSCRIPT_FALLBACK_MAX_MESSAGES)
+    const lines: string[] = [
+      '\x1b[36m[Transcript loaded from session JSONL]\x1b[0m',
+      '\x1b[2mNative CLI output has not printed yet; input still goes to the live terminal session.\x1b[0m',
+      '',
+    ]
+
+    for (const msg of recent) {
+      const label = msg.role === 'user' ? 'user' : 'agent'
+      if (msg.type === 'stats') {
+        const stats = msg.stats
+        const tokens = stats
+          ? [
+              stats.inputTokens != null ? `in=${stats.inputTokens}` : null,
+              stats.outputTokens != null ? `out=${stats.outputTokens}` : null,
+            ].filter(Boolean).join(' ')
+          : ''
+        lines.push(`\x1b[2m[stats${tokens ? ` ${tokens}` : ''}]\x1b[0m`, '')
+        continue
+      }
+
+      let content = ''
+      if (msg.type === 'toolUse' && msg.toolUse) {
+        content = `$ ${msg.toolUse.toolName} ${msg.toolUse.input || ''}`
+      } else if (msg.type === 'toolResult' && msg.toolResult) {
+        content = msg.toolResult.content || ''
+      } else if (msg.type === 'thinking') {
+        content = msg.thinkingSummary || ''
+      } else {
+        content = msg.content || ''
+      }
+
+      content = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim()
+      if (!content) continue
+      if (content.length > TRANSCRIPT_FALLBACK_MAX_MESSAGE_CHARS) {
+        content = `${content.slice(0, TRANSCRIPT_FALLBACK_MAX_MESSAGE_CHARS)}...`
+      }
+      const color = label === 'user' ? '\x1b[33m' : '\x1b[32m'
+      lines.push(`${color}${label}>\x1b[0m ${content.replace(/\n/g, '\r\n')}`, '')
+    }
+
+    let out = lines.join('\r\n')
+    if (out.length > TRANSCRIPT_FALLBACK_MAX_CHARS) {
+      out = out.slice(out.length - TRANSCRIPT_FALLBACK_MAX_CHARS)
+      out = `\x1b[36m[Transcript loaded from session JSONL]\x1b[0m\r\n\x1b[2mEarlier transcript omitted for terminal buffer size.\x1b[0m\r\n\r\n${out}`
+    }
+    return out
   }
 
   private appendReplay(view: ViewPty, data: string): void {

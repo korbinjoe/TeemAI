@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const ptyMock = vi.hoisted(() => ({
   ptys: [] as any[],
@@ -8,6 +8,49 @@ const ptyMock = vi.hoisted(() => ({
 const codexEnvMock = vi.hoisted(() => ({
   resolveCodexProviderEnv: vi.fn(async () => ({ IDEALAB_API_TOKEN: 'from-config' })),
 }))
+
+const transcriptMock = vi.hoisted(() => {
+  const watchers: any[] = []
+  const resolveSessionTranscript = vi.fn((): any => null)
+  class FakeSessionFileWatcher {
+    handlers = new Map<string, Set<(payload: any) => void>>()
+    messages: any[] = []
+    start = vi.fn(async () => {})
+    stop = vi.fn()
+
+    constructor(
+      public filePath: string,
+      public parser: unknown,
+    ) {
+      watchers.push(this)
+    }
+
+    on(event: string, handler: (payload: any) => void) {
+      const set = this.handlers.get(event) ?? new Set()
+      set.add(handler)
+      this.handlers.set(event, set)
+      return this
+    }
+
+    emitEvent(event: string, payload: any) {
+      for (const handler of this.handlers.get(event) ?? []) {
+        handler(payload)
+      }
+    }
+
+    getFullMessages() {
+      return this.messages
+    }
+  }
+
+  return {
+    watchers,
+    resolveSessionTranscript,
+    SessionFileWatcher: vi.fn(function (filePath: string, parser: unknown) {
+      return new FakeSessionFileWatcher(filePath, parser)
+    }),
+  }
+})
 
 vi.mock('node-pty', () => {
   ptyMock.spawn.mockImplementation((_command: string, _args: string[], _opts: Record<string, unknown>) => {
@@ -37,6 +80,14 @@ vi.mock('../lib/codexConfigEnv', () => ({
 vi.mock('../lib/resolveCliCommand', () => ({
   resolveCliCommandAsync: vi.fn(async (command: string) => command),
   resolveInterpreter: vi.fn((command: string) => ({ command, prependArgs: [] })),
+}))
+
+vi.mock('../terminal/SessionTranscript', () => ({
+  resolveSessionTranscript: transcriptMock.resolveSessionTranscript,
+}))
+
+vi.mock('../terminal/SessionFileWatcher', () => ({
+  SessionFileWatcher: transcriptMock.SessionFileWatcher,
 }))
 
 import { TerminalViewManager } from '../terminal/TerminalViewManager'
@@ -69,9 +120,18 @@ const makeManager = () => new TerminalViewManager(
 
 describe('TerminalViewManager replay snapshots', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     ptyMock.ptys.length = 0
     ptyMock.spawn.mockClear()
     codexEnvMock.resolveCodexProviderEnv.mockClear()
+    transcriptMock.watchers.length = 0
+    transcriptMock.resolveSessionTranscript.mockReset()
+    transcriptMock.resolveSessionTranscript.mockReturnValue(null)
+    transcriptMock.SessionFileWatcher.mockClear()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('waits for printable data before the first snapshot and preserves prior control sequences', async () => {
@@ -173,5 +233,85 @@ describe('TerminalViewManager replay snapshots', () => {
         }),
       }),
     )
+  })
+
+  it('emits structured transcript batches from the watched session JSONL', async () => {
+    transcriptMock.resolveSessionTranscript.mockReturnValue({
+      filePath: '/tmp/cli-1.jsonl',
+      parser: { kind: 'test-parser' },
+    })
+    const manager = makeManager()
+    const { ws, sent } = makeWs()
+
+    await manager.handleAttach(ws, { chatId: 'chat-1', agentId: 'lead', cols: 80, rows: 24 }, 'conn-1')
+
+    expect(transcriptMock.SessionFileWatcher).toHaveBeenCalledWith('/tmp/cli-1.jsonl', { kind: 'test-parser' })
+    const watcher = transcriptMock.watchers[0]
+    const fullMessage = {
+      id: 'msg-1',
+      role: 'user',
+      content: 'hello',
+      timestamp: 1,
+      type: 'text',
+    }
+    const deltaMessage = {
+      id: 'msg-2',
+      role: 'agent',
+      content: 'world',
+      timestamp: 2,
+      type: 'text',
+    }
+
+    watcher.emitEvent('message:full', { messages: [fullMessage] })
+    watcher.emitEvent('message:delta', { newMessages: [deltaMessage], replacedStatsId: 'stats-0' })
+
+    const structured = sent.filter(frame => frame.type === 'agent:structured-message')
+    expect(structured).toHaveLength(2)
+    expect(structured[0].payload).toMatchObject({
+      agentId: 'lead',
+      chatId: 'chat-1',
+      sessionId: 'cli-1',
+      type: 'full',
+      messages: [fullMessage],
+      replacedStatsId: null,
+    })
+    expect(structured[1].payload).toMatchObject({
+      agentId: 'lead',
+      chatId: 'chat-1',
+      sessionId: 'cli-1',
+      type: 'delta',
+      messages: [deltaMessage],
+      replacedStatsId: 'stats-0',
+    })
+  })
+
+  it('renders a JSONL transcript snapshot when the PTY has no printable output', async () => {
+    transcriptMock.resolveSessionTranscript.mockReturnValue({
+      filePath: '/tmp/cli-1.jsonl',
+      parser: { kind: 'test-parser' },
+    })
+    const manager = makeManager()
+    const { ws, sent } = makeWs()
+
+    await manager.handleAttach(ws, { chatId: 'chat-1', agentId: 'lead', cols: 80, rows: 24 }, 'conn-1')
+    vi.useFakeTimers()
+
+    const watcher = transcriptMock.watchers[0]
+    watcher.emitEvent('message:full', {
+      messages: [
+        { id: 'msg-1', role: 'user', content: 'hello from transcript', timestamp: 1, type: 'text' },
+        { id: 'msg-2', role: 'agent', content: 'reply from jsonl', timestamp: 2, type: 'text' },
+      ],
+    })
+
+    await vi.advanceTimersByTimeAsync(600)
+
+    const fallbackFrame = sent.find(frame =>
+      frame.type === 'agent:data' &&
+      frame.payload.snapshot === true &&
+      String(frame.payload.data).includes('Transcript loaded from session JSONL'),
+    )
+    expect(fallbackFrame?.payload.data).toContain('hello from transcript')
+    expect(fallbackFrame?.payload.data).toContain('reply from jsonl')
   })
 })

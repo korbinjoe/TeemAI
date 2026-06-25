@@ -47,6 +47,8 @@ const MAIN_CONTENT_STYLE: React.CSSProperties = { flex: 1, display: 'flex', minH
 const DIVIDER_BAR_STYLE: React.CSSProperties = { width: 4, flexShrink: 0, position: 'relative', zIndex: 20 }
 const GIT_STATUS_ACTIVATION_DELAY_MS = 450
 const TERMINAL_PREWARM_DELAY_MS = 1800
+const TERMINAL_PREWARM_ENABLED = import.meta.env.VITE_TERMINAL_PREWARM === 'true'
+const TERMINAL_VIEW_KEEP_ALIVE_MS = 8000
 const RightPanel = lazy(() => import('../ide/RightPanel'))
 
 /**
@@ -210,6 +212,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   }, [singleAgentMode, lockedAgentKey, filterAgentId, agentMessages, mergedMessages])
 
   const [terminalPrewarmEnabled, setTerminalPrewarmEnabled] = useState(false)
+  const [terminalKeepAlive, setTerminalKeepAlive] = useState(false)
   const [gitStatusLive, setGitStatusLive] = useState(false)
   useEffect(() => {
     if (!isActive) {
@@ -221,6 +224,10 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   }, [isActive, chatId])
 
   useEffect(() => {
+    if (!TERMINAL_PREWARM_ENABLED) {
+      setTerminalPrewarmEnabled(false)
+      return
+    }
     if (!isActive || viewMode !== 'message' || !connected || !cwdReady || resumableAgentIds.length === 0) {
       if (!isActive || resumableAgentIds.length === 0) setTerminalPrewarmEnabled(false)
       return
@@ -229,6 +236,17 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     const timer = setTimeout(() => setTerminalPrewarmEnabled(true), TERMINAL_PREWARM_DELAY_MS)
     return () => clearTimeout(timer)
   }, [isActive, viewMode, connected, cwdReady, resumableAgentIds.length])
+
+  useEffect(() => {
+    if (viewMode === 'terminal') {
+      setTerminalKeepAlive(true)
+      return
+    }
+    if (!terminalKeepAlive) return
+
+    const timer = setTimeout(() => setTerminalKeepAlive(false), TERMINAL_VIEW_KEEP_ALIVE_MS)
+    return () => clearTimeout(timer)
+  }, [viewMode, terminalKeepAlive])
 
   const dirPickerHistory = useMemo(() => currentWorkingDirectory ? [currentWorkingDirectory] : [], [currentWorkingDirectory])
   const dirPicker = useDirPicker(dirPickerHistory)
@@ -576,8 +594,9 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   )
 
   const canSend = connected && !!currentSessionId && cwdReady
-  const shouldRenderTerminalPanel = viewMode === 'terminal' || terminalPrewarmEnabled
   const terminalPanelVisible = viewMode === 'terminal'
+  const terminalPanelKeepAlive = terminalKeepAlive && !terminalPanelVisible
+  const shouldRenderTerminalPanel = terminalPanelVisible || terminalPrewarmEnabled || terminalPanelKeepAlive
 
   // When external IDE is active, chat owns the full pane width.
   const rightPanelExternal = hideRightPanel
@@ -625,8 +644,8 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
                 agentActive={terminalPanelVisible && isActive && !!activeMergedActivity && !['completed', 'waiting_input', 'error', 'initializing'].includes(activeMergedActivity.phase)}
                 connected={connected}
                 lockedAgentId={singleAgentMode ? lockedAgentKey : null}
-                inTerminalView={terminalPanelVisible || terminalPrewarmEnabled}
-                prewarmOnly={!terminalPanelVisible}
+                inTerminalView={terminalPanelVisible || terminalPrewarmEnabled || terminalPanelKeepAlive}
+                prewarmOnly={terminalPrewarmEnabled && !terminalPanelVisible && !terminalPanelKeepAlive}
               />
             </div>
           )}

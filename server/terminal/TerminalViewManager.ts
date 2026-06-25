@@ -19,6 +19,7 @@ import type { SessionRegistry } from './SessionRegistry'
 import { sendFrame } from '../ws/wsFrame'
 import type { ChatStore } from '../stores/ChatStore'
 import { resolveCliCommandAsync, resolveInterpreter } from '../lib/resolveCliCommand'
+import { resolveCodexProviderEnv } from '../lib/codexConfigEnv'
 import { isQoderVendor, type CliProvider } from '../config/types'
 import { createLogger } from '../lib/logger'
 
@@ -158,6 +159,9 @@ export class TerminalViewManager {
       return
     }
     const { command: spawnCmd, prependArgs } = resolveInterpreter(resolved)
+    const providerEnv = provider === 'codex'
+      ? await resolveCodexProviderEnv(cwd)
+      : {}
 
     let ptyProcess: pty.IPty
     try {
@@ -168,6 +172,7 @@ export class TerminalViewManager {
         cwd,
         env: {
           ...process.env,
+          ...providerEnv,
           TERM: 'xterm-256color',
           COLORTERM: 'truecolor',
           LANG: process.env.LANG || 'en_US.UTF-8',

@@ -5,6 +5,10 @@ const ptyMock = vi.hoisted(() => ({
   spawn: vi.fn(),
 }))
 
+const codexEnvMock = vi.hoisted(() => ({
+  resolveCodexProviderEnv: vi.fn(async () => ({ IDEALAB_API_TOKEN: 'from-config' })),
+}))
+
 vi.mock('node-pty', () => {
   ptyMock.spawn.mockImplementation((_command: string, _args: string[], _opts: Record<string, unknown>) => {
     const handlers: {
@@ -25,6 +29,10 @@ vi.mock('node-pty', () => {
   })
   return { spawn: ptyMock.spawn }
 })
+
+vi.mock('../lib/codexConfigEnv', () => ({
+  resolveCodexProviderEnv: codexEnvMock.resolveCodexProviderEnv,
+}))
 
 vi.mock('../lib/resolveCliCommand', () => ({
   resolveCliCommandAsync: vi.fn(async (command: string) => command),
@@ -63,6 +71,7 @@ describe('TerminalViewManager replay snapshots', () => {
   beforeEach(() => {
     ptyMock.ptys.length = 0
     ptyMock.spawn.mockClear()
+    codexEnvMock.resolveCodexProviderEnv.mockClear()
   })
 
   it('waits for printable data before the first snapshot and preserves prior control sequences', async () => {
@@ -126,5 +135,43 @@ describe('TerminalViewManager replay snapshots', () => {
     expect(manager.has('conn-1', 'chat-1', 'lead')).toBe(false)
     expect(manager.has('conn-2', 'chat-1', 'lead')).toBe(true)
     expect(ptyMock.ptys[0].kill).not.toHaveBeenCalled()
+  })
+
+  it('injects Codex provider env into terminal resume PTY', async () => {
+    const cwd = process.cwd()
+    const manager = new TerminalViewManager(
+      { findByChat: vi.fn(() => null) } as any,
+      {
+        get: vi.fn(() => ({
+          expertSessions: {
+            'fullstack-engineer': {
+              cliSessionId: 'codex-thread-1',
+              cwd,
+              provider: 'codex',
+            },
+          },
+        })),
+      } as any,
+    )
+    const { ws } = makeWs()
+
+    await manager.handleAttach(ws, {
+      chatId: 'chat-1',
+      agentId: 'fullstack-engineer',
+      cols: 80,
+      rows: 24,
+    }, 'conn-1')
+
+    expect(codexEnvMock.resolveCodexProviderEnv).toHaveBeenCalledWith(cwd)
+    expect(ptyMock.spawn).toHaveBeenCalledWith(
+      'codex',
+      ['resume', '--include-non-interactive', 'codex-thread-1'],
+      expect.objectContaining({
+        env: expect.objectContaining({
+          IDEALAB_API_TOKEN: 'from-config',
+          TERM: 'xterm-256color',
+        }),
+      }),
+    )
   })
 })

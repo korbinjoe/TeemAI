@@ -181,6 +181,26 @@ const IGNORED_NAMES = new Set([
 ])
 
 const ALWAYS_HIDDEN = new Set(['.git', '.DS_Store', '.Spotlight-V100', '.Trashes', 'Thumbs.db'])
+const LIST_FILES_CACHE_TTL_MS = 5_000
+
+type ListFilesEntry =
+  | { name: string; path: string; type: 'directory'; ignored?: boolean }
+  | { name: string; path: string; type: 'file'; size: number; ignored?: boolean }
+
+interface ListFilesResponse {
+  path: string
+  entries: ListFilesEntry[]
+}
+
+interface ListFilesCacheEntry {
+  expiresAt: number
+  dirMtimeMs: number
+  response: ListFilesResponse
+}
+
+const listFilesCache = new Map<string, ListFilesCacheEntry>()
+
+const listFilesCacheKey = (dirPath: string, showIgnored: boolean) => `${dirPath}\0${showIgnored ? '1' : '0'}`
 
 router.get('/api/list-files', async (req, res) => {
   const dirPath = req.query.path as string
@@ -199,6 +219,13 @@ router.get('/api/list-files', async (req, res) => {
   }
 
   try {
+    const dirMtimeMs = statSync(dirPath).mtimeMs
+    const cacheKey = listFilesCacheKey(dirPath, showIgnored)
+    const cached = listFilesCache.get(cacheKey)
+    if (cached && cached.expiresAt > Date.now() && cached.dirMtimeMs === dirMtimeMs) {
+      return res.json(cached.response)
+    }
+
     const raw = readdirSync(dirPath, { withFileTypes: true })
     const candidateNames = raw
       .map(e => e.name)
@@ -231,7 +258,13 @@ router.get('/api/list-files', async (req, res) => {
     dirs.sort((a, b) => a.name.localeCompare(b.name))
     files.sort((a, b) => a.name.localeCompare(b.name))
 
-    res.json({ path: dirPath, entries: [...dirs, ...files] })
+    const response: ListFilesResponse = { path: dirPath, entries: [...dirs, ...files] }
+    listFilesCache.set(cacheKey, {
+      response,
+      dirMtimeMs,
+      expiresAt: Date.now() + LIST_FILES_CACHE_TTL_MS,
+    })
+    res.json(response)
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : 'Cannot read directory' })
   }

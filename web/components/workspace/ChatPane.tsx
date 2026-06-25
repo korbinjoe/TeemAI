@@ -84,6 +84,9 @@ const ChatPane = () => {
     const idx = cache.findIndex((c) => c.chatId === chatId)
     if (idx >= 0) {
       const [item] = cache.splice(idx, 1)
+      // `isNew` is a one-shot navigation hint; normal revisits must resume history.
+      if (!isNew) item.isNew = false
+      if (agentId !== undefined) item.agentId = agentId
       cache.unshift(item)
     } else {
       cache.unshift({ chatId, workspaceId: wsId, isNew, agentId })

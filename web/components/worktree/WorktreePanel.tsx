@@ -134,29 +134,30 @@ const WorktreePanel = ({ sessions, repositories }: WorktreePanelProps) => {
         'shrink-0 border-b border-border-subtle bg-bg-secondary',
         expanded && 'shadow-sm',
       )}>
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          tabIndex={0}
-          aria-label={expanded ? 'Collapse worktrees' : 'Expand worktrees'}
-          aria-expanded={expanded}
-          className="w-full flex items-center gap-1.5 px-3 py-1.5 bg-transparent border-none cursor-pointer text-left hover:bg-bg-hover transition-colors"
-        >
-          {expanded ? <ChevronDown size={10} className="text-text-secondary shrink-0" /> : <ChevronRight size={10} className="text-text-secondary shrink-0" />}
-          <GitBranch size={11} className="text-accent-green shrink-0" />
-          <span className="text-xs text-text-secondary font-medium">{sessions.length}</span>
-          <span className="text-xs text-text-secondary opacity-40">|</span>
-          <span className="text-xs text-text-secondary truncate">{summaryText}</span>
-          <span className="flex-1" />
+        <div className="w-full flex items-center gap-1.5 px-3 py-1.5 hover:bg-bg-hover transition-colors">
           <button
-            onClick={(e) => { e.stopPropagation(); fetchAllStatus() }}
-            tabIndex={0}
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-label={expanded ? 'Collapse worktrees' : 'Expand worktrees'}
+            aria-expanded={expanded}
+            className="min-w-0 flex flex-1 items-center gap-1.5 bg-transparent border-none cursor-pointer text-left"
+          >
+            {expanded ? <ChevronDown size={10} className="text-text-secondary shrink-0" /> : <ChevronRight size={10} className="text-text-secondary shrink-0" />}
+            <GitBranch size={11} className="text-accent-green shrink-0" />
+            <span className="text-xs text-text-secondary font-medium">{sessions.length}</span>
+            <span className="text-xs text-text-secondary opacity-40">|</span>
+            <span className="text-xs text-text-secondary truncate">{summaryText}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => fetchAllStatus()}
             aria-label={t('workspace:worktree.refresh')}
             title={t('workspace:worktree.refresh')}
-            className="bg-transparent border-none cursor-pointer text-text-secondary p-0.5 rounded hover:text-text-primary transition-colors"
+            className="shrink-0 bg-transparent border-none cursor-pointer text-text-secondary p-0.5 rounded hover:text-text-primary transition-colors"
           >
             <RefreshCw size={10} className={cn(loadingStatus && 'animate-spin')} />
           </button>
-        </button>
+        </div>
 
         {expanded && (
           <div className="px-3 pb-2 pt-0.5">

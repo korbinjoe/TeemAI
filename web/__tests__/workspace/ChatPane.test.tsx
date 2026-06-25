@@ -7,8 +7,12 @@ const workspaceState = vi.hoisted(() => ({
   activeChatId: 'mission-a',
 }))
 
+const routerState = vi.hoisted(() => ({
+  locationState: null as { isNew?: boolean; agentId?: string } | null,
+}))
+
 vi.mock('react-router-dom', () => ({
-  useLocation: () => ({ state: null }),
+  useLocation: () => ({ state: routerState.locationState }),
 }))
 
 vi.mock('../../contexts/WorkspaceContext', () => ({
@@ -24,8 +28,13 @@ vi.mock('@/config/api', () => ({
 }))
 
 vi.mock('../../components/chat/ChatInstance', () => ({
-  default: ({ chatId, isActive }: { chatId: string; isActive: boolean }) => (
-    <section data-testid={`chat-${chatId}`} data-active={isActive ? 'true' : 'false'} />
+  default: ({ chatId, isActive, isNewChat, resumeWarm }: { chatId: string; isActive: boolean; isNewChat?: boolean; resumeWarm?: boolean }) => (
+    <section
+      data-testid={`chat-${chatId}`}
+      data-active={isActive ? 'true' : 'false'}
+      data-new={isNewChat ? 'true' : 'false'}
+      data-resume-warm={resumeWarm ? 'true' : 'false'}
+    />
   ),
 }))
 
@@ -39,6 +48,7 @@ describe('ChatPane mission cache visibility', () => {
   afterEach(() => {
     workspaceState.workspaceId = 'workspace-1'
     workspaceState.activeChatId = 'mission-a'
+    routerState.locationState = null
     cleanup()
     vi.clearAllMocks()
   })
@@ -59,5 +69,24 @@ describe('ChatPane mission cache visibility', () => {
     expect(inactive.parentElement?.getAttribute('aria-hidden')).toBe('true')
     expect(active.dataset.active).toBe('true')
     expect(active.parentElement?.style.display).toBe('flex')
+  })
+
+  it('clears a cached new-mission marker when reopened through normal navigation', () => {
+    routerState.locationState = { isNew: true, agentId: 'agent-a' }
+    const { rerender, getByTestId } = render(<ChatPane />)
+
+    expect(getByTestId('chat-mission-a').dataset.new).toBe('true')
+
+    routerState.locationState = null
+    workspaceState.activeChatId = 'mission-b'
+    rerender(<ChatPane />)
+
+    workspaceState.activeChatId = 'mission-a'
+    rerender(<ChatPane />)
+
+    const reopened = getByTestId('chat-mission-a')
+    expect(reopened.dataset.active).toBe('true')
+    expect(reopened.dataset.new).toBe('false')
+    expect(reopened.dataset.resumeWarm).toBe('true')
   })
 })

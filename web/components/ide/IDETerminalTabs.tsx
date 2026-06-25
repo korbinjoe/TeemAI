@@ -83,11 +83,20 @@ const IDETerminalTabs = ({ cwd, hidden = false }: IDETerminalTabsProps) => {
     <div className="h-full flex flex-col">
       <div className="flex items-center h-7 bg-bg-secondary border-b border-border-subtle shrink-0 px-1 gap-0.5 overflow-x-auto">
         {tabs.map(tab => (
-          <button
+          <div
             key={tab.id}
+            role="tab"
+            tabIndex={0}
+            aria-selected={tab.id === activeTabId}
             onClick={() => setActiveTabId(tab.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setActiveTabId(tab.id)
+              }
+            }}
             className={cn(
-              'group flex items-center gap-1 px-2 h-6 text-[11px] rounded-sm transition-colors shrink-0',
+              'group flex items-center gap-1 px-2 h-6 text-[11px] rounded-sm transition-colors shrink-0 cursor-pointer',
               tab.id === activeTabId
                 ? 'bg-bg-primary text-text-primary'
                 : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover',
@@ -111,7 +120,7 @@ const IDETerminalTabs = ({ cwd, hidden = false }: IDETerminalTabsProps) => {
                 <X size={10} />
               </button>
             )}
-          </button>
+          </div>
         ))}
         {tabs.length < MAX_TABS && (
           <button

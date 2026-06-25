@@ -42,33 +42,44 @@ const FALLBACK_STYLE: React.CSSProperties = {
 const RightPanel = ({ chatId, gitStatus, multiGitStatus, onMultiOptimisticUpdate, agentActive = false, workingDirectory, repositories, worktreePath, changesTabRequest }: RightPanelProps) => {
   const [expertCwd, setExpertCwd] = useState<string | undefined>()
   const wsClient = getWebSocketClient()
+  const needsExpertCwd = !workingDirectory && !worktreePath && (!repositories || repositories.length === 0)
 
   useEffect(() => {
-    const checkRunModes = (payload: { chatId?: string; agents: ExpertRunModeInfo[] }) => {
-      if (chatId && payload.chatId !== chatId) return
-      const streamJsonExpert = payload.agents.find(e => e.cwd)
-      if (streamJsonExpert?.cwd) setExpertCwd(streamJsonExpert.cwd)
-    }
+    if (!needsExpertCwd) return
 
-    const handleStarted = (payload: ExpertRunModeInfo & { chatId?: string }) => {
-      if (chatId && payload.chatId !== chatId) return
-      if (payload.cwd) setExpertCwd(payload.cwd)
-    }
+    let cleanup: (() => void) | undefined
+    const timer = window.setTimeout(() => {
+      const checkRunModes = (payload: { chatId?: string; agents: ExpertRunModeInfo[] }) => {
+        if (chatId && payload.chatId !== chatId) return
+        const streamJsonExpert = payload.agents.find(e => e.cwd)
+        if (streamJsonExpert?.cwd) setExpertCwd(streamJsonExpert.cwd)
+      }
 
-    wsClient.on('agent:list', checkRunModes)
-    wsClient.on('agent:list-updated', checkRunModes)
-    wsClient.on('agent:started', handleStarted)
+      const handleStarted = (payload: ExpertRunModeInfo & { chatId?: string }) => {
+        if (chatId && payload.chatId !== chatId) return
+        if (payload.cwd) setExpertCwd(payload.cwd)
+      }
 
-    if (wsClient.isConnected()) {
-      wsClient.send('agent:list', { chatId })
-    }
+      wsClient.on('agent:list', checkRunModes)
+      wsClient.on('agent:list-updated', checkRunModes)
+      wsClient.on('agent:started', handleStarted)
+
+      if (wsClient.isConnected()) {
+        wsClient.send('agent:list', { chatId })
+      }
+
+      cleanup = () => {
+        wsClient.off('agent:list', checkRunModes)
+        wsClient.off('agent:list-updated', checkRunModes)
+        wsClient.off('agent:started', handleStarted)
+      }
+    }, 750)
 
     return () => {
-      wsClient.off('agent:list', checkRunModes)
-      wsClient.off('agent:list-updated', checkRunModes)
-      wsClient.off('agent:started', handleStarted)
+      window.clearTimeout(timer)
+      cleanup?.()
     }
-  }, [wsClient, chatId])
+  }, [wsClient, chatId, needsExpertCwd])
 
   const ideRootPath = workingDirectory || expertCwd || worktreePath
 

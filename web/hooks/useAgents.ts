@@ -4,6 +4,23 @@ import { API_BASE, authFetch } from '@/config/api'
 import { parseInstanceId } from '../../shared/utils'
 import { initDefaultHiredAgents } from '@/utils/teamStorage'
 
+let cachedAgents: AgentSummary[] | null = null
+let agentsPromise: Promise<AgentSummary[]> | null = null
+
+const fetchAgentsOnce = (): Promise<AgentSummary[]> => {
+  if (cachedAgents) return Promise.resolve(cachedAgents)
+  if (!agentsPromise) {
+    agentsPromise = authFetch(`${API_BASE}/api/agents`)
+      .then((res) => res.ok ? res.json() : Promise.reject(new Error()))
+      .then((agents: AgentSummary[]) => {
+        cachedAgents = agents
+        return agents
+      })
+      .finally(() => { agentsPromise = null })
+  }
+  return agentsPromise
+}
+
 const instanceFallbackHandler = <T,>(): ProxyHandler<Record<string, T>> => ({
   get(target, prop, receiver) {
     if (typeof prop !== 'string') return Reflect.get(target, prop, receiver)
@@ -35,8 +52,7 @@ export const useAgents = () => {
 
   useEffect(() => {
     if (availableAgents.length > 0) return
-    authFetch(`${API_BASE}/api/agents`)
-      .then((res) => res.ok ? res.json() : Promise.reject(new Error()))
+    fetchAgentsOnce()
       .then((agents: AgentSummary[]) => {
         setAvailableAgents(agents)
         initDefaultHiredAgents(agents as Array<AgentSummary & { source: string }>).then(setHiredAgentIds)

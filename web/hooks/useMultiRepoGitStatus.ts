@@ -42,6 +42,33 @@ export interface MultiRepoGitStatus {
   optimisticUpdate: (repoPath: string, updater: (prev: GitStatusData) => GitStatusData) => void
 }
 
+const INITIAL_SNAPSHOT_TTL_MS = 15_000
+
+interface SnapshotCacheEntry {
+  expiresAt: number
+  snapshot: GitStatusData
+}
+
+const initialSnapshotCache = new Map<string, SnapshotCacheEntry>()
+const initialSnapshotInflight = new Map<string, Promise<GitStatusData | null>>()
+
+const snapshotCacheKey = (path: string, mode: 'worktree' | 'repo', base?: string): string =>
+  `${mode}\0${path}\0${base ?? ''}`
+
+const readCachedSnapshot = (key: string): GitStatusData | null => {
+  const cached = initialSnapshotCache.get(key)
+  if (!cached) return null
+  if (cached.expiresAt < Date.now()) {
+    initialSnapshotCache.delete(key)
+    return null
+  }
+  return cached.snapshot
+}
+
+const writeCachedSnapshot = (key: string, snapshot: GitStatusData) => {
+  initialSnapshotCache.set(key, { snapshot, expiresAt: Date.now() + INITIAL_SNAPSHOT_TTL_MS })
+}
+
 const buildSignature = (snapshot: GitStatusData): string => {
   let h = 2166136261
   const push = (s: string) => {
@@ -105,43 +132,62 @@ const useMultiRepoGitStatus = ({
       if (!current) return prev
       const next = updater(current)
       lastSignatures.current.set(repoPath, buildSignature(next))
+      writeCachedSnapshot(snapshotCacheKey(repoPath, isWorktreeMode ? 'worktree' : 'repo', targetBase), next)
       const updated = new Map(prev)
       updated.set(repoPath, next)
       return updated
     })
-  }, [])
+  }, [isWorktreeMode, targetBase])
 
   const fetchInitialSnapshots = useCallback(async (paths: string[]) => {
     await Promise.all(paths.map(async (path) => {
+      const cacheKey = snapshotCacheKey(path, isWorktreeMode ? 'worktree' : 'repo', targetBase)
+      const cached = readCachedSnapshot(cacheKey)
+      if (cached) {
+        applySnapshot(path, cached)
+        return
+      }
       try {
-        if (isWorktreeMode && targetBase) {
-          const params = new URLSearchParams({ path, base: targetBase })
-          const [statusRes, diffRes] = await Promise.all([
-            fetch(`${API_BASE}/api/worktree/status?${params}`),
-            fetch(`${API_BASE}/api/worktree/diff?${params}`),
-          ])
-          if (!statusRes.ok || !diffRes.ok) return
-          const status = await statusRes.json()
-          const diff = await diffRes.json()
-          const files = (diff.files || []) as GitStatusData['diffEntries']
-          applySnapshot(path, {
-            worktreePath: path,
-            branch: status.branch,
-            baseBranch: status.baseBranch,
-            aheadCount: status.aheadCount,
-            changedFiles: status.changedFiles,
-            untrackedFiles: status.untrackedFiles,
-            insertions: files.reduce((s: number, e) => s + e.insertions, 0),
-            deletions: files.reduce((s: number, e) => s + e.deletions, 0),
-            diffEntries: files,
-          })
-        } else {
+        const existing = initialSnapshotInflight.get(cacheKey)
+        const promise = existing ?? (async (): Promise<GitStatusData | null> => {
+          if (isWorktreeMode && targetBase) {
+            const params = new URLSearchParams({ path, base: targetBase })
+            const [statusRes, diffRes] = await Promise.all([
+              fetch(`${API_BASE}/api/worktree/status?${params}`),
+              fetch(`${API_BASE}/api/worktree/diff?${params}`),
+            ])
+            if (!statusRes.ok || !diffRes.ok) return null
+            const status = await statusRes.json()
+            const diff = await diffRes.json()
+            const files = (diff.files || []) as GitStatusData['diffEntries']
+            return {
+              worktreePath: path,
+              branch: status.branch,
+              baseBranch: status.baseBranch,
+              aheadCount: status.aheadCount,
+              changedFiles: status.changedFiles,
+              untrackedFiles: status.untrackedFiles,
+              insertions: files.reduce((s: number, e) => s + e.insertions, 0),
+              deletions: files.reduce((s: number, e) => s + e.deletions, 0),
+              diffEntries: files,
+            }
+          }
           const params = new URLSearchParams({ path })
           const res = await fetch(`${API_BASE}/api/git/working-changes?${params}`)
-          if (!res.ok) return
-          const snapshot: GitStatusData = await res.json()
-          applySnapshot(path, snapshot)
+          if (!res.ok) return null
+          return await res.json() as GitStatusData
+        })()
+        if (!existing) {
+          initialSnapshotInflight.set(cacheKey, promise)
+          promise.then(
+            () => initialSnapshotInflight.delete(cacheKey),
+            () => initialSnapshotInflight.delete(cacheKey),
+          )
         }
+        const snapshot = await promise
+        if (!snapshot) return
+        writeCachedSnapshot(cacheKey, snapshot)
+        applySnapshot(path, snapshot)
       } catch (err) {
         console.warn('[useMultiRepoGitStatus] snapshot error for', path, err)
       }
@@ -199,7 +245,9 @@ const useMultiRepoGitStatus = ({
     const onGitChanges = (event: GitChangesEventPayload) => {
       if (event.chatId !== cid) return
       if (!currentSet.has(event.path)) return
-      applySnapshot(event.path, event.payload as GitStatusData)
+      const snapshot = event.payload as GitStatusData
+      writeCachedSnapshot(snapshotCacheKey(event.path, isWorktreeMode ? 'worktree' : 'repo', targetBase), snapshot)
+      applySnapshot(event.path, snapshot)
     }
 
     wsClient.on('git:changes', onGitChanges)

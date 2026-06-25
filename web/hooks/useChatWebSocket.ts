@@ -60,7 +60,27 @@ export const canSkipWarmReplay = (args: {
   return Object.values(args.agentMessages).some((messages) => messages.length > 0)
 }
 
-const isSnapshotReplaySafeChat = (chat: { status?: string; members?: Array<{ status?: string }> } | null): boolean => {
+type ChatStatusSnapshot = {
+  status?: string | null
+  members?: Array<{ status?: string | null }>
+}
+
+export const deriveChatStatusFromSnapshot = (chat: ChatStatusSnapshot | null): string | null => {
+  if (!chat) return null
+
+  const status = chat.status ?? null
+  const members = chat.members ?? []
+  if (members.length === 0) return status
+
+  if (members.some((m) => m.status === 'running')) return 'running'
+
+  const allMembersSettled = members.every((m) => !!m.status && m.status !== 'running')
+  if (allMembersSettled && (status === null || status === 'running')) return 'idle'
+
+  return status
+}
+
+const isSnapshotReplaySafeChat = (chat: ChatStatusSnapshot | null): boolean => {
   if (!chat) return false
   if (chat.status === 'stopped' || chat.status === 'merged') return true
   const members = chat.members ?? []
@@ -333,7 +353,8 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
           expectedReplayAgentIdsRef.current = expertSessionIds
           setResumableAgentIds(expertSessionIds)
           if (chat.title) setChatTitle(chat.title)
-          if (chat.status) setChatStatus(chat.status)
+          const derivedChatStatus = deriveChatStatusFromSnapshot(chat)
+          if (derivedChatStatus) setChatStatus(derivedChatStatus)
           setChatModel(chat.model || DEFAULT_MODEL)
           setAllWorktreeSessions(chat.worktreeSessions ?? [])
           if (chat.totalTokens || chat.totalCost != null) {

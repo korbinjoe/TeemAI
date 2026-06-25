@@ -8,7 +8,7 @@ import { homedir } from 'os'
 import { resolve } from 'path'
 import { readFile, writeFile, unlink } from 'fs/promises'
 import simpleGit from 'simple-git'
-import { WorktreeManager, detectGitRepo, type DiffEntry } from '../../git/WorktreeManager'
+import { WorktreeManager, detectGitRepo, type DiffEntry, type WorktreeStatus } from '../../git/WorktreeManager'
 import type { ConflictResolver } from '../../git/ConflictResolver'
 import { computeWorkingChanges } from '../../git/workingChanges'
 import { getGitWatchManager } from '../../git/GitWatchManager'
@@ -57,6 +57,57 @@ async function resolveRepoRoot(worktreePath: string): Promise<string | null> {
 }
 
 const repoLocks = new Map<string, Promise<void>>()
+const WORKTREE_READ_CACHE_TTL_MS = 10_000
+
+interface TimedCacheEntry<T> {
+  expiresAt: number
+  value: T
+}
+
+const worktreeStatusCache = new Map<string, TimedCacheEntry<WorktreeStatus>>()
+const worktreeDiffCache = new Map<string, TimedCacheEntry<DiffEntry[]>>()
+const pendingReadCache = new Map<string, Promise<unknown>>()
+
+const readCache = <T>(cache: Map<string, TimedCacheEntry<T>>, key: string): T | null => {
+  const cached = cache.get(key)
+  if (!cached) return null
+  if (cached.expiresAt < Date.now()) {
+    cache.delete(key)
+    return null
+  }
+  return cached.value
+}
+
+const loadWithCache = async <T>(
+  namespace: string,
+  cache: Map<string, TimedCacheEntry<T>>,
+  key: string,
+  load: () => Promise<T>,
+): Promise<T> => {
+  const cached = readCache(cache, key)
+  if (cached) return cached
+
+  const pendingKey = `${namespace}\0${key}`
+  const pending = pendingReadCache.get(pendingKey) as Promise<T> | undefined
+  if (pending) return pending
+
+  const promise = load().then((value) => {
+    cache.set(key, { value, expiresAt: Date.now() + WORKTREE_READ_CACHE_TTL_MS })
+    return value
+  })
+  pendingReadCache.set(pendingKey, promise)
+  try {
+    return await promise
+  } finally {
+    pendingReadCache.delete(pendingKey)
+  }
+}
+
+const clearWorktreeReadCache = () => {
+  worktreeStatusCache.clear()
+  worktreeDiffCache.clear()
+  pendingReadCache.clear()
+}
 
 async function withRepoLock<T>(repoRoot: string, fn: () => Promise<T>): Promise<T> {
   const key = resolve(repoRoot)
@@ -129,6 +180,7 @@ router.post('/api/worktree/create', async (req, res) => {
       const manager = new WorktreeManager(repoRoot)
       return manager.create({ sessionId, baseBranch })
     })
+    clearWorktreeReadCache()
     res.json(result)
   } catch (err) {
     log.error('Create worktree error', { error: err instanceof Error ? err.message : String(err) })
@@ -164,15 +216,18 @@ router.get('/api/worktree/status', async (req, res) => {
   if (!isPathSafe(worktreePath)) return res.status(403).json({ error: 'path not allowed' })
 
   try {
-    const repoRoot = await resolveRepoRoot(worktreePath)
-    if (!repoRoot) {
-      return res.status(400).json({ error: 'Cannot resolve repository root' })
-    }
-    const manager = new WorktreeManager(repoRoot)
-    const status = await manager.status(worktreePath)
+    const status = await loadWithCache('status', worktreeStatusCache, resolve(worktreePath), async () => {
+      const repoRoot = await resolveRepoRoot(worktreePath)
+      if (!repoRoot) {
+        throw Object.assign(new Error('Cannot resolve repository root'), { statusCode: 400 })
+      }
+      const manager = new WorktreeManager(repoRoot)
+      return manager.status(worktreePath)
+    })
     res.json(status)
   } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to get status' })
+    const statusCode = err && typeof err === 'object' && 'statusCode' in err ? Number((err as { statusCode: number }).statusCode) : 500
+    res.status(statusCode).json({ error: err instanceof Error ? err.message : 'Failed to get status' })
   }
 })
 
@@ -186,15 +241,18 @@ router.get('/api/worktree/diff', async (req, res) => {
   if (!isPathSafe(worktreePath)) return res.status(403).json({ error: 'path not allowed' })
 
   try {
-    const repoRoot = await resolveRepoRoot(worktreePath)
-    if (!repoRoot) {
-      return res.status(400).json({ error: 'Cannot resolve repository root' })
-    }
-    const manager = new WorktreeManager(repoRoot)
-    const files = await manager.diff(worktreePath, baseBranch)
+    const files = await loadWithCache('diff', worktreeDiffCache, `${resolve(worktreePath)}\0${baseBranch}`, async () => {
+      const repoRoot = await resolveRepoRoot(worktreePath)
+      if (!repoRoot) {
+        throw Object.assign(new Error('Cannot resolve repository root'), { statusCode: 400 })
+      }
+      const manager = new WorktreeManager(repoRoot)
+      return manager.diff(worktreePath, baseBranch)
+    })
     res.json({ files })
   } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to get diff' })
+    const statusCode = err && typeof err === 'object' && 'statusCode' in err ? Number((err as { statusCode: number }).statusCode) : 500
+    res.status(statusCode).json({ error: err instanceof Error ? err.message : 'Failed to get diff' })
   }
 })
 
@@ -360,6 +418,7 @@ router.post('/api/worktree/save-file', async (req, res) => {
 
   try {
     await writeFile(fullPath, content, 'utf-8')
+    clearWorktreeReadCache()
     getGitWatchManager()?.notifyChange(resolve(worktreePath))
     res.json({ success: true, filePath })
   } catch (err) {
@@ -391,6 +450,7 @@ router.post('/api/worktree/merge', async (req, res) => {
     })
 
     if (!result.success && result.conflicts?.length && conflictResolver && chatId) {
+      clearWorktreeReadCache()
       const resolution = await conflictResolver.resolve({
         chatId,
         worktreePath,
@@ -401,6 +461,7 @@ router.post('/api/worktree/merge', async (req, res) => {
       return
     }
 
+    clearWorktreeReadCache()
     res.json(result)
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to merge' })
@@ -426,6 +487,7 @@ router.post('/api/worktree/delete', async (req, res) => {
       const manager = new WorktreeManager(repoRoot)
       await manager.remove(worktreePath, { force: !!force })
     })
+    clearWorktreeReadCache()
     res.json({ success: true })
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to delete worktree' })
@@ -458,6 +520,7 @@ router.post('/api/worktree/clean', async (req, res) => {
       }
       return { cleaned, total: toClean.length }
     })
+    clearWorktreeReadCache()
     res.json(result)
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Failed to clean worktrees' })
@@ -478,6 +541,7 @@ router.post('/api/git/stage', async (req, res) => {
     } else {
       await git.add(files)
     }
+    clearWorktreeReadCache()
     getGitWatchManager()?.notifyChange(repoPath)
     res.json({ success: true, staged: files?.length || -1 })
   } catch (err) {
@@ -497,6 +561,7 @@ router.post('/api/git/unstage', async (req, res) => {
   try {
     const git = simpleGit(resolve(repoPath))
     await git.reset(['HEAD', '--', ...files])
+    clearWorktreeReadCache()
     getGitWatchManager()?.notifyChange(repoPath)
     res.json({ success: true, unstaged: files.length })
   } catch (err) {
@@ -531,6 +596,7 @@ router.post('/api/git/discard', async (req, res) => {
       await unlink(resolve(cwd, f)).catch(() => {})
     }
 
+    clearWorktreeReadCache()
     getGitWatchManager()?.notifyChange(repoPath)
     res.json({ success: true, discarded: files.length })
   } catch (err) {
@@ -550,6 +616,7 @@ router.post('/api/git/commit', async (req, res) => {
       return res.status(400).json({ error: 'Nothing staged to commit' })
     }
     const result = await git.commit(message)
+    clearWorktreeReadCache()
     getGitWatchManager()?.notifyChange(repoPath)
     res.json({
       success: true,
@@ -578,6 +645,7 @@ router.post('/api/git/push', async (req, res) => {
       await git.push(['-u', 'origin', branch || 'HEAD'])
     }
 
+    clearWorktreeReadCache()
     getGitWatchManager()?.notifyChange(repoPath)
     res.json({ success: true, pushed: true })
   } catch (err) {
@@ -626,6 +694,7 @@ router.post('/api/git/fetch', async (req, res) => {
   try {
     const git = simpleGit(resolve(repoPath))
     await git.fetch(['--prune'])
+    clearWorktreeReadCache()
     res.json({ success: true, fetched: true })
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Fetch failed' })
@@ -697,6 +766,7 @@ router.post('/api/git/checkout', async (req, res) => {
       }
     }
 
+    clearWorktreeReadCache()
     getGitWatchManager()?.notifyChange(repoPath)
     res.json({ success: true, branch })
   } catch (err) {

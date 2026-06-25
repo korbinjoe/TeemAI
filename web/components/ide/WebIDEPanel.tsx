@@ -23,6 +23,26 @@ const BrowserPanel = lazy(() => import('./BrowserPanel'))
 
 const preloadTerminal = () => import('./IDETerminalTabs')
 
+let cachedHomeDir: string | null = null
+let homeDirPromise: Promise<string> | null = null
+
+const getCachedHomeDir = (): Promise<string> => {
+  if (cachedHomeDir !== null) return Promise.resolve(cachedHomeDir)
+  if (!homeDirPromise) {
+    const promise = authFetch('/api/home-dir')
+      .then(r => r.json())
+      .then(d => {
+        const home = typeof d.home === 'string' ? d.home : ''
+        cachedHomeDir = home
+        return home
+      })
+      .catch(() => '')
+      .finally(() => { homeDirPromise = null })
+    homeDirPromise = promise
+  }
+  return homeDirPromise
+}
+
 export interface WebIDERoot {
   path: string
   name: string
@@ -99,31 +119,14 @@ const WebIDEPanel = ({ chatId, roots, gitStatus, multiGitStatus, onMultiOptimist
 
   const homeDirRef = useRef('')
   useEffect(() => {
-    authFetch('/api/home-dir')
-      .then(r => r.json())
-      .then(d => { homeDirRef.current = d.home || '' })
-      .catch(() => {})
+    let cancelled = false
+    getCachedHomeDir().then(home => {
+      if (!cancelled) homeDirRef.current = home
+    })
+    return () => { cancelled = true }
   }, [])
 
   const wsClient = getWebSocketClient()
-
-  useEffect(() => {
-    if (!primaryRoot) return
-    if (!wsClient.isConnected()) {
-      const onConnect = () => {
-        wsClient.send('shell:precreate', { cwd: primaryRoot })
-        wsClient.off('connected', onConnect)
-        wsClient.off('reconnected', onConnect)
-      }
-      wsClient.on('connected', onConnect)
-      wsClient.on('reconnected', onConnect)
-      return () => {
-        wsClient.off('connected', onConnect)
-        wsClient.off('reconnected', onConnect)
-      }
-    }
-    wsClient.send('shell:precreate', { cwd: primaryRoot })
-  }, [wsClient, primaryRoot])
 
   useEffect(() => {
     const onTreeChanged = () => {
@@ -148,12 +151,6 @@ const WebIDEPanel = ({ chatId, roots, gitStatus, multiGitStatus, onMultiOptimist
       wsClient.off('session:file-operation', onFileOperation)
     }
   }, [wsClient, pruneDeletedTabs, refreshOpenTabs])
-
-  useEffect(() => {
-    preloadTerminal().then(() => {
-      setTerminalMounted(true)
-    })
-  }, [])
 
   useEffect(() => {
     if (changesTabRequest && changesTabRequest > 0) {
@@ -190,10 +187,20 @@ const WebIDEPanel = ({ chatId, roots, gitStatus, multiGitStatus, onMultiOptimist
   const handleToggleTerminal = useCallback(() => {
     setTerminalOpen(v => {
       const next = !v
-      if (next && !terminalMounted) setTerminalMounted(true)
+      if (next && !terminalMounted) {
+        void preloadTerminal()
+        setTerminalMounted(true)
+      }
       return next
     })
   }, [terminalMounted])
+
+  const previousRootRef = useRef(primaryRoot)
+  useEffect(() => {
+    if (previousRootRef.current === primaryRoot) return
+    previousRootRef.current = primaryRoot
+    if (!terminalOpen) setTerminalMounted(false)
+  }, [primaryRoot, terminalOpen])
 
   // Bridges: V2 CollapsedStrip / keyboard shortcuts / CommandPalette drive
   // inner state without coupling React contexts across the portal boundary.
@@ -497,37 +504,37 @@ const WebIDEPanel = ({ chatId, roots, gitStatus, multiGitStatus, onMultiOptimist
           )}
         </div>
 
-        {terminalMounted && (
-          <div
-            className="border-t border-border-subtle shrink-0 flex flex-col overflow-hidden"
-            style={{ height: terminalOpen ? `${terminalHeight}%` : '26px' }}
+        <div
+          className="border-t border-border-subtle shrink-0 flex flex-col overflow-hidden"
+          style={{ height: terminalOpen ? `${terminalHeight}%` : '26px' }}
+        >
+          {terminalOpen && (
+            <div
+              onMouseDown={handleTerminalDragStart}
+              className="h-1 shrink-0 cursor-row-resize hover:bg-accent-brand/50 transition-colors"
+            />
+          )}
+          <button
+            type="button"
+            onClick={handleToggleTerminal}
+            onMouseEnter={() => preloadTerminal()}
+            className="h-[26px] shrink-0 flex items-center px-2 gap-1.5 bg-bg-secondary hover:bg-bg-hover text-left transition-colors"
+            aria-label={terminalOpen ? 'CloseTerminal' : 'OpenTerminal'}
+            aria-expanded={terminalOpen}
           >
-            {terminalOpen && (
-              <div
-                onMouseDown={handleTerminalDragStart}
-                className="h-1 shrink-0 cursor-row-resize hover:bg-accent-brand/50 transition-colors"
-              />
-            )}
-            <button
-              type="button"
-              onClick={handleToggleTerminal}
-              onMouseEnter={() => preloadTerminal()}
-              className="h-[26px] shrink-0 flex items-center px-2 gap-1.5 bg-bg-secondary hover:bg-bg-hover text-left transition-colors"
-              aria-label={terminalOpen ? 'CloseTerminal' : 'OpenTerminal'}
-              aria-expanded={terminalOpen}
-            >
-              <Terminal size={11} className="text-text-secondary" />
-              <span className="text-[10px] font-medium text-text-secondary">Terminal</span>
-              <span className="text-[9px] font-mono text-text-muted">zsh</span>
-              <span className="flex-1" />
-              <ChevronDown
-                size={10}
-                className={cn(
-                  'text-text-muted transition-transform',
-                  !terminalOpen && 'rotate-180',
-                )}
-              />
-            </button>
+            <Terminal size={11} className="text-text-secondary" />
+            <span className="text-[10px] font-medium text-text-secondary">Terminal</span>
+            <span className="text-[9px] font-mono text-text-muted">zsh</span>
+            <span className="flex-1" />
+            <ChevronDown
+              size={10}
+              className={cn(
+                'text-text-muted transition-transform',
+                !terminalOpen && 'rotate-180',
+              )}
+            />
+          </button>
+          {terminalMounted && (
             <div
               style={terminalOpen
                 ? undefined
@@ -544,8 +551,8 @@ const WebIDEPanel = ({ chatId, roots, gitStatus, multiGitStatus, onMultiOptimist
                 <IDETerminalTabs cwd={primaryRoot} hidden={!terminalOpen} />
               </Suspense>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )

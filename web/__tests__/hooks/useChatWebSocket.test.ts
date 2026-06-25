@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { canSkipWarmReplay } from '../../hooks/useChatWebSocket'
+import { canSkipWarmReplay, deriveChatStatusFromSnapshot } from '../../hooks/useChatWebSocket'
 
 const handlers = new Map<string, Array<(data: unknown) => void>>()
 const mockWsClient = {
@@ -138,5 +138,28 @@ describe('canSkipWarmReplay', () => {
         lead: [{ id: 'm1', role: 'agent', content: 'cached', timestamp: 1, type: 'text' }],
       },
     })).toBe(false)
+  })
+})
+
+describe('deriveChatStatusFromSnapshot', () => {
+  it('keeps running when any enriched member is running', () => {
+    expect(deriveChatStatusFromSnapshot({
+      status: 'idle',
+      members: [{ status: 'waiting_input' }, { status: 'running' }],
+    })).toBe('running')
+  })
+
+  it('downgrades stale persisted running status when all enriched members are non-running', () => {
+    expect(deriveChatStatusFromSnapshot({
+      status: 'running',
+      members: [{ status: 'waiting_input' }, { status: 'done' }],
+    })).toBe('idle')
+  })
+
+  it('preserves explicit stopped status from the snapshot', () => {
+    expect(deriveChatStatusFromSnapshot({
+      status: 'stopped',
+      members: [{ status: 'done' }],
+    })).toBe('stopped')
   })
 })

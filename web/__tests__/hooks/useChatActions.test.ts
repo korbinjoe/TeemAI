@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { shouldQueueForTargetActivity } from '../../hooks/useChatActions'
+import { deriveChatStatusFromSnapshot } from '../../hooks/useChatWebSocket'
 import type { AgentActivity } from '../../types/chat'
 
 const activity = (phase: AgentActivity['phase']): AgentActivity => ({
@@ -27,6 +28,20 @@ describe('shouldQueueForTargetActivity', () => {
       targetAgentId: null,
       expertActivities: { lead: activity('thinking') },
       currentMergedActivity: activity('thinking'),
+    })).toBe(false)
+  })
+
+  it('lets non-running member rollup override stale persisted running status', () => {
+    const chatStatus = deriveChatStatusFromSnapshot({
+      status: 'running',
+      members: [{ status: 'waiting_input' }, { status: 'done' }],
+    })
+
+    expect(shouldQueueForTargetActivity({
+      chatStatus,
+      targetAgentId: 'lead',
+      expertActivities: { lead: activity('tool_running') },
+      currentMergedActivity: activity('tool_running'),
     })).toBe(false)
   })
 

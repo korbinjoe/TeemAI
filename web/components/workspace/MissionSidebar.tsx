@@ -64,7 +64,7 @@ const MissionSidebar = ({ collapsed }: MissionSidebarProps) => {
 
   if (collapsed) {
     return (
-      <div className="w-[52px] bg-bg-secondary border-r border-border-subtle flex flex-col flex-shrink-0 transition-[width] duration-200 ease-out">
+      <div className="w-[52px] bg-bg-secondary border-r border-border-subtle flex flex-col flex-shrink-0 transition-[width] duration-200 ease-out" data-render-surface="mission-sidebar">
         {/* Drag strip — macOS Electron traffic-light zone */}
         {isMacElectron && <div className="h-[30px] flex-shrink-0 -webkit-app-region-drag" />}
         {/* Header — logo (web only) + expand button */}
@@ -127,6 +127,7 @@ const MissionSidebar = ({ collapsed }: MissionSidebarProps) => {
   return (
     <div
       className="bg-bg-secondary border-r border-border-subtle flex flex-col flex-shrink-0 relative"
+      data-render-surface="mission-sidebar"
       style={{ width: sidebarWidth }}
     >
       {/* Header — drag zone (macOS Electron) + toolbar + new mission button */}

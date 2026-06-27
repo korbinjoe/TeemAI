@@ -1,8 +1,9 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { ElectronNavigator } from './components/ElectronNavigator'
 import WorkspaceRedirect from './components/workspace/WorkspaceRedirect'
 import { WorkspaceChatsProvider } from './hooks/useWorkspaceMissions'
+import { renderPerf } from './lib/renderPerf'
 
 const WorkspaceLayout = lazy(() => import('./layouts/WorkspaceLayout'))
 const ResourceLayout = lazy(() => import('./layouts/ResourceLayout'))
@@ -41,11 +42,16 @@ const RouteFallback = () => (
   </div>
 )
 
-const App = () => (
-  <Suspense fallback={<RouteFallback />}>
-    <ElectronNavigator />
-    <WorkspaceChatsProvider>
-    <Routes>
+const App = () => {
+  useEffect(() => {
+    renderPerf.mark('app-shell-mounted')
+  }, [])
+
+  return (
+    <Suspense fallback={<RouteFallback />}>
+      <ElectronNavigator />
+      <WorkspaceChatsProvider>
+      <Routes>
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       {import.meta.env.DEV && (
         <>
@@ -92,10 +98,11 @@ const App = () => (
       <Route path="/workspace/:workspaceId/settings" element={<Navigate to="/settings" replace />} />
       <Route path="/workspace/:workspaceId/admin" element={<Navigate to="/admin" replace />} />
       <Route path="/workspace/:workspaceId/updates" element={<Navigate to="/updates" replace />} />
-    </Routes>
-    </WorkspaceChatsProvider>
-  </Suspense>
-)
+      </Routes>
+      </WorkspaceChatsProvider>
+    </Suspense>
+  )
+}
 
 /** /workspace/:wsId/agents/:id/edit → /agents/:id/edit (preserves the agent id). */
 const LegacyAgentEditorRedirect = () => {

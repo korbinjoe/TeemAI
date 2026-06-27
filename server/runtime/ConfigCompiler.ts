@@ -588,7 +588,7 @@ export class ConfigCompiler {
   private codexHookCommandKey(command: unknown): string | null {
     if (typeof command !== 'string') return null
     const normalized = command.trim()
-    const teemaiHook = normalized.match(/(?:^|[\s/])(wb-auto-extract\.sh|satisfaction-score\.sh)(?:\s|$)/)
+    const teemaiHook = normalized.match(/(?:^|[\s/])(wb-auto-extract\.sh|satisfaction-score\.sh|render-perf-auto\.sh)(?:\s|$)/)
     return teemaiHook ? `teemai:${teemaiHook[1]}` : normalized
   }
 

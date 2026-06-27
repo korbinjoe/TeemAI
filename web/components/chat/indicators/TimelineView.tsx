@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
-import ReactMarkdown from 'react-markdown'
+import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
   Brain, Terminal, AlertCircle,
@@ -25,7 +25,7 @@ import {
   type TimelineEntry, type ToolGroup, type ExpertProgressGroup,
   getExpertAction, getReadableToolLabel, groupConsecutiveTools,
 } from './timelineHelpers'
-import { InlineCode, MarkdownP, MarkdownLi, MarkdownTd } from './filePathLinks'
+import { InlineCode, MarkdownP, MarkdownLi, MarkdownTd, openFileInIde, parseFileHref } from './filePathLinks'
 
 const IMAGE_EXTENSIONS = new Set([
   '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.bmp', '.ico',
@@ -279,14 +279,20 @@ const TimelineThinkingRow = ({ entry }: { entry: TimelineEntry }) => {
   )
 }
 
-const ExternalLink = ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+type MarkdownAnchorProps = React.AnchorHTMLAttributes<HTMLAnchorElement> & { node?: unknown }
+
+const ExternalLink = ({ href, children, node: _node, ...props }: MarkdownAnchorProps) => (
   <a
     {...props}
     href={href}
     onClick={(e) => {
-      if (href) {
-        e.preventDefault()
-        e.stopPropagation()
+      if (!href) return
+      const fileTarget = parseFileHref(href)
+      e.preventDefault()
+      e.stopPropagation()
+      if (fileTarget) {
+        openFileInIde(fileTarget.path, fileTarget.line)
+      } else {
         window.open(href, '_blank')
       }
     }}
@@ -303,10 +309,15 @@ const markdownComponents = {
   td: MarkdownTd,
 }
 
+const markdownUrlTransform = (url: string, key: string): string | null | undefined => {
+  if (key === 'href' && parseFileHref(url)) return url
+  return defaultUrlTransform(url)
+}
+
 const TimelineTextBlock = ({ entry }: { entry: TimelineEntry }) => (
   <div style={{ padding: '6px 12px', margin: '6px 4px 6px 17px', background: 'rgb(var(--bg-hover-subtle) / var(--bg-hover-subtle-alpha))', borderRadius: 6, overflow: 'hidden' }}>
     <div className="chat-markdown" style={{ fontSize: 12, lineHeight: 1.7 }}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{entry.textContent || ''}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents} urlTransform={markdownUrlTransform}>{entry.textContent || ''}</ReactMarkdown>
     </div>
   </div>
 )

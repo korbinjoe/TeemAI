@@ -43,7 +43,7 @@
         "description": "End-to-end delivery from requirement analysis and technical design to frontend/backend development.",
         "workspace": "./ai-assets/agents/fullstack-engineer",
         "role": "expert",
-        "skills": ["frontend-expert", "api-integrator", "playwright-cli", "whiteboard", "dev-server", "handoff"],
+        "skills": ["frontend-expert", "api-integrator", "playwright-cli", "render-performance-verification", "whiteboard", "dev-server", "handoff"],
         "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
         "heartbeat": {
           "every": "30m",
@@ -73,7 +73,7 @@
         "description": "Integrated UI design and implementation expert with professional aesthetic judgment. Handles design decisions, code implementation, browser preview verification, and iterative delivery of high-quality UI through screenshot review.",
         "workspace": "./ai-assets/agents/ui-designer",
         "role": "expert",
-        "skills": ["ui-reviewer", "ui-designer", "dev-server", "playwright-cli", "design-taste-frontend", "whiteboard", "handoff"]
+        "skills": ["ui-reviewer", "ui-designer", "dev-server", "playwright-cli", "design-taste-frontend", "render-performance-verification", "whiteboard", "handoff"]
       },
       {
         "id": "devops-engineer",
@@ -95,7 +95,7 @@
         "description": "Architecture guardian who also implements architectural changes. Reviews layering, module boundaries, dependency governance, data flow, and evolvability. Can write code for architectural refactors with self-verification.",
         "workspace": "./ai-assets/agents/architect",
         "role": "expert",
-        "skills": ["architecture-review", "dev-server", "playwright-cli", "whiteboard", "handoff"],
+        "skills": ["architecture-review", "dev-server", "playwright-cli", "render-performance-verification", "whiteboard", "handoff"],
         "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "Bash"]
       },
       {

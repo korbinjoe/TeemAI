@@ -15,7 +15,8 @@ describe('buildFullSuitePrompt', () => {
     expect(out).toContain('===AGENTS===')
     expect(out).toContain('===SOUL===')
     expect(out).toContain('Rigorous data analyst')
-    expect(out).toContain('MUST be in English')
+    expect(out).toContain('Use the same language as the Digital Worker Description')
+    expect(out).not.toContain('MUST be in English')
   })
 
   it('trims user description', () => {

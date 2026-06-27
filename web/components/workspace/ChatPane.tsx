@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, useState } from 'react'
+import { Profiler, useRef, useCallback, useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { API_BASE, authFetch } from '@/config/api'
@@ -6,6 +6,7 @@ import ChatInstance from '../chat/ChatInstance'
 import type { PrefetchedWorkspaceData } from '../chat/ChatInstance'
 import WorkspaceHome from './WorkspaceHome'
 import { missionSwitchPerf } from '../../lib/missionSwitchPerf'
+import { renderPerf } from '../../lib/renderPerf'
 
 const MAX_CACHED = 8
 const MAX_WS_CACHE = 5
@@ -44,6 +45,7 @@ const ChatPane = () => {
       cached: warmHitRef.current,
       warm: warmHitRef.current,
     })
+    renderPerf.mark('mission-route-entered', { chatId: activeChatId, cached: warmHitRef.current })
   }, [activeChatId])
 
   useEffect(() => {
@@ -116,9 +118,21 @@ const ChatPane = () => {
   void wsDataVersion
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative" data-render-surface="chat-pane">
       {cached.map((item) => {
         const active = item.chatId === activeChatId
+        const chatInstance = (
+          <ChatInstance
+            chatId={item.chatId}
+            workspaceId={item.workspaceId}
+            isActive={active}
+            isNewChat={item.isNew}
+            initAgentId={item.agentId}
+            resumeWarm={warmBeforeEnsure.has(item.chatId) && !item.isNew}
+            hideRightPanel
+            prefetchedWorkspace={wsDataCacheRef.current.get(item.workspaceId) ?? null}
+          />
+        )
         return (
           <div
             key={item.chatId}
@@ -126,16 +140,11 @@ const ChatPane = () => {
             style={cachedPaneStyle(active)}
             aria-hidden={!active || undefined}
           >
-            <ChatInstance
-              chatId={item.chatId}
-              workspaceId={item.workspaceId}
-              isActive={active}
-              isNewChat={item.isNew}
-              initAgentId={item.agentId}
-              resumeWarm={warmBeforeEnsure.has(item.chatId) && !item.isNew}
-              hideRightPanel
-              prefetchedWorkspace={wsDataCacheRef.current.get(item.workspaceId) ?? null}
-            />
+            {renderPerf.enabled ? (
+              <Profiler id={`chat-instance:${item.chatId}`} onRender={renderPerf.onProfilerRender}>
+                {chatInstance}
+              </Profiler>
+            ) : chatInstance}
           </div>
         )
       })}

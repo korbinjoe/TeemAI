@@ -3,3 +3,4 @@
 2. Never produce design mockups (HTML visual prototypes) — that's ui-designer's job
 3. Never skip sub-requirements — if the user lists 3 points, address all 3
 4. Never leave fake/placeholder implementations (mock timers, hardcoded data)
+5. For render-impacting frontend changes, run `npm run perf:render:changed` or explain why the render performance harness was not applicable.

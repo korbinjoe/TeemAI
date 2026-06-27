@@ -2,9 +2,13 @@ import { FileCode2 } from 'lucide-react'
 
 const FILE_EXT_RE = /\.(tsx?|jsx?|css|scss|less|json|md|mdx|yml|yaml|toml|py|rs|go|java|rb|php|sh|bash|zsh|sql|graphql|gql|html|vue|svelte|astro|prisma|env|config|lock|txt|log|xml|ini|cfg|conf|c|cpp|h|hpp|swift|kt|dart|lua|zig|nix|tf|hcl|proto)$/i
 
-export const parseFilePath = (text: string): { path: string; line?: number } | null => {
+interface ParseFilePathOptions {
+  allowSpaces?: boolean
+}
+
+export const parseFilePath = (text: string, options: ParseFilePathOptions = {}): { path: string; line?: number } | null => {
   const trimmed = text.trim()
-  if (!trimmed || trimmed.includes(' ') || trimmed.includes('\n')) return null
+  if (!trimmed || (!options.allowSpaces && trimmed.includes(' ')) || trimmed.includes('\n')) return null
   const lineMatch = trimmed.match(/:(\d+)(?:-\d+)?$/)
   const pathPart = lineMatch ? trimmed.slice(0, lineMatch.index!) : trimmed
   if (!FILE_EXT_RE.test(pathPart)) return null
@@ -12,7 +16,43 @@ export const parseFilePath = (text: string): { path: string; line?: number } | n
   return { path: pathPart, line: lineMatch ? parseInt(lineMatch[1], 10) : undefined }
 }
 
-const openFileInIde = (filePath: string, line?: number) => {
+const URL_SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i
+
+const safeDecodeHref = (value: string): string => {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    try {
+      return decodeURI(value)
+    } catch {
+      return value
+    }
+  }
+}
+
+export const parseFileHref = (href?: string): { path: string; line?: number } | null => {
+  const raw = href?.trim()
+  if (!raw || raw.startsWith('#')) return null
+
+  let candidate = raw
+  if (URL_SCHEME_RE.test(raw)) {
+    let url: URL
+    try {
+      url = new URL(raw)
+    } catch {
+      return null
+    }
+    if (url.protocol !== 'file:') return null
+    candidate = safeDecodeHref(url.pathname)
+    if (/^\/[A-Za-z]:\//.test(candidate)) candidate = candidate.slice(1)
+  } else {
+    candidate = safeDecodeHref(raw)
+  }
+
+  return parseFilePath(candidate, { allowSpaces: true })
+}
+
+export const openFileInIde = (filePath: string, line?: number) => {
   window.dispatchEvent(new CustomEvent('ide:open-file', { detail: { filePath, line } }))
 }
 

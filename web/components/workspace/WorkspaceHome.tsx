@@ -54,7 +54,7 @@ const WorkspaceHome = () => {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto" data-render-surface="workspace-home">
       <div className="max-w-[760px] mx-auto px-16 py-14">
         {/* Header */}
         <div className="mb-14">

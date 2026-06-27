@@ -29,6 +29,7 @@ const ChatViewModeToggle = ({ mode, onChange, disabled }: ChatViewModeToggleProp
         <ToggleButton
           active={mode === 'message'}
           disabled={disabled}
+          action="chat-view-message"
           label={t('chatViewMode.message')}
           tooltip={t('chatViewMode.tooltipMessage', { shortcut })}
           onClick={() => mode === 'message' ? undefined : onChange('message')}
@@ -39,6 +40,7 @@ const ChatViewModeToggle = ({ mode, onChange, disabled }: ChatViewModeToggleProp
         <ToggleButton
           active={mode === 'terminal'}
           disabled={disabled}
+          action="chat-view-terminal"
           label={t('chatViewMode.terminal')}
           tooltip={t('chatViewMode.tooltipTerminal', { shortcut })}
           onClick={() => mode === 'terminal' ? undefined : onChange('terminal')}
@@ -52,6 +54,7 @@ const ChatViewModeToggle = ({ mode, onChange, disabled }: ChatViewModeToggleProp
 
 interface ToggleButtonProps {
   active: boolean
+  action: string
   disabled?: boolean
   label: string
   tooltip: string
@@ -59,13 +62,14 @@ interface ToggleButtonProps {
   children: React.ReactNode
 }
 
-const ToggleButton = ({ active, disabled, label, tooltip, onClick, children }: ToggleButtonProps) => (
+const ToggleButton = ({ active, action, disabled, label, tooltip, onClick, children }: ToggleButtonProps) => (
   <Tooltip>
     <TooltipTrigger asChild>
       <button
         type="button"
         aria-pressed={active}
         aria-label={label}
+        data-render-action={action}
         disabled={disabled}
         onClick={onClick}
         tabIndex={0}

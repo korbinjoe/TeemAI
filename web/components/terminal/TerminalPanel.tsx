@@ -22,6 +22,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { estimateSize } from './constants'
 import { useTerminalWsEvents } from './useTerminalWsEvents'
 import { useTerminalInstances } from './useTerminalInstances'
+import { renderPerf } from '@/lib/renderPerf'
 
 export interface TerminalPanelHandle {
   getEstimatedSize: () => { cols: number; rows: number }
@@ -153,6 +154,20 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
     const wsClient = getWebSocketClient()
     const { theme } = useTheme()
     expertsRef.current = experts
+
+    useEffect(() => {
+      if (!inTerminalView) return
+      const raf = requestAnimationFrame(() => {
+        const rect = terminalAreaRef.current?.getBoundingClientRect()
+        renderPerf.mark('terminal-ready', {
+          chatId,
+          width: rect?.width ?? 0,
+          height: rect?.height ?? 0,
+          experts: expertsRef.current.length,
+        })
+      })
+      return () => cancelAnimationFrame(raf)
+    }, [chatId, inTerminalView, activeKey, layoutMode])
 
     useEffect(() => {
       setHiddenExperts(loadHiddenExperts(chatId))
@@ -490,7 +505,7 @@ const TerminalPanel = forwardRef<TerminalPanelHandle, TerminalPanelProps>(
 
     return (
       <TooltipProvider delayDuration={300}>
-        <div className="flex-1 min-h-0 h-full flex flex-col bg-bg-primary overflow-hidden">
+        <div className="flex-1 min-h-0 h-full flex flex-col bg-bg-primary overflow-hidden" data-render-surface="terminal-panel" data-terminal-view={inTerminalView ? 'true' : 'false'}>
           <style>{TABS_STYLE}</style>
           <Tabs
             className="unified-terminal-tabs"

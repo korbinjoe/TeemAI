@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.1.0-beta.11] - 2026-06-27
+
+### Features
+
+- Add a render performance harness with changed-file scenario selection, budgets, baselines, Playwright/browser metrics, screenshots, traces, and Markdown reports
+- Add automatic render performance verification via the `render-performance-verification` skill, Codex Stop hook, and pre-commit gate
+- Add a running-load mission switch benchmark for desktop renderer responsiveness under active mission traffic
+
+### Bug Fixes
+
+- Open local Markdown file links from chat timeline messages in the in-app IDE instead of the external browser, including `file://` links and optional line numbers
+- Remove forced English output requirements from agent definition generation and agent behavior prompts; generated agent definitions now follow the requested/input language
+- Treat `render-perf-auto.sh` as a managed TeemAI Codex hook so repeated config compilation does not duplicate it
+
+### Improvements
+
+- Instrument key workspace, chat, terminal, IDE, settings, and home render surfaces behind `VITE_RENDER_PERF`
+- Attach render performance verification to code-writing built-in agents
+- Allow Vite dev proxy targets to follow `TEEMAI_DEV_SERVER_PORT`
+
 ## [0.1.0-beta.9] - 2026-06-16
 
 ### Features

@@ -41,6 +41,7 @@ import { useDirPicker } from '../../hooks/useDirPicker'
 import { API_BASE, authFetch } from '@/config/api'
 import { getModelsForProvider } from '@/lib/models'
 import { missionSwitchPerf } from '../../lib/missionSwitchPerf'
+import { renderPerf } from '../../lib/renderPerf'
 
 const ROOT_STYLE: React.CSSProperties = { display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }
 const MAIN_CONTENT_STYLE: React.CSSProperties = { flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }
@@ -299,7 +300,10 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     missionSwitchPerf.mark('instance-active', chatId)
     let cancelled = false
     const raf = requestAnimationFrame(() => {
-      if (!cancelled) missionSwitchPerf.markInteractive(chatId)
+      if (!cancelled) {
+        missionSwitchPerf.markInteractive(chatId)
+        renderPerf.mark('mission-interactive', { chatId })
+      }
     })
     return () => {
       cancelled = true
@@ -612,7 +616,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
   }), [chatCollapsed, terminalWidth, isResizing])
 
   return (
-    <div style={ROOT_STYLE}>
+    <div style={ROOT_STYLE} data-render-surface="chat-instance" data-chat-id={chatId} data-active={isActive ? 'true' : 'false'}>
       {/* Main content */}
       <div style={MAIN_CONTENT_STYLE}>
         <div style={chatPanelStyle}>

@@ -346,7 +346,7 @@ export class SenseiUpgradeService {
       '1. Output the complete AGENTS.md Markdown content directly (no YAML frontmatter needed)',
       '2. Include key sections: role definition, core capabilities, workflow, output standards',
       '3. Professional language, clear instructions, well-structured, logically complete',
-      '4. Write in English',
+      '4. Use the same language as the digital worker description unless it explicitly requests another language',
       '',
       'Digital worker description:',
       req.description,

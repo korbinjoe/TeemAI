@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { useWorkspace } from '../../contexts/WorkspaceContext'
 import { useChatIDEOutletSnapshot } from '../../contexts/ChatIDEOutletContext'
 import { Folder, Flag, FolderGit } from './icons'
@@ -6,6 +6,7 @@ import { cn } from '../../lib/utils'
 import { useWarRoomCounts } from './WarRoomPanel'
 import { useWorkspaceMeta } from '../../hooks/useWorkspaceMeta'
 import useMultiRepoGitStatus from '../../hooks/useMultiRepoGitStatus'
+import { renderPerf } from '../../lib/renderPerf'
 
 // V2 IDE column is a thin wrapper:
 //   • Expanded → single stable RightPanel fed by ChatIDEOutlet (no portal remount).
@@ -123,8 +124,15 @@ const ExpandedPanel = () => {
   const snapshot = useChatIDEOutletSnapshot(activeChatId)
   const hasChat = !!activeChatId
 
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      renderPerf.mark('ide-ready', { chatId: activeChatId, hasSnapshot: !!snapshot })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [activeChatId, snapshot])
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 overflow-hidden border-l border-border-subtle">
+    <div className="flex-1 flex flex-col min-w-0 overflow-hidden border-l border-border-subtle" data-render-surface="ide-panel">
       {!hasChat ? (
         <EmptyState />
       ) : snapshot ? (

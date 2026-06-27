@@ -16,6 +16,7 @@ import { persistLastWorkspace } from '../components/workspace/WorkspaceRedirect'
 import useResponsiveLayout from '../components/workspace/useResponsiveLayout'
 import DevPanel from '../components/dev/DevPanel'
 import { missionSwitchPerf } from '../lib/missionSwitchPerf'
+import { renderPerf } from '../lib/renderPerf'
 
 const WorkspaceLayoutInner = () => {
   const {
@@ -63,6 +64,16 @@ const WorkspaceLayoutInner = () => {
   useEffect(() => {
     if (workspaceId) persistLastWorkspace(workspaceId)
   }, [workspaceId])
+
+  useEffect(() => {
+    if (!workspaceId) return
+    const route = activeChatId ? `mission:${activeChatId}` : `workspace:${workspaceId}`
+    renderPerf.routeStart(route, { workspaceId, chatId: activeChatId })
+    const raf = requestAnimationFrame(() => {
+      renderPerf.routeReady(route, { workspaceId, chatId: activeChatId })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [workspaceId, activeChatId])
 
   // ⌘1-4 jumps to the quad chats (active first, then awaiting, then running)
   const quickJumpChats = useMemo(() => {
@@ -154,7 +165,7 @@ const WorkspaceLayoutInner = () => {
   }, [ideCollapsed, toggleIde])
 
   return (
-    <div className="flex h-screen bg-bg-primary overflow-hidden">
+    <div className="flex h-screen bg-bg-primary overflow-hidden" data-render-surface="workspace-layout">
       <MissionSidebar collapsed={panelCollapsed} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <WorkspaceToolbar />

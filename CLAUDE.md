@@ -144,8 +144,8 @@ The following are explicitly prohibited:
 
 ## Rule 7: Code Standards
 
-- Always respond in English
-- **Code, comments, documentation, and commit messages must all be in English**
+- Respond in the user's language unless they request otherwise
+- **Code, comments, documentation, and commit messages should follow the surrounding project conventions; use English when the existing context is English**
 - Use TypeScript strict mode style
 - Use only Tailwind classes for styling
 - Use const arrow functions, no semicolons

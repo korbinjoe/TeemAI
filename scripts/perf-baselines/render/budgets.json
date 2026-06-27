@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "scenarios": {
+    "home.initial": {
+      "navDomContentLoadedMs": { "max": 3000, "maxRegressionPct": 20 },
+      "longTaskCount": { "max": 8 },
+      "longTaskTotalMs": { "max": 600, "maxRegressionPct": 30 },
+      "documentElementCount": { "max": 9000, "maxRegressionPct": 25 },
+      "consoleErrors": { "max": 0 },
+      "pageErrors": { "max": 0 },
+      "failedRequests": { "max": 0 }
+    },
+    "workspace.initial": {
+      "navDomContentLoadedMs": { "max": 3000, "maxRegressionPct": 20 },
+      "longTaskCount": { "max": 8 },
+      "longTaskTotalMs": { "max": 650, "maxRegressionPct": 30 },
+      "documentElementCount": { "max": 10000, "maxRegressionPct": 25 },
+      "consoleErrors": { "max": 0 },
+      "pageErrors": { "max": 0 },
+      "failedRequests": { "max": 0 }
+    },
+    "mission.initial": {
+      "navDomContentLoadedMs": { "max": 3500, "maxRegressionPct": 20 },
+      "longTaskCount": { "max": 10 },
+      "longTaskTotalMs": { "max": 800, "maxRegressionPct": 30 },
+      "documentElementCount": { "max": 12000, "maxRegressionPct": 25 },
+      "consoleErrors": { "max": 0 },
+      "pageErrors": { "max": 0 },
+      "failedRequests": { "max": 0 }
+    },
+    "mission.switch.warm": {
+      "interactionP95Ms": { "max": 500, "maxRegressionPct": 20 },
+      "longTaskCount": { "max": 10 },
+      "longTaskTotalMs": { "max": 850, "maxRegressionPct": 30 },
+      "documentElementCount": { "max": 16000, "maxRegressionPct": 25 },
+      "consoleErrors": { "max": 0 },
+      "pageErrors": { "max": 0 },
+      "failedRequests": { "max": 0 }
+    },
+    "mission.multi-active.switch-loop": {
+      "interactionP95Ms": { "max": 650, "maxRegressionPct": 20 },
+      "interactionMaxMs": { "max": 1200, "maxRegressionPct": 25 },
+      "longTaskCount": { "max": 24 },
+      "longTaskTotalMs": { "max": 1800, "maxRegressionPct": 35 },
+      "documentElementCount": { "max": 18000, "maxRegressionPct": 25 },
+      "consoleErrors": { "max": 0 },
+      "pageErrors": { "max": 0 },
+      "failedRequests": { "max": 0 }
+    },
+    "mission.mode-toggle.loop": {
+      "interactionP95Ms": { "max": 800, "maxRegressionPct": 20 },
+      "interactionMaxMs": { "max": 1400, "maxRegressionPct": 25 },
+      "longTaskCount": { "max": 24 },
+      "longTaskTotalMs": { "max": 2000, "maxRegressionPct": 35 },
+      "documentElementCount": { "max": 18000, "maxRegressionPct": 25 },
+      "consoleErrors": { "max": 0 },
+      "pageErrors": { "max": 0 },
+      "failedRequests": { "max": 0 }
+    },
+    "mission.switch-with-terminal-active": {
+      "interactionP95Ms": { "max": 900, "maxRegressionPct": 20 },
+      "longTaskCount": { "max": 18 },
+      "longTaskTotalMs": { "max": 1800, "maxRegressionPct": 35 },
+      "documentElementCount": { "max": 18000, "maxRegressionPct": 25 },
+      "consoleErrors": { "max": 0 },
+      "pageErrors": { "max": 0 },
+      "failedRequests": { "max": 0 }
+    },
+    "mission.message-stress": {
+      "navDomContentLoadedMs": { "max": 3500, "maxRegressionPct": 20 },
+      "longTaskCount": { "max": 12 },
+      "longTaskTotalMs": { "max": 1000, "maxRegressionPct": 35 },
+      "consoleErrors": { "max": 0 },
+      "pageErrors": { "max": 0 },
+      "failedRequests": { "max": 0 }
+    },
+    "mission.filter-search": {
+      "interactionP95Ms": { "max": 500, "maxRegressionPct": 20 },
+      "longTaskCount": { "max": 10 },
+      "consoleErrors": { "max": 0 },
+      "pageErrors": { "max": 0 },
+      "failedRequests": { "max": 0 }
+    },
+    "terminal.open": {
+      "interactionP95Ms": { "max": 900, "maxRegressionPct": 20 },
+      "longTaskCount": { "max": 16 },
+      "longTaskTotalMs": { "max": 1600, "maxRegressionPct": 35 },
+      "consoleErrors": { "max": 0 },
+      "pageErrors": { "max": 0 },
+      "failedRequests": { "max": 0 }
+    },
+    "ide.open": {
+      "navDomContentLoadedMs": { "max": 3800, "maxRegressionPct": 20 },
+      "longTaskCount": { "max": 16 },
+      "longTaskTotalMs": { "max": 1600, "maxRegressionPct": 35 },
+      "consoleErrors": { "max": 0 },
+      "pageErrors": { "max": 0 },
+      "failedRequests": { "max": 0 }
+    },
+    "settings.keys": {
+      "navDomContentLoadedMs": { "max": 3000, "maxRegressionPct": 20 },
+      "longTaskCount": { "max": 8 },
+      "longTaskTotalMs": { "max": 600, "maxRegressionPct": 30 },
+      "consoleErrors": { "max": 0 },
+      "pageErrors": { "max": 0 },
+      "failedRequests": { "max": 0 }
+    }
+  }
+}

@@ -56,19 +56,19 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: `http://localhost:${PORTS.DEV_SERVER}`,
+        target: `http://localhost:${process.env.TEEMAI_DEV_SERVER_PORT ?? PORTS.DEV_SERVER}`,
         changeOrigin: true
       },
       '/avatars': {
-        target: `http://localhost:${PORTS.DEV_SERVER}`,
+        target: `http://localhost:${process.env.TEEMAI_DEV_SERVER_PORT ?? PORTS.DEV_SERVER}`,
         changeOrigin: true
       },
       '/ws': {
-        target: `ws://localhost:${PORTS.DEV_SERVER}`,
+        target: `ws://localhost:${process.env.TEEMAI_DEV_SERVER_PORT ?? PORTS.DEV_SERVER}`,
         ws: true
       },
       '/element/': {
-        target: `http://localhost:${PORTS.DEV_SERVER}`,
+        target: `http://localhost:${process.env.TEEMAI_DEV_SERVER_PORT ?? PORTS.DEV_SERVER}`,
         changeOrigin: true,
       },
     },

@@ -13,13 +13,22 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
 STAGED_TS=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx)$' || true)
-if [[ -z "$STAGED_TS" ]]; then
-  exit 0
+
+if [[ -n "$STAGED_TS" ]]; then
+  echo "[pre-commit] Running tsc --noEmit on the project..."
+  if ! npx --no-install tsc --noEmit; then
+    echo ""
+    echo "[pre-commit] TypeScript check failed. Fix the errors above, or bypass with --no-verify."
+    exit 1
+  fi
 fi
 
-echo "[pre-commit] Running tsc --noEmit on the project..."
-if ! npx --no-install tsc --noEmit; then
-  echo ""
-  echo "[pre-commit] TypeScript check failed. Fix the errors above, or bypass with --no-verify."
-  exit 1
+PERF_HOOK="ai-assets/hooks/render-perf-auto.sh"
+if [[ -f "$PERF_HOOK" ]]; then
+  echo "[pre-commit] Running automatic render performance gate..."
+  if ! bash "$PERF_HOOK" --pre-commit; then
+    echo ""
+    echo "[pre-commit] Render performance gate failed. Fix the issue above, or bypass with --no-verify."
+    exit 1
+  fi
 fi

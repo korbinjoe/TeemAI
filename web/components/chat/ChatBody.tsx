@@ -280,7 +280,7 @@ const ChatBody = ({
   }), [shouldConcealInitialLayout])
 
   return (
-    <div style={MESSAGES_AREA_STYLE}>
+    <div style={MESSAGES_AREA_STYLE} data-render-surface="chat-body">
       {(reconnecting || showReconnected) && messages.length > 0 && (
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, zIndex: 15,

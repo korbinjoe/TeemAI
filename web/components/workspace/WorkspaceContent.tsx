@@ -69,7 +69,7 @@ const UnifiedFrame = ({
   const splitChatWidth = useSplitChatWidth()
 
   return (
-    <div className="flex-1 flex min-h-0 overflow-hidden">
+    <div className="flex-1 flex min-h-0 overflow-hidden" data-render-surface="workspace-content">
       <ChatColumn
         key="chat"
         layoutMode={layoutMode}
@@ -193,7 +193,7 @@ const QuadFrame = ({ ideCollapsed }: { ideCollapsed: boolean }) => {
   const handleAdd = () => { if (activeChatId) openAddAgent(activeChatId) }
 
   return (
-    <div className="flex-1 flex min-h-0 overflow-hidden relative">
+    <div className="flex-1 flex min-h-0 overflow-hidden relative" data-render-surface="workspace-content">
       <div className="flex-1 flex min-h-0 overflow-hidden">
         <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-px bg-border overflow-hidden min-w-0">
           {!chat ? (

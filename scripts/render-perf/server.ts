@@ -37,8 +37,9 @@ export const startRenderPerfServer = async (options: StartOptions): Promise<Mana
   const apiBase = `http://127.0.0.1:${apiPort}`
   const uiBase = `http://127.0.0.1:${uiPort}`
 
+  const { ELECTRON: _electron, TEEMAI_CLI: _teemaiCli, ...parentEnv } = process.env
   const baseEnv = {
-    ...process.env,
+    ...parentEnv,
     TEEMAI_HOME: options.homeDir,
     TEEMAI_NO_PORTFILE: '1',
     VITE_RENDER_PERF: 'true',

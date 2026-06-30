@@ -4,6 +4,7 @@ const FILE_EXT_RE = /\.(tsx?|jsx?|css|scss|less|json|md|mdx|yml|yaml|toml|py|rs|
 
 interface ParseFilePathOptions {
   allowSpaces?: boolean
+  allowBareFilename?: boolean
 }
 
 export const parseFilePath = (text: string, options: ParseFilePathOptions = {}): { path: string; line?: number } | null => {
@@ -11,8 +12,9 @@ export const parseFilePath = (text: string, options: ParseFilePathOptions = {}):
   if (!trimmed || (!options.allowSpaces && trimmed.includes(' ')) || trimmed.includes('\n')) return null
   const lineMatch = trimmed.match(/:(\d+)(?:-\d+)?$/)
   const pathPart = lineMatch ? trimmed.slice(0, lineMatch.index!) : trimmed
+  if (pathPart.includes(':') && !/^[A-Za-z]:[\\/]/.test(pathPart)) return null
   if (!FILE_EXT_RE.test(pathPart)) return null
-  if (!pathPart.includes('/') && !pathPart.startsWith('.')) return null
+  if (!options.allowBareFilename && !pathPart.includes('/') && !pathPart.startsWith('.')) return null
   return { path: pathPart, line: lineMatch ? parseInt(lineMatch[1], 10) : undefined }
 }
 
@@ -35,6 +37,9 @@ export const parseFileHref = (href?: string): { path: string; line?: number } | 
   if (!raw || raw.startsWith('#')) return null
 
   let candidate = raw
+  const directFileTarget = parseFilePath(safeDecodeHref(raw), { allowSpaces: true, allowBareFilename: true })
+  if (directFileTarget) return directFileTarget
+
   if (URL_SCHEME_RE.test(raw)) {
     let url: URL
     try {
@@ -49,7 +54,7 @@ export const parseFileHref = (href?: string): { path: string; line?: number } | 
     candidate = safeDecodeHref(raw)
   }
 
-  return parseFilePath(candidate, { allowSpaces: true })
+  return parseFilePath(candidate, { allowSpaces: true, allowBareFilename: true })
 }
 
 export const openFileInIde = (filePath: string, line?: number) => {

@@ -74,6 +74,34 @@ describe('TimelineView file links', () => {
     }
   })
 
+  it('opens bare file-name Markdown links in the IDE', () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    const openedFiles: Array<{ filePath: string; line?: number }> = []
+    const handleOpenFile = (event: Event) => {
+      openedFiles.push((event as CustomEvent<{ filePath: string; line?: number }>).detail)
+    }
+    window.addEventListener('ide:open-file', handleOpenFile)
+
+    try {
+      render(
+        <TimelineView
+          messages={[
+            textMessage('[AGENTS.md](AGENTS.md:12)'),
+          ]}
+        />,
+      )
+
+      fireEvent.click(screen.getByRole('link', { name: 'AGENTS.md' }))
+
+      expect(openSpy).not.toHaveBeenCalled()
+      expect(openedFiles).toEqual([
+        { filePath: 'AGENTS.md', line: 12 },
+      ])
+    } finally {
+      window.removeEventListener('ide:open-file', handleOpenFile)
+    }
+  })
+
   it('keeps external Markdown links opening in the browser', () => {
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
 

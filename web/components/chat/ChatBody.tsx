@@ -92,6 +92,31 @@ const estimateGroupHeight = (group: MessageGroup, expanded: boolean, hasDivider:
   )
 }
 
+interface HeightEstimateCacheEntry {
+  signature: string
+  height: number
+}
+
+const groupHeightSignature = (group: MessageGroup, expanded: boolean, hasDivider: boolean): string => {
+  const user = group.userMessage
+  const last = group.agentMessages[group.agentMessages.length - 1]
+  return [
+    expanded ? '1' : '0',
+    hasDivider ? '1' : '0',
+    user?.id ?? '',
+    user?.content.length ?? 0,
+    user?.images?.length ?? 0,
+    group.agentMessages.length,
+    last?.id ?? '',
+    last?.type ?? '',
+    last?.content?.length ?? 0,
+    last?.toolUse?.toolName ?? '',
+    last?.toolUse?.status ?? '',
+    last?.toolResult?.isError ? '1' : '0',
+    group.isStreaming ? '1' : '0',
+  ].join('|')
+}
+
 const TimeDivider = ({ label }: { label: string }) => (
   <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
     <span style={{
@@ -149,6 +174,7 @@ const ChatBody = ({
   const revealRafRef = useRef<number[]>([])
   const [initialLayoutReady, setInitialLayoutReady] = useState(() => messages.length > 0)
   const initialLayoutReadyRef = useRef(initialLayoutReady)
+  const heightEstimateCacheRef = useRef<Map<string, HeightEstimateCacheEntry>>(new Map())
 
   useEffect(() => {
     initialLayoutReadyRef.current = initialLayoutReady
@@ -203,24 +229,36 @@ const ChatBody = ({
 
   // Timestamp of the most recent message — drives the running indicator's
   // "time since last message" so users can tell if a task has stalled.
-  const lastMessageTs = useMemo(() => {
-    let max = 0
-    for (const m of messages) if (m.timestamp > max) max = m.timestamp
-    return max
-  }, [messages])
+  const lastMessageTs = messages[messages.length - 1]?.timestamp ?? 0
 
   // Time-group dividers: anchor sections of the stream to a moment (今天/昨天/date)
   // so users can read the message timeline at a glance without per-message noise.
   const dividerLabels = useMemo(() => computeDividerLabels(groups), [groups])
 
-  const heightEstimates = useMemo(
-    () => groups.map((group, index) => estimateGroupHeight(group, index === totalGroups - 1, !!dividerLabels[index])),
-    [groups, totalGroups, dividerLabels],
-  )
+  const heightEstimates = useMemo(() => {
+    const prevCache = heightEstimateCacheRef.current
+    const nextCache = new Map<string, HeightEstimateCacheEntry>()
+    const estimates = groups.map((group, index) => {
+      const expanded = index === totalGroups - 1
+      const hasDivider = !!dividerLabels[index]
+      const signature = groupHeightSignature(group, expanded, hasDivider)
+      const cached = prevCache.get(group.id)
+      if (cached?.signature === signature) {
+        nextCache.set(group.id, cached)
+        return cached.height
+      }
+      const height = estimateGroupHeight(group, expanded, hasDivider)
+      nextCache.set(group.id, { signature, height })
+      return height
+    })
+    heightEstimateCacheRef.current = nextCache
+    return estimates
+  }, [groups, totalGroups, dividerLabels])
 
   const defaultItemHeight = useMemo(() => {
     if (heightEstimates.length === 0) return 160
-    const sorted = [...heightEstimates].sort((a, b) => a - b)
+    const sample = heightEstimates.length > 64 ? heightEstimates.slice(-64) : heightEstimates
+    const sorted = [...sample].sort((a, b) => a - b)
     return clamp(sorted[Math.floor(sorted.length * 0.75)] ?? sorted[sorted.length - 1] ?? 160, 120, 900)
   }, [heightEstimates])
 

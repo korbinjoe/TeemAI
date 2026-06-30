@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 // Sidebar pagination: every group shows this many items first; "Load more"
 // grows the visible slice in the same step. When the slice catches up to the
@@ -30,6 +30,47 @@ interface MissionSessionListProps {
   query?: string
 }
 
+interface GroupedChats {
+  chatsByWorkspace: Map<string, Chat[]>
+  chatWorkspaceById: Map<string, string>
+}
+
+const sameChatRefs = (a: Chat[], b: Chat[]): boolean => {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false
+  }
+  return true
+}
+
+const useStableChatsByWorkspace = (chats: Chat[]): GroupedChats => {
+  const prevRef = useRef<GroupedChats | null>(null)
+  return useMemo(() => {
+    const nextMap = new Map<string, Chat[]>()
+    const chatWorkspaceById = new Map<string, string>()
+    for (const c of chats) {
+      chatWorkspaceById.set(c.id, c.workspaceId)
+      const list = nextMap.get(c.workspaceId)
+      if (list) list.push(c)
+      else nextMap.set(c.workspaceId, [c])
+    }
+
+    const prev = prevRef.current
+    if (prev) {
+      for (const [wsId, nextList] of nextMap.entries()) {
+        const prevList = prev.chatsByWorkspace.get(wsId)
+        if (prevList && sameChatRefs(prevList, nextList)) {
+          nextMap.set(wsId, prevList)
+        }
+      }
+    }
+
+    const grouped = { chatsByWorkspace: nextMap, chatWorkspaceById }
+    prevRef.current = grouped
+    return grouped
+  }, [chats])
+}
+
 const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
   const { workspaceId, activeChatId, selectedAgentId } = useWorkspace()
   const { openAddAgent, openNewMission } = useDialog()
@@ -58,18 +99,10 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
   )
 
   // Group all chats by workspace once (O(C)) instead of filtering the full chat
-  // list per workspace (O(W×C)) on every render. Each group array ref is stable
-  // across renders while `chats` is unchanged, so WorkspaceGroup's chats-keyed
-  // memos survive a mission switch (which only flips activeChatId).
-  const chatsByWorkspace = useMemo(() => {
-    const m = new Map<string, Chat[]>()
-    for (const c of chats) {
-      const list = m.get(c.workspaceId)
-      if (list) list.push(c)
-      else m.set(c.workspaceId, [c])
-    }
-    return m
-  }, [chats])
+  // list per workspace (O(W×C)). Preserve each workspace array ref when none
+  // of its chat objects changed, so high-frequency activity in one workspace
+  // does not invalidate every WorkspaceGroup.
+  const { chatsByWorkspace, chatWorkspaceById } = useStableChatsByWorkspace(chats)
 
   // Session-local expansion only. Default-collapsed so the sidebar opens as a
   // scannable index rather than a wall of nested rows; the active workspace
@@ -79,10 +112,12 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
 
   const activeWorkspaceId = useMemo(() => {
     if (activeChatId) {
-      return chats.find((c) => c.id === activeChatId)?.workspaceId ?? workspaceId ?? null
+      return chatWorkspaceById.get(activeChatId) ?? workspaceId ?? null
     }
     return workspaceId ?? null
-  }, [activeChatId, chats, workspaceId])
+  }, [activeChatId, chatWorkspaceById, workspaceId])
+  const activeWorkspaceIdRef = useRef<string | null>(activeWorkspaceId)
+  activeWorkspaceIdRef.current = activeWorkspaceId
 
   const defaultExpanded = useCallback(
     (wsId: string) => wsId === activeWorkspaceId,
@@ -90,8 +125,8 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
   )
 
   const toggleWorkspace = useCallback((wsId: string) => {
-    setWsExpanded((prev) => ({ ...prev, [wsId]: !(prev[wsId] ?? defaultExpanded(wsId)) }))
-  }, [defaultExpanded])
+    setWsExpanded((prev) => ({ ...prev, [wsId]: !(prev[wsId] ?? (wsId === activeWorkspaceIdRef.current)) }))
+  }, [])
 
   // Reset manual overrides only when the user switches to a different workspace.
   // Switching missions within the same workspace should not collapse/re-expand
@@ -111,10 +146,6 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
   const INITIAL_WS_VISIBLE = 15
   const [wsVisibleCount, setWsVisibleCount] = useState(INITIAL_WS_VISIBLE)
 
-  if (loading && workspaces.length === 0 && unmatchedDirs.length === 0) {
-    return <div className="px-3 py-3 text-[10px] text-text-muted">Loading…</div>
-  }
-
   // Always render every workspace + every unmatched local dir, regardless of
   // whether the URL has a workspace selected. The selected workspace just
   // drives which chat is highlighted and (optionally later) auto-scroll. This
@@ -122,6 +153,50 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
   const visibleUnmatched = unmatchedDirs.filter(
     (d) => d.sessionCount > 0,
   )
+
+  // While searching: hide workspaces with no name match and no chat-title match.
+  // External sessions are also filterable but only against what's already loaded —
+  // we don't trigger fetches based on the query.
+  const allRendered = useMemo(() => workspaces
+    .map((ws) => {
+      const wsChats = chatsByWorkspace.get(ws.id) ?? EMPTY_CHATS
+      if (!isSearching) return { ws, wsChats, wsNameMatches: false }
+      const wsNameMatches = ws.name.toLowerCase().includes(q)
+      const anyChatMatches = wsChats.some((c) => c.title.toLowerCase().includes(q))
+      if (!wsNameMatches && !anyChatMatches) return null
+      return { ws, wsChats, wsNameMatches }
+    })
+    .filter((x): x is { ws: typeof workspaces[number]; wsChats: Chat[]; wsNameMatches: boolean } => x !== null),
+  [workspaces, chatsByWorkspace, isSearching, q])
+
+  // When searching, show all workspaces (including hidden) so results aren't silently suppressed.
+  const visibleWorkspaces = useMemo(
+    () => isSearching ? allRendered : allRendered.filter((x) => !hiddenIds.has(x.ws.id)),
+    [allRendered, hiddenIds, isSearching],
+  )
+  const hiddenWorkspaces = useMemo(
+    () => isSearching ? [] : allRendered.filter((x) => hiddenIds.has(x.ws.id)),
+    [allRendered, hiddenIds, isSearching],
+  )
+  const renderedWorkspaces = useMemo(
+    () => isSearching ? visibleWorkspaces : visibleWorkspaces.slice(0, wsVisibleCount),
+    [isSearching, visibleWorkspaces, wsVisibleCount],
+  )
+  const hasMoreWorkspaces = !isSearching && visibleWorkspaces.length > wsVisibleCount
+
+  // Pinned chats filtered by search query
+  const visiblePinned = useMemo(
+    () => isSearching
+      ? globalPinnedChats.filter((c) => c.title.toLowerCase().includes(q))
+      : globalPinnedChats,
+    [globalPinnedChats, isSearching, q],
+  )
+
+  const hasMatches = !isSearching || renderedWorkspaces.length > 0 || visiblePinned.length > 0
+
+  if (loading && workspaces.length === 0 && unmatchedDirs.length === 0) {
+    return <div className="px-3 py-3 text-[10px] text-text-muted">Loading…</div>
+  }
 
   if (workspaces.length === 0 && visibleUnmatched.length === 0) {
     return (
@@ -131,33 +206,6 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
       </div>
     )
   }
-
-  // While searching: hide workspaces with no name match and no chat-title match.
-  // External sessions are also filterable but only against what's already loaded —
-  // we don't trigger fetches based on the query.
-  const allRendered = workspaces
-    .map((ws) => {
-      const wsChats = chatsByWorkspace.get(ws.id) ?? EMPTY_CHATS
-      if (!isSearching) return { ws, wsChats, wsNameMatches: false }
-      const wsNameMatches = ws.name.toLowerCase().includes(q)
-      const anyChatMatches = wsChats.some((c) => c.title.toLowerCase().includes(q))
-      if (!wsNameMatches && !anyChatMatches) return null
-      return { ws, wsChats, wsNameMatches }
-    })
-    .filter((x): x is { ws: typeof workspaces[number]; wsChats: Chat[]; wsNameMatches: boolean } => x !== null)
-
-  // When searching, show all workspaces (including hidden) so results aren't silently suppressed.
-  const visibleWorkspaces = isSearching ? allRendered : allRendered.filter((x) => !hiddenIds.has(x.ws.id))
-  const hiddenWorkspaces = isSearching ? [] : allRendered.filter((x) => hiddenIds.has(x.ws.id))
-  const renderedWorkspaces = isSearching ? visibleWorkspaces : visibleWorkspaces.slice(0, wsVisibleCount)
-  const hasMoreWorkspaces = !isSearching && visibleWorkspaces.length > wsVisibleCount
-
-  // Pinned chats filtered by search query
-  const visiblePinned = isSearching
-    ? globalPinnedChats.filter((c) => c.title.toLowerCase().includes(q))
-    : globalPinnedChats
-
-  const hasMatches = !isSearching || renderedWorkspaces.length > 0 || visiblePinned.length > 0
 
   return (
     <div className="flex flex-col gap-1 pb-2">
@@ -187,18 +235,19 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
             hidePinnedSection
             expanded={expanded}
             isCurrent={ws.id === workspaceId}
+            activeWorkspaceId={activeWorkspaceId}
             activeChatId={activeChatId}
             selectedAgentId={selectedAgentId}
             agentNames={agentNames}
             query={q}
             wsNameMatches={wsNameMatches}
-            onToggle={() => toggleWorkspace(ws.id)}
+            onToggleWorkspace={toggleWorkspace}
             onPin={togglePin}
             onArchive={toggleArchive}
             onArchiveAll={archiveAll}
             onAddAgent={openAddAgent}
             onNewTask={openNewMission}
-            onHide={() => toggleHide(ws.id)}
+            onHideWorkspace={toggleHide}
           />
         )
       })}
@@ -253,7 +302,7 @@ const MissionSessionList = ({ query = '' }: MissionSessionListProps) => {
 }
 
 // ── Global pinned section ──────────────────────────────────────────────────
-const PinnedSection = ({ chats, activeChatId, selectedAgentId, agentNames, wsNameById, onPin, onArchive, onAddAgent }: {
+interface PinnedSectionProps {
   chats: Chat[]
   activeChatId: string | null
   selectedAgentId: string | null
@@ -262,7 +311,28 @@ const PinnedSection = ({ chats, activeChatId, selectedAgentId, agentNames, wsNam
   onPin: (chatId: string) => void
   onArchive: (chatId: string) => void
   onAddAgent: (chatId: string) => void
-}) => (
+}
+
+const chatListHasId = (chats: Chat[], chatId: string | null): boolean =>
+  !!chatId && chats.some((c) => c.id === chatId)
+
+const pinnedSelectionChanged = (prev: PinnedSectionProps, next: PinnedSectionProps): boolean => {
+  if (prev.activeChatId !== next.activeChatId) {
+    return chatListHasId(prev.chats, prev.activeChatId) || chatListHasId(next.chats, next.activeChatId)
+  }
+  return prev.selectedAgentId !== next.selectedAgentId && chatListHasId(next.chats, next.activeChatId)
+}
+
+const arePinnedSectionPropsEqual = (prev: PinnedSectionProps, next: PinnedSectionProps): boolean =>
+  prev.chats === next.chats &&
+  prev.agentNames === next.agentNames &&
+  prev.wsNameById === next.wsNameById &&
+  prev.onPin === next.onPin &&
+  prev.onArchive === next.onArchive &&
+  prev.onAddAgent === next.onAddAgent &&
+  !pinnedSelectionChanged(prev, next)
+
+const PinnedSection = memo(({ chats, activeChatId, selectedAgentId, agentNames, wsNameById, onPin, onArchive, onAddAgent }: PinnedSectionProps) => (
   <div className="pb-1 mb-1 border-b border-border/40">
     <div className="flex items-center gap-1.5 px-2 py-1">
       <Pin size={10} className="text-text-muted" />
@@ -285,19 +355,15 @@ const PinnedSection = ({ chats, activeChatId, selectedAgentId, agentNames, wsNam
       ))}
     </div>
   </div>
-)
+), arePinnedSectionPropsEqual)
+PinnedSection.displayName = 'PinnedSection'
 
 // ── Workspace group ────────────────────────────────────────────────────────
 // Unifies native chats + external sessions for ONE workspace into a single
 // time-ordered list, with "Load more" pulling the next page of external rows.
 // External fetch fires only when the group is expanded. `isCurrent` flags the
 // workspace the URL currently points at so its header gets a subtle marker.
-const WorkspaceGroup = ({
-  wsId, name, chats, pinnedIds, pinnedAt, archivedIds,
-  expanded, isCurrent, activeChatId, selectedAgentId, agentNames,
-  query, wsNameMatches, hidePinnedSection = false,
-  onToggle, onPin, onArchive, onArchiveAll, onAddAgent, onNewTask, onHide,
-}: {
+interface WorkspaceGroupProps {
   wsId: string
   name: string
   chats: Chat[]
@@ -306,20 +372,57 @@ const WorkspaceGroup = ({
   archivedIds: Set<string>
   expanded: boolean
   isCurrent: boolean
+  activeWorkspaceId: string | null
   activeChatId: string | null
   selectedAgentId: string | null
   agentNames: Record<string, string>
   query: string
   wsNameMatches: boolean
   hidePinnedSection?: boolean
-  onToggle: () => void
+  onToggleWorkspace: (wsId: string) => void
   onPin: (chatId: string) => void
   onArchive: (chatId: string) => void
   onArchiveAll: (chatIds: string[]) => void
   onAddAgent: (chatId: string) => void
   onNewTask: (workspaceId: string) => void
-  onHide?: () => void
-}) => {
+  onHideWorkspace?: (wsId: string) => void
+}
+
+const workspaceSelectionChanged = (prev: WorkspaceGroupProps, next: WorkspaceGroupProps): boolean => {
+  if (prev.activeChatId !== next.activeChatId) {
+    return prev.wsId === prev.activeWorkspaceId || next.wsId === next.activeWorkspaceId
+  }
+  return prev.selectedAgentId !== next.selectedAgentId && next.wsId === next.activeWorkspaceId
+}
+
+const areWorkspaceGroupPropsEqual = (prev: WorkspaceGroupProps, next: WorkspaceGroupProps): boolean =>
+  prev.wsId === next.wsId &&
+  prev.name === next.name &&
+  prev.chats === next.chats &&
+  prev.pinnedIds === next.pinnedIds &&
+  prev.pinnedAt === next.pinnedAt &&
+  prev.archivedIds === next.archivedIds &&
+  prev.expanded === next.expanded &&
+  prev.isCurrent === next.isCurrent &&
+  prev.agentNames === next.agentNames &&
+  prev.query === next.query &&
+  prev.wsNameMatches === next.wsNameMatches &&
+  prev.hidePinnedSection === next.hidePinnedSection &&
+  prev.onToggleWorkspace === next.onToggleWorkspace &&
+  prev.onPin === next.onPin &&
+  prev.onArchive === next.onArchive &&
+  prev.onArchiveAll === next.onArchiveAll &&
+  prev.onAddAgent === next.onAddAgent &&
+  prev.onNewTask === next.onNewTask &&
+  prev.onHideWorkspace === next.onHideWorkspace &&
+  !workspaceSelectionChanged(prev, next)
+
+const WorkspaceGroup = memo(({
+  wsId, name, chats, pinnedIds, pinnedAt, archivedIds,
+  expanded, isCurrent, activeChatId, selectedAgentId, agentNames,
+  query, wsNameMatches, hidePinnedSection = false,
+  onToggleWorkspace, onPin, onArchive, onArchiveAll, onAddAgent, onNewTask, onHideWorkspace,
+}: WorkspaceGroupProps) => {
   const { sessions, hasMore, loading, loadMore, hide } = useWorkspaceExternalSessions(wsId, expanded)
   const [archivingAll, setArchivingAll] = useState(false)
   const isSearching = query.length > 0
@@ -455,7 +558,7 @@ const WorkspaceGroup = ({
     <div>
       <div className={`group relative flex items-center rounded-sm transition-colors ${isCurrent ? 'bg-bg-hover/40' : 'hover:bg-bg-hover/50'}`}>
         <button
-          onClick={onToggle}
+          onClick={() => onToggleWorkspace(wsId)}
           className="flex-1 min-w-0 flex items-center gap-1.5 px-2 py-1"
           aria-expanded={expanded}
         >
@@ -505,13 +608,13 @@ const WorkspaceGroup = ({
               <Archive size={11} />
             </span>
           )}
-          {onHide && (
+          {onHideWorkspace && (
             <span
               role="button"
               tabIndex={-1}
-              onClick={(e) => { e.stopPropagation(); onHide() }}
+              onClick={(e) => { e.stopPropagation(); onHideWorkspace(wsId) }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); onHide() }
+                if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); onHideWorkspace(wsId) }
               }}
               title={`Hide ${name}`}
               aria-label={`Hide ${name}`}
@@ -612,7 +715,8 @@ const WorkspaceGroup = ({
       )}
     </div>
   )
-}
+}, areWorkspaceGroupPropsEqual)
+WorkspaceGroup.displayName = 'WorkspaceGroup'
 
 // ── helpers ────────────────────────────────────────────────────────────────
 

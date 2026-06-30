@@ -1,6 +1,6 @@
 /** TimelineView — agent  Timeline  */
 
-import { useState, useMemo } from 'react'
+import { memo, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
@@ -308,19 +308,24 @@ const markdownComponents = {
   li: MarkdownLi,
   td: MarkdownTd,
 }
+const markdownPlugins = [remarkGfm]
 
 const markdownUrlTransform = (url: string, key: string): string | null | undefined => {
   if (key === 'href' && parseFileHref(url)) return url
   return defaultUrlTransform(url)
 }
 
-const TimelineTextBlock = ({ entry }: { entry: TimelineEntry }) => (
+const TimelineTextBlock = memo(({ entry }: { entry: TimelineEntry }) => (
   <div style={{ padding: '6px 12px', margin: '6px 4px 6px 17px', background: 'rgb(var(--bg-hover-subtle) / var(--bg-hover-subtle-alpha))', borderRadius: 6, overflow: 'hidden' }}>
     <div className="chat-markdown" style={{ fontSize: 12, lineHeight: 1.7 }}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents} urlTransform={markdownUrlTransform}>{entry.textContent || ''}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={markdownPlugins} components={markdownComponents} urlTransform={markdownUrlTransform}>{entry.textContent || ''}</ReactMarkdown>
     </div>
   </div>
+), (prev, next) =>
+  prev.entry.id === next.entry.id &&
+  prev.entry.textContent === next.entry.textContent
 )
+TimelineTextBlock.displayName = 'TimelineTextBlock'
 
 const TimelineStatsRow = ({ entry }: { entry: TimelineEntry }) => {
   const { t } = useTranslation('chat')
@@ -456,4 +461,8 @@ const TimelineView = ({ messages, onAnswerQuestion, isCompleted }: { messages: M
   )
 }
 
-export default TimelineView
+export default memo(TimelineView, (prev, next) =>
+  prev.messages === next.messages &&
+  prev.onAnswerQuestion === next.onAnswerQuestion &&
+  prev.isCompleted === next.isCompleted
+)

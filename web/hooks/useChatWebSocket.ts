@@ -146,6 +146,12 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
   // at a working phase when a turn-end event is missed, but the chat-level
   // signal is broadcast workspace-wide and reliably reaches this view.
   const [chatStatus, setChatStatus] = useState<string | null>(null)
+  const chatStatusRef = useRef<string | null>(null)
+  const setChatStatusIfChanged = useCallback((nextStatus: string | null) => {
+    if (chatStatusRef.current === nextStatus) return
+    chatStatusRef.current = nextStatus
+    setChatStatus(nextStatus)
+  }, [])
 
   const [agentPlans, setAgentPlans] = useState<Record<string, { entries: Array<{ content: string; status: 'pending' | 'in_progress' | 'completed'; priority?: 'low' | 'medium' | 'high' }> }>>({})
   const [agentModes, setAgentModes] = useState<Record<string, string>>({})
@@ -354,7 +360,7 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
           setResumableAgentIds(expertSessionIds)
           if (chat.title) setChatTitle(chat.title)
           const derivedChatStatus = deriveChatStatusFromSnapshot(chat)
-          if (derivedChatStatus) setChatStatus(derivedChatStatus)
+          if (derivedChatStatus) setChatStatusIfChanged(derivedChatStatus)
           setChatModel(chat.model || DEFAULT_MODEL)
           setAllWorktreeSessions(chat.worktreeSessions ?? [])
           if (chat.totalTokens || chat.totalCost != null) {
@@ -380,29 +386,12 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
 
     init()
     return () => { cancelled = true }
-  }, [workspaceId, chatId, handleSetSelectedAgentId, setAvailableAgents, onInitError])
+  }, [workspaceId, chatId, handleSetSelectedAgentId, setAvailableAgents, onInitError, setChatStatusIfChanged])
 
   useEffect(() => {
     let cancelled = false
-    const h = wsHandlersRef.current
 
-    const markMissed = (p: unknown) => { if ((p as { chatId?: string })?.chatId === chatIdRef.current) missedWhileInactiveRef.current = true }
-    const onStructuredMessage = (p: unknown) => { if (!isActiveRef.current) { markMissed(p); return } wsHandlersRef.current.onExpertStructuredMessage(p as Parameters<typeof h.onExpertStructuredMessage>[0]) }
     const onError = (p: unknown) => wsHandlersRef.current.handleError(p as { message?: string; chatId?: string } | undefined)
-    const onExpertError = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertError(p as Parameters<typeof h.handleExpertError>[0]) }
-    const onExpertActivity = (p: unknown) => { if (!isActiveRef.current) { markMissed(p); return } wsHandlersRef.current.handleExpertActivity(p as Parameters<typeof h.handleExpertActivity>[0]) }
-    const onExpertExit = (p: unknown) => { if (!isActiveRef.current) { markMissed(p); return } wsHandlersRef.current.handleExpertExit(p as Parameters<typeof h.handleExpertExit>[0]) }
-    const onExpertStarted = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertStarted(p as Parameters<typeof h.handleExpertStarted>[0]) }
-    const onExpertResumeFailed = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertResumeFailed(p as Parameters<typeof h.handleExpertResumeFailed>[0]) }
-    const onVersionBlocked = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleVersionBlocked(p as Parameters<typeof h.handleVersionBlocked>[0]) }
-    const onExpertSlashCommands = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertSlashCommands(p as Parameters<typeof h.handleExpertSlashCommands>[0]) }
-    const onExpertPartialText = (p: unknown) => { if (!isActiveRef.current) { markMissed(p); return } wsHandlersRef.current.handleExpertPartialText(p as Parameters<typeof h.handleExpertPartialText>[0]) }
-    const onExpertPlanUpdate = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertPlanUpdate(p as Parameters<typeof h.handleExpertPlanUpdate>[0]) }
-    const onExpertModeChange = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertModeChange(p as Parameters<typeof h.handleExpertModeChange>[0]) }
-    const onExpertCommandsUpdate = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertCommandsUpdate(p as Parameters<typeof h.handleExpertCommandsUpdate>[0]) }
-    const onExpertSessionInfo = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertSessionInfo(p as Parameters<typeof h.handleExpertSessionInfo>[0]) }
-    const onExpertPermissionRequest = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleExpertPermissionRequest(p as Parameters<typeof h.handleExpertPermissionRequest>[0]) }
-    const onChatPermissionResolved = (p: unknown) => { if (!isActiveRef.current) return; wsHandlersRef.current.handleChatPermissionResolved(p as Parameters<typeof h.handleChatPermissionResolved>[0]) }
     const onChatTitleUpdated = (p: unknown) => {
       if (!isActiveRef.current) return
       const payload = p as { chatId: string; title: string }
@@ -420,36 +409,23 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
     const onChatStatusChanged = (p: unknown) => {
       const payload = p as { chatId: string; status: string }
       if (!isCurrentChatEvent(payload)) return
-      if (payload.status) setChatStatus(payload.status)
+      if (payload.status) setChatStatusIfChanged(payload.status)
     }
     const onChatActivity = (p: unknown) => {
       const payload = p as ChatActivityPayload
       if (!isCurrentChatEvent(payload)) return
       const phase = payload.phase
-      if (phase === 'completed' || phase === 'error') setChatStatus('stopped')
-      else if (phase === 'waiting_input' || phase === 'waiting_confirmation') setChatStatus('idle')
-      else if (ACTIVE_PHASES.has(phase)) setChatStatus('running')
-      if (!isActiveRef.current) return
+      if (phase === 'completed' || phase === 'error') setChatStatusIfChanged('stopped')
+      else if (phase === 'waiting_input' || phase === 'waiting_confirmation') setChatStatusIfChanged('idle')
+      else if (ACTIVE_PHASES.has(phase)) setChatStatusIfChanged('running')
+      if (!isActiveRef.current) {
+        missedWhileInactiveRef.current = true
+        return
+      }
       setExpertActivities((prev) => reconcileExpertActivitiesFromChat(prev, payload))
     }
 
-    wsClient.on('agent:structured-message', onStructuredMessage)
     wsClient.on('error', onError)
-    wsClient.on('agent:error', onExpertError)
-    wsClient.on('agent:activity', onExpertActivity)
-    wsClient.on('agent:exit', onExpertExit)
-    wsClient.on('agent:stopped', onExpertExit)
-    wsClient.on('agent:started', onExpertStarted)
-    wsClient.on('agent:resume-failed', onExpertResumeFailed)
-    wsClient.on('agent:version-blocked', onVersionBlocked)
-    wsClient.on('agent:slash-commands', onExpertSlashCommands)
-    wsClient.on('agent:partial-text', onExpertPartialText)
-    wsClient.on('agent:plan-update', onExpertPlanUpdate)
-    wsClient.on('agent:mode-change', onExpertModeChange)
-    wsClient.on('agent:commands-update', onExpertCommandsUpdate)
-    wsClient.on('agent:session-info', onExpertSessionInfo)
-    wsClient.on('agent:permission-request', onExpertPermissionRequest)
-    wsClient.on('mission.permission-resolved', onChatPermissionResolved)
     wsClient.on('mission.title-updated', onChatTitleUpdated)
     wsClient.on('mission.available-commands', onChatAvailableCommands)
     wsClient.on('mission.status-changed', onChatStatusChanged)
@@ -499,8 +475,58 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       cancelled = true
       expertHandlers.cleanupDeltaTimer()
       if (sendContextTimerRef.current) { clearTimeout(sendContextTimerRef.current); sendContextTimerRef.current = null }
-      wsClient.off('agent:structured-message', onStructuredMessage)
       wsClient.off('error', onError)
+      wsClient.off('mission.title-updated', onChatTitleUpdated)
+      wsClient.off('mission.available-commands', onChatAvailableCommands)
+      wsClient.off('mission.status-changed', onChatStatusChanged)
+      wsClient.off('mission.activity', onChatActivity)
+      wsClient.off('reconnected', handleReconnected)
+      wsClient.off('disconnected', handleDisconnected)
+      wsClient.off('reconnect_failed', handleReconnectFailed)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [wsClient, setChatStatusIfChanged])
+
+  useEffect(() => {
+    if (!isActive) return
+    const h = wsHandlersRef.current
+
+    const onStructuredMessage = (p: unknown) => wsHandlersRef.current.onExpertStructuredMessage(p as Parameters<typeof h.onExpertStructuredMessage>[0])
+    const onExpertError = (p: unknown) => wsHandlersRef.current.handleExpertError(p as Parameters<typeof h.handleExpertError>[0])
+    const onExpertActivity = (p: unknown) => wsHandlersRef.current.handleExpertActivity(p as Parameters<typeof h.handleExpertActivity>[0])
+    const onExpertExit = (p: unknown) => wsHandlersRef.current.handleExpertExit(p as Parameters<typeof h.handleExpertExit>[0])
+    const onExpertStarted = (p: unknown) => wsHandlersRef.current.handleExpertStarted(p as Parameters<typeof h.handleExpertStarted>[0])
+    const onExpertResumeFailed = (p: unknown) => wsHandlersRef.current.handleExpertResumeFailed(p as Parameters<typeof h.handleExpertResumeFailed>[0])
+    const onVersionBlocked = (p: unknown) => wsHandlersRef.current.handleVersionBlocked(p as Parameters<typeof h.handleVersionBlocked>[0])
+    const onExpertSlashCommands = (p: unknown) => wsHandlersRef.current.handleExpertSlashCommands(p as Parameters<typeof h.handleExpertSlashCommands>[0])
+    const onExpertPartialText = (p: unknown) => wsHandlersRef.current.handleExpertPartialText(p as Parameters<typeof h.handleExpertPartialText>[0])
+    const onExpertPlanUpdate = (p: unknown) => wsHandlersRef.current.handleExpertPlanUpdate(p as Parameters<typeof h.handleExpertPlanUpdate>[0])
+    const onExpertModeChange = (p: unknown) => wsHandlersRef.current.handleExpertModeChange(p as Parameters<typeof h.handleExpertModeChange>[0])
+    const onExpertCommandsUpdate = (p: unknown) => wsHandlersRef.current.handleExpertCommandsUpdate(p as Parameters<typeof h.handleExpertCommandsUpdate>[0])
+    const onExpertSessionInfo = (p: unknown) => wsHandlersRef.current.handleExpertSessionInfo(p as Parameters<typeof h.handleExpertSessionInfo>[0])
+    const onExpertPermissionRequest = (p: unknown) => wsHandlersRef.current.handleExpertPermissionRequest(p as Parameters<typeof h.handleExpertPermissionRequest>[0])
+    const onChatPermissionResolved = (p: unknown) => wsHandlersRef.current.handleChatPermissionResolved(p as Parameters<typeof h.handleChatPermissionResolved>[0])
+
+    wsClient.on('agent:structured-message', onStructuredMessage)
+    wsClient.on('agent:error', onExpertError)
+    wsClient.on('agent:activity', onExpertActivity)
+    wsClient.on('agent:exit', onExpertExit)
+    wsClient.on('agent:stopped', onExpertExit)
+    wsClient.on('agent:started', onExpertStarted)
+    wsClient.on('agent:resume-failed', onExpertResumeFailed)
+    wsClient.on('agent:version-blocked', onVersionBlocked)
+    wsClient.on('agent:slash-commands', onExpertSlashCommands)
+    wsClient.on('agent:partial-text', onExpertPartialText)
+    wsClient.on('agent:plan-update', onExpertPlanUpdate)
+    wsClient.on('agent:mode-change', onExpertModeChange)
+    wsClient.on('agent:commands-update', onExpertCommandsUpdate)
+    wsClient.on('agent:session-info', onExpertSessionInfo)
+    wsClient.on('agent:permission-request', onExpertPermissionRequest)
+    wsClient.on('mission.permission-resolved', onChatPermissionResolved)
+
+    return () => {
+      expertHandlers.cleanupDeltaTimer()
+      wsClient.off('agent:structured-message', onStructuredMessage)
       wsClient.off('agent:error', onExpertError)
       wsClient.off('agent:activity', onExpertActivity)
       wsClient.off('agent:exit', onExpertExit)
@@ -516,16 +542,8 @@ export const useChatWebSocket = (opts: UseChatWebSocketOptions) => {
       wsClient.off('agent:session-info', onExpertSessionInfo)
       wsClient.off('agent:permission-request', onExpertPermissionRequest)
       wsClient.off('mission.permission-resolved', onChatPermissionResolved)
-      wsClient.off('mission.title-updated', onChatTitleUpdated)
-      wsClient.off('mission.available-commands', onChatAvailableCommands)
-      wsClient.off('mission.status-changed', onChatStatusChanged)
-      wsClient.off('mission.activity', onChatActivity)
-      wsClient.off('reconnected', handleReconnected)
-      wsClient.off('disconnected', handleDisconnected)
-      wsClient.off('reconnect_failed', handleReconnectFailed)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [wsClient])
+  }, [expertHandlers, isActive, wsClient])
 
   const prevIsActiveRef = useRef(isActive)
   useEffect(() => {

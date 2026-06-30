@@ -845,6 +845,7 @@ export class ConfigCompiler {
     if (!query.trim()) return null
 
     const episodes = this.episodicMemoryService.search(agent.id, query, 3)
+      .filter((episode) => episode.outcome !== 'failed' && episode.outcome !== 'blocked' || !!episode.hasLesson)
     if (episodes.length === 0) return null
     return this.formatPriorEpisodes(episodes)
   }

@@ -6,14 +6,14 @@
  *
  *   subscribe(chatId, path) → refCount++ →  chokidar
  *   fs event → debounce 500ms → computeWorkingChanges() → emit('changes', chatId, payload)
- *   unsubscribe(chatId, path) → refCount-- →  0  watcher.close()
+ *   unsubscribe(chatId, path) → refCount-- →  0  delayed watcher.close()
  *
  *  design.md 5
  *   1. watcher  path  +
  *   2.  chatId  WS
  *   3. WS disconnect  unsubscribeAllFor(chatId)
  *   4. diff  path path  chat  payload
- *   5.  unsub  sub
+ *   5.  unsub  sub; recent idle watchers kept briefly for Mission switch reuse
  */
 
 import chokidar from 'chokidar'
@@ -25,6 +25,7 @@ import { computeWorkingChanges, type WorkingChanges } from './workingChanges'
 const log = createLogger('GitWatchManager')
 
 const DEBOUNCE_MS = 200
+const DEFAULT_IDLE_CLOSE_MS = 30_000
 
 const IGNORED_PATTERNS: Array<string | ((filePath: string) => boolean)> = [
   '**/node_modules/**',
@@ -59,6 +60,7 @@ interface WatcherEntry {
   subscribers: Set<string> // chatId set
   debounceTimer: ReturnType<typeof setTimeout> | null
   treeDebounceTimer: ReturnType<typeof setTimeout> | null
+  idleCloseTimer: ReturnType<typeof setTimeout> | null
 }
 
 let _instance: GitWatchManager | null = null
@@ -69,7 +71,7 @@ export class GitWatchManager extends EventEmitter {
   private readonly watchers = new Map<string, WatcherEntry>()
   private readonly chatPaths = new Map<string, Set<string>>()
 
-  constructor() {
+  constructor(private readonly idleCloseMs = DEFAULT_IDLE_CLOSE_MS) {
     super()
     _instance = this
   }
@@ -91,6 +93,10 @@ export class GitWatchManager extends EventEmitter {
     if (!entry) {
       entry = this.createWatcher(path)
       this.watchers.set(path, entry)
+    } else if (entry.idleCloseTimer) {
+      clearTimeout(entry.idleCloseTimer)
+      entry.idleCloseTimer = null
+      log.debug('watcher idle close cancelled', { chatId, path })
     }
     entry.subscribers.add(chatId)
     log.debug('subscribed', { chatId, path, refCount: entry.subscribers.size })
@@ -111,7 +117,7 @@ export class GitWatchManager extends EventEmitter {
     log.debug('unsubscribed', { chatId, path, refCount: entry.subscribers.size })
 
     if (entry.subscribers.size === 0) {
-      this.closeEntry(path, entry)
+      this.scheduleIdleClose(path, entry)
     }
   }
 
@@ -131,6 +137,7 @@ export class GitWatchManager extends EventEmitter {
       entries.map(async ([path, entry]) => {
         if (entry.debounceTimer) clearTimeout(entry.debounceTimer)
         if (entry.treeDebounceTimer) clearTimeout(entry.treeDebounceTimer)
+        if (entry.idleCloseTimer) clearTimeout(entry.idleCloseTimer)
         try {
           await entry.watcher.close()
         } catch (err) {
@@ -177,6 +184,10 @@ export class GitWatchManager extends EventEmitter {
     return entry ? entry.subscribers.size : 0
   }
 
+  getWatchedPathCount(): number {
+    return this.watchers.size
+  }
+
   private createWatcher(path: string): WatcherEntry {
     const watcher = chokidar.watch(path, {
       ignored: IGNORED_PATTERNS,
@@ -190,6 +201,7 @@ export class GitWatchManager extends EventEmitter {
       subscribers: new Set(),
       debounceTimer: null,
       treeDebounceTimer: null,
+      idleCloseTimer: null,
     }
 
     const onFsEvent = () => this.scheduleEmit(path, entry)
@@ -243,9 +255,23 @@ export class GitWatchManager extends EventEmitter {
     }
   }
 
+  private scheduleIdleClose(path: string, entry: WatcherEntry): void {
+    if (entry.idleCloseTimer) clearTimeout(entry.idleCloseTimer)
+    if (this.idleCloseMs <= 0) {
+      this.closeEntry(path, entry)
+      return
+    }
+    entry.idleCloseTimer = setTimeout(() => {
+      entry.idleCloseTimer = null
+      if (entry.subscribers.size === 0) this.closeEntry(path, entry)
+    }, this.idleCloseMs)
+    log.debug('watcher idle close scheduled', { path, idleCloseMs: this.idleCloseMs })
+  }
+
   private closeEntry(path: string, entry: WatcherEntry): void {
     if (entry.debounceTimer) clearTimeout(entry.debounceTimer)
     if (entry.treeDebounceTimer) clearTimeout(entry.treeDebounceTimer)
+    if (entry.idleCloseTimer) clearTimeout(entry.idleCloseTimer)
     this.watchers.delete(path)
     entry.watcher.close().catch((err) => log.warn('close error', { path, error: String(err) }))
     log.info('watcher closed', { path })

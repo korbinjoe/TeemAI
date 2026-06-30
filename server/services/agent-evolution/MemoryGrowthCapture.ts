@@ -5,6 +5,8 @@ import type { WhiteboardEntry } from '../../../shared/whiteboard-types'
 import type { MemoryCategory } from '../../config/types'
 import { canonicalAgentId } from '../../../shared/utils'
 import type { EpisodicMemoryService } from './EpisodicMemoryService'
+import type { ChatStore } from '../../stores/ChatStore'
+import { resolveExpertSessionJsonl } from '../sessionFilePurger'
 import { createLogger } from '../../lib/logger'
 
 const log = createLogger('MemoryGrowthCapture')
@@ -25,6 +27,7 @@ export class MemoryGrowthCapture {
     private whiteboardManager: WhiteboardManager,
     private agentRegistry: AgentRegistry,
     private episodicMemoryService?: EpisodicMemoryService,
+    private chatStore?: ChatStore,
   ) {
     this.loadSourceIndex()
   }
@@ -44,14 +47,14 @@ export class MemoryGrowthCapture {
   onTaskCompleted(agentId: string, _chatId: string): void {
     const canonical = canonicalAgentId(agentId, this.agentRegistry)
     if (!canonical) return
-    this.episodicMemoryService?.indexCompletedMission({
+    const jsonlPath = this.resolveJsonlPath(_chatId, canonical)
+    this.episodicMemoryService?.indexCompletedMissionFromTranscript({
       agentId: canonical,
       missionId: _chatId,
       title: `Completed mission ${_chatId}`,
-      summary: `Mission completed by ${canonical}.`,
       outcome: 'success',
-      tags: ['mission'],
-      sourceRef: `mission:${_chatId}`,
+      jsonlPath,
+      fallbackSummary: `Mission for ${canonical} completed. Review transcript or whiteboard for reusable details.`,
     })
     log.debug('Task completed (growth tracking deprecated)', { agentId: canonical })
   }
@@ -59,14 +62,14 @@ export class MemoryGrowthCapture {
   onTaskFailed(agentId: string, chatId: string): void {
     const canonical = canonicalAgentId(agentId, this.agentRegistry)
     if (!canonical) return
-    this.episodicMemoryService?.indexCompletedMission({
+    const jsonlPath = this.resolveJsonlPath(chatId, canonical)
+    this.episodicMemoryService?.indexCompletedMissionFromTranscript({
       agentId: canonical,
       missionId: chatId,
       title: `Failed mission ${chatId}`,
-      summary: `Mission ended unsuccessfully for ${canonical}.`,
       outcome: 'failed',
-      tags: ['mission'],
-      sourceRef: `mission:${chatId}`,
+      jsonlPath,
+      fallbackSummary: `Mission for ${canonical} failed. Do not repeat this approach without reviewing evidence.`,
     })
   }
 
@@ -110,5 +113,11 @@ export class MemoryGrowthCapture {
     if (agentId) return agentId
     log.debug('Skipping unrecognized agent', { by })
     return null
+  }
+
+  private resolveJsonlPath(chatId: string, agentId: string): string | null {
+    const session = this.chatStore?.get(chatId)?.expertSessions?.[agentId]
+    if (!session) return null
+    return resolveExpertSessionJsonl(session).path
   }
 }

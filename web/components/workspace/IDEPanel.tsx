@@ -58,14 +58,14 @@ const useStripMeta = (): Record<StripTab, StripMeta> => {
 /** Workspace-level git aggregate badge — uses workspace repos directly (no worktree).
  *  Per-chat worktree-aware diffs live inside the embedded WebIDEPanel. */
 const useWorkspaceGitAggregate = () => {
-  const { workspaceId, activeChatId } = useWorkspace()
+  const { workspaceId } = useWorkspace()
   const { meta } = useWorkspaceMeta(workspaceId)
   const repos = meta?.repositories ?? []
   const { aggregate } = useMultiRepoGitStatus({
     worktreeSessions: [],
     agentActivity: null,
     repositories: repos,
-    chatId: activeChatId ?? undefined,
+    chatId: workspaceId ? `workspace:${workspaceId}` : undefined,
   })
   return aggregate
 }

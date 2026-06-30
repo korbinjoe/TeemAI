@@ -51,7 +51,7 @@ import { UpdateMonitor } from './services/update/UpdateMonitor'
 import { WorkspaceSeeder } from './services/WorkspaceSeeder'
 import { VersionGate } from './services/update/VersionGate'
 
-import { SessionRegistry } from './terminal/SessionRegistry'
+import { SessionRegistry, type ChatActivityPayload } from './terminal/SessionRegistry'
 import { IdleReaper } from './terminal/IdleReaper'
 import { TerminalViewManager } from './terminal/TerminalViewManager'
 
@@ -60,6 +60,11 @@ import { MemoryGrowthCapture } from './services/agent-evolution/MemoryGrowthCapt
 import { startPeriodicCheck as startEvolutionTrigger } from './services/agent-evolution/EvolutionTrigger'
 import { EvolutionReviewService } from './services/agent-evolution/EvolutionReviewService'
 import { EpisodicMemoryService } from './services/agent-evolution/EpisodicMemoryService'
+import { SkillEvolutionService } from './services/agent-evolution/SkillEvolutionService'
+import { AgentEvolutionService } from './services/agent-evolution/AgentEvolutionService'
+import { EvolutionApplyService } from './services/agent-evolution/EvolutionApplyService'
+import { EvolutionReviewContextBuilder } from './services/agent-evolution/EvolutionReviewContextBuilder'
+import { SenseiReviewRunner } from './services/agent-evolution/SenseiReviewRunner'
 import { ExecutionPlanManager } from './mailbox/ExecutionPlanManager'
 import { WorkflowRegistry } from './orchestration/WorkflowRegistry'
 import { WorkflowScheduler } from './orchestration/WorkflowScheduler'
@@ -139,8 +144,29 @@ const skillEvolutionStore = new SkillEvolutionStore()
 const evolutionEventStore = new EvolutionEventStore()
 const reviewJobStore = new EvolutionReviewJobStore()
 const episodeStore = new EpisodeStore()
-const evolutionReviewService = new EvolutionReviewService(reviewJobStore)
 const episodicMemoryService = new EpisodicMemoryService(episodeStore)
+const skillEvolutionService = new SkillEvolutionService({
+  skillsDir: join(TEEMAI_HOME, 'skills'),
+  store: skillEvolutionStore,
+  evolutionEventStore,
+})
+const agentEvolutionService = new AgentEvolutionService({ agentRegistry, evolutionEventStore })
+const evolutionApplyService = new EvolutionApplyService({
+  reviewJobStore,
+  skillEvolutionService,
+  agentEvolutionService,
+  memoryStore,
+})
+const evolutionReviewContextBuilder = new EvolutionReviewContextBuilder({
+  agentRegistry,
+  memoryStore,
+  episodicMemoryService,
+})
+const evolutionReviewService = new EvolutionReviewService(
+  reviewJobStore,
+  new SenseiReviewRunner(evolutionReviewContextBuilder),
+  evolutionApplyService,
+)
 initEventTracker(eventStore)
 setSkillEvolutionStore(skillEvolutionStore)
 
@@ -164,6 +190,43 @@ const broadcast = (msg: Record<string, unknown>) => {
   wss.clients.forEach((c) => { if (c.readyState === WebSocket.OPEN) frames.forEach((f) => c.send(f)) })
 }
 
+const MISSION_ACTIVITY_BROADCAST_COALESCE_MS = 120
+const pendingMissionActivityBroadcasts = new Map<string, ChatActivityPayload>()
+let missionActivityBroadcastTimer: ReturnType<typeof setTimeout> | null = null
+
+const flushMissionActivityBroadcasts = () => {
+  if (missionActivityBroadcastTimer) {
+    clearTimeout(missionActivityBroadcastTimer)
+    missionActivityBroadcastTimer = null
+  }
+  if (pendingMissionActivityBroadcasts.size === 0) return
+  const payloads = Array.from(pendingMissionActivityBroadcasts.values())
+  pendingMissionActivityBroadcasts.clear()
+  for (const payload of payloads) {
+    broadcast({ type: 'mission.activity', payload })
+  }
+}
+
+const shouldFlushMissionActivityImmediately = (payload: ChatActivityPayload): boolean =>
+  payload.phase === 'completed' ||
+  payload.phase === 'error' ||
+  payload.phase === 'waiting_input' ||
+  payload.phase === 'waiting_confirmation'
+
+const broadcastMissionActivityForUi = (payload: ChatActivityPayload) => {
+  pendingMissionActivityBroadcasts.set(payload.chatId, payload)
+  if (shouldFlushMissionActivityImmediately(payload)) {
+    flushMissionActivityBroadcasts()
+    return
+  }
+  if (!missionActivityBroadcastTimer) {
+    missionActivityBroadcastTimer = setTimeout(
+      flushMissionActivityBroadcasts,
+      MISSION_ACTIVITY_BROADCAST_COALESCE_MS,
+    )
+  }
+}
+
 const updateMonitor = new UpdateMonitor(updateManager, broadcast)
 
 const sessionRegistry = new SessionRegistry(hooksConfigManager, chatStore)
@@ -176,7 +239,7 @@ sessionRegistry.onActivityChanged((payload) => {
     const latest = expertHandler.getLatestMessage(payload.chatId)
     if (latest) payload.latestMessage = latest
   }
-  broadcast({ type: 'mission.activity', payload })
+  broadcastMissionActivityForUi(payload)
   semanticLogBroadcaster.handle(payload)
   workflowScheduler.onActivityChanged(payload)
   const sessions = sessionRegistry.findAllByChat(payload.chatId)
@@ -213,7 +276,7 @@ const broadcastToChat = (chatId: string, msg: Record<string, unknown>) => {
 }
 const expertHandler = new MissionAgentHandler(configCompiler, agentRegistry, agentStore, chatStore, workspaceStore, tokenUsageStore, executionLogStore, undefined, sessionRegistry, versionGate, broadcastToChat, whiteboardManager, broadcast)
 const workflowScheduler = new WorkflowScheduler({ workflowRegistry, expertHandler, chatStore, workspaceStore, sessionRegistry, broadcastToChat })
-const memoryGrowthCapture = new MemoryGrowthCapture(memoryStore, whiteboardManager, agentRegistry, episodicMemoryService)
+const memoryGrowthCapture = new MemoryGrowthCapture(memoryStore, whiteboardManager, agentRegistry, episodicMemoryService, chatStore)
 whiteboardManager.onEntryAppended((chatId, entry) => {
   memoryGrowthCapture.onWhiteboardEntry(chatId, entry)
 })
@@ -403,6 +466,10 @@ const gracefulShutdown = async (signal: string) => {
   log.info(`${signal} received, shutting down gracefully...`)
   if (IS_DAEMON_FILE_OWNER) removePorts()
   clearInterval(heartbeatTimer)
+  if (missionActivityBroadcastTimer) {
+    clearTimeout(missionActivityBroadcastTimer)
+    missionActivityBroadcastTimer = null
+  }
   const forceTimer = setTimeout(() => {
     log.warn('Graceful shutdown timed out, forcing exit')
     process.exit(1)

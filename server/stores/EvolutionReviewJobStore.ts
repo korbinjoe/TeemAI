@@ -4,6 +4,85 @@ import { getDatabase } from './Database'
 export type EvolutionReviewStatus = 'queued' | 'running' | 'proposal_ready' | 'approved' | 'rejected' | 'applied' | 'failed'
 export type EvolutionReviewTargetType = 'agent' | 'skill' | 'team'
 
+export type AgentPromptFile = 'IDENTITY.md' | 'AGENTS.md' | 'SOUL.md'
+
+export interface AgentPromptPatchAction {
+  type: 'agent_prompt_patch'
+  agentId: string
+  filePath: AgentPromptFile
+  find: string
+  replace: string
+}
+
+export interface SkillPatchAction {
+  type: 'skill_patch'
+  skillName: string
+  filePath?: string
+  find: string
+  replace: string
+}
+
+export interface SkillCreateAction {
+  type: 'skill_create'
+  skillName: string
+  description: string
+  body: string
+  createdBy?: string
+}
+
+export interface SkillWriteFileAction {
+  type: 'skill_write_file'
+  skillName: string
+  filePath: string
+  content: string
+}
+
+export interface SkillArchiveAction {
+  type: 'skill_archive'
+  skillName: string
+}
+
+export interface SkillRestoreAction {
+  type: 'skill_restore'
+  skillName: string
+  archivePath: string
+}
+
+export interface SkillPinAction {
+  type: 'skill_pin'
+  skillName: string
+  pinned: boolean
+}
+
+export interface MemoryUpsertAction {
+  type: 'memory_upsert'
+  agentId: string
+  content: string
+  category?: string
+  importance?: number
+  source?: string
+}
+
+export type EvolutionAction =
+  | AgentPromptPatchAction
+  | SkillPatchAction
+  | SkillCreateAction
+  | SkillWriteFileAction
+  | SkillArchiveAction
+  | SkillRestoreAction
+  | SkillPinAction
+  | MemoryUpsertAction
+
+export interface EvolutionMetrics {
+  baselineScore?: number
+  candidateScore?: number
+  holdoutScore?: number
+  datasetSource?: string
+  sizeChange?: number
+  gates?: Array<{ name: string; passed: boolean; message?: string }>
+  [key: string]: unknown
+}
+
 export interface EvolutionProposal {
   evidence: unknown
   rootCause: string
@@ -12,6 +91,17 @@ export interface EvolutionProposal {
   risk: string
   validationPlan: string
   rollbackPath: string
+  actions: EvolutionAction[]
+  metrics?: EvolutionMetrics
+}
+
+export interface AppliedEvolutionAction {
+  action: EvolutionAction
+  status: 'applied' | 'failed'
+  changedFile?: string
+  rollbackRef?: string
+  result?: unknown
+  error?: string
 }
 
 export interface EvolutionReviewJob {
@@ -22,6 +112,7 @@ export interface EvolutionReviewJob {
   evidence: unknown
   status: EvolutionReviewStatus
   proposal?: EvolutionProposal
+  appliedActions?: AppliedEvolutionAction[]
   error?: string
   createdAt: string
   updatedAt: string
@@ -120,6 +211,14 @@ export class EvolutionReviewJobStore {
     `).run(JSON.stringify(proposal), new Date().toISOString(), id)
   }
 
+  setAppliedActions(id: string, actions: AppliedEvolutionAction[]): void {
+    this.db.prepare(`
+      UPDATE evolution_review_jobs
+      SET applied_actions_json = ?, updated_at = ?
+      WHERE id = ?
+    `).run(JSON.stringify(actions), new Date().toISOString(), id)
+  }
+
   private rowToJob(row: Record<string, unknown>): EvolutionReviewJob {
     return {
       id: row.id as string,
@@ -129,6 +228,7 @@ export class EvolutionReviewJobStore {
       evidence: JSON.parse(row.evidence_json as string),
       status: row.status as EvolutionReviewStatus,
       proposal: row.proposal_json ? JSON.parse(row.proposal_json as string) as EvolutionProposal : undefined,
+      appliedActions: row.applied_actions_json ? JSON.parse(row.applied_actions_json as string) as AppliedEvolutionAction[] : undefined,
       error: row.error as string | undefined,
       createdAt: row.created_at as string,
       updatedAt: row.updated_at as string,

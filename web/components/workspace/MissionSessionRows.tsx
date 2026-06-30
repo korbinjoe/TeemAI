@@ -97,6 +97,20 @@ export const isCompletedStatus = (c: Chat) => c.status === 'stopped' || c.status
 export const buildMissionOpenUrl = (chat: Chat): string =>
   buildMissionUrl(chat.workspaceId, chat.id)
 
+const hasRunningMember = (chat: Chat): boolean =>
+  chat.status === 'running' || (chat.members ?? []).some((m) => m.status === 'running')
+
+const navigateMission = (navigate: ReturnType<typeof useNavigate>, chat: Chat, agentId?: string): void => {
+  const url = agentId
+    ? buildMissionUrl(chat.workspaceId, chat.id, agentId)
+    : buildMissionOpenUrl(chat)
+  if (hasRunningMember(chat)) {
+    startTransition(() => navigate(url))
+    return
+  }
+  navigate(url)
+}
+
 interface MissionRowProps {
   chat: Chat
   isSelected: boolean
@@ -124,9 +138,7 @@ export const MissionRow = memo(({ chat, isSelected, agentNames, onPin, onArchive
 
   const handleOpen = () => {
     missionSwitchPerf.start(chat.id, 'sidebar')
-    startTransition(() => {
-      navigate(buildMissionOpenUrl(chat))
-    })
+    navigateMission(navigate, chat)
   }
 
   const handleDeleteTask = useCallback(async () => {
@@ -283,9 +295,7 @@ export const AgentRow = memo(({ agentId, agentName, isLead, chat, member, isSele
   // Agent 1:1 navigation: includes ?agent= so viewMode becomes 'agent'.
   const handleOpen = (e: React.MouseEvent) => {
     e.stopPropagation()
-    startTransition(() => {
-      navigate(buildMissionUrl(chat.workspaceId, chat.id, agentId))
-    })
+    navigateMission(navigate, chat, agentId)
   }
   // Per-member status when available; fall back to parent chat rollup so legacy
   // payloads (no members[]) still light up.
@@ -392,9 +402,7 @@ export const CompletedRow = memo(({ chat, isSelected, archived, agentNames, onPi
   const navigate = useNavigate()
   const handleOpen = () => {
     missionSwitchPerf.start(chat.id, 'sidebar')
-    startTransition(() => {
-      navigate(buildMissionOpenUrl(chat))
-    })
+    navigate(buildMissionOpenUrl(chat))
   }
   const handleDeleteTask = useCallback(async () => {
     if (!window.confirm(

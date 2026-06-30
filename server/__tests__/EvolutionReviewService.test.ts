@@ -50,6 +50,8 @@ class FakeReviewJobStore {
     job.proposal = proposal
     job.status = 'proposal_ready'
   }
+
+  setAppliedActions(): void {}
 }
 
 const proposal = (evidence: unknown): EvolutionProposal => ({
@@ -60,6 +62,11 @@ const proposal = (evidence: unknown): EvolutionProposal => ({
   risk: 'Low',
   validationPlan: 'Run targeted tests.',
   rollbackPath: 'Reject proposal.',
+  actions: [{
+    type: 'memory_upsert',
+    agentId: 'architect',
+    content: 'Remember to clarify repeated corrections before changing prompts.',
+  }],
 })
 
 describe('EvolutionReviewService', () => {
@@ -81,7 +88,14 @@ describe('EvolutionReviewService', () => {
 
   it('runs queued jobs through a restricted tool surface and stores a proposal', async () => {
     const store = new FakeReviewJobStore()
-    const runner = { run: vi.fn(async (job: EvolutionReviewJob) => proposal(job.evidence)) }
+    const runner = { run: vi.fn(async (job: EvolutionReviewJob) => ({
+      ...proposal(job.evidence),
+      actions: [{
+        type: 'memory_upsert',
+        agentId: job.targetId,
+        content: 'Remember to clarify repeated corrections before changing prompts.',
+      }],
+    })) }
     const service = new EvolutionReviewService(store as never, runner)
     service.enqueueFromTrigger({
       agentId: 'architect',
@@ -93,6 +107,7 @@ describe('EvolutionReviewService', () => {
     const job = await service.runNext()
 
     expect(runner.run).toHaveBeenCalledWith(expect.any(Object), { allowedTools: EVOLUTION_REVIEW_TOOLS })
+    expect(EVOLUTION_REVIEW_TOOLS).toEqual(['episode_search', 'readonly_inspect', 'proposal_draft'])
     expect(job?.status).toBe('proposal_ready')
     expect(job?.proposal?.validationPlan).toBe('Run targeted tests.')
   })
@@ -120,7 +135,14 @@ describe('EvolutionReviewService', () => {
     try {
       const store = new FakeReviewJobStore()
       const service = new EvolutionReviewService(store as never, {
-        run: vi.fn(async (job) => proposal({ ...job.evidence, suggestedFile: skillPath })),
+        run: vi.fn(async (job) => ({
+          ...proposal({ ...job.evidence, suggestedFile: skillPath }),
+          actions: [{
+            type: 'memory_upsert',
+            agentId: job.targetId,
+            content: 'Proposal only memory action.',
+          }],
+        })),
       })
       service.enqueueFromTrigger({
         agentId: 'sensei',
@@ -139,7 +161,22 @@ describe('EvolutionReviewService', () => {
 
   it('requires approval before apply', async () => {
     const store = new FakeReviewJobStore()
-    const service = new EvolutionReviewService(store as never)
+    const applyExecutor = {
+      apply: vi.fn(async (jobId: string) => {
+        store.updateStatus(jobId, 'applied')
+        return store.get(jobId)!
+      }),
+    }
+    const service = new EvolutionReviewService(store as never, {
+      run: vi.fn(async (job) => ({
+        ...proposal(job.evidence),
+        actions: [{
+          type: 'memory_upsert',
+          agentId: job.targetId,
+          content: 'Approved memory action.',
+        }],
+      })),
+    }, applyExecutor)
     const queued = service.enqueueFromTrigger({
       agentId: 'lead',
       type: 'low_satisfaction',
@@ -148,8 +185,25 @@ describe('EvolutionReviewService', () => {
     })
     await service.runNext()
 
-    expect(() => service.apply(queued.id)).toThrow(/must be approved/)
+    await expect(service.apply(queued.id)).rejects.toThrow(/must be approved/)
     expect(service.approve(queued.id).status).toBe('approved')
-    expect(service.apply(queued.id).status).toBe('applied')
+    await expect(service.apply(queued.id)).resolves.toMatchObject({ status: 'applied' })
+    expect(applyExecutor.apply).toHaveBeenCalledWith(queued.id)
+  })
+
+  it('fails queued jobs when no review runner is configured', async () => {
+    const store = new FakeReviewJobStore()
+    const service = new EvolutionReviewService(store as never)
+    const queued = service.enqueueFromTrigger({
+      agentId: 'lead',
+      type: 'low_satisfaction',
+      severity: 'high',
+      evidence: {},
+    })
+
+    const job = await service.runNext()
+
+    expect(job?.status).toBe('failed')
+    expect(store.get(queued.id)?.error).toMatch(/runner unavailable/)
   })
 })

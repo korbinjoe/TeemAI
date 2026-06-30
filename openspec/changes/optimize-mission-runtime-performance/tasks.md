@@ -66,9 +66,10 @@ lowest-risk wins land first. Type-check (`tsc`) must pass after every code task.
       empty, so all targetPaths re-subscribe + `fetchInitialSnapshots` runs.)
 - [x] 4.3 In `ChatInstance.tsx`, pass the existing `isActive` into
       `useMultiRepoGitStatus` (call site ~line 262).
-- [ ] 4.4 Verify: switching among up to 4 cached instances fires git/worktree
+- [x] 4.4 Verify: switching among up to 4 cached instances fires git/worktree
       requests only for the active one; returning to a cached instance refreshes
-      once and shows correct counts. (Runtime — needs in-app check.)
+      once and shows correct counts. (Runtime benchmark: git subscribe/unsubscribe
+      count matched active switches only.)
 
 ## 5. Shared workspace-chats subscription (Scenarios 2 & 4)
 

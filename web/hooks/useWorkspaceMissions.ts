@@ -50,6 +50,11 @@ interface WorkspaceSlice {
 
 const EMPTY_SLICE: WorkspaceSlice = { chats: [], loading: false }
 
+interface ChatIndexEntry {
+  workspaceId: string
+  index: number
+}
+
 interface WorkspaceChatsStore {
   slices: Record<string, WorkspaceSlice>
   register: (workspaceId: string) => () => void
@@ -58,9 +63,33 @@ interface WorkspaceChatsStore {
 
 const WorkspaceChatsContext = createContext<WorkspaceChatsStore | null>(null)
 
+const buildChatIndex = (slices: Record<string, WorkspaceSlice>): Map<string, ChatIndexEntry> => {
+  const index = new Map<string, ChatIndexEntry>()
+  for (const [workspaceId, slice] of Object.entries(slices)) {
+    slice.chats.forEach((chat, i) => index.set(chat.id, { workspaceId, index: i }))
+  }
+  return index
+}
+
+const indexWorkspaceChats = (
+  existing: Map<string, ChatIndexEntry>,
+  workspaceId: string,
+  chats: Chat[],
+): Map<string, ChatIndexEntry> => {
+  const next = new Map(existing)
+  for (const [chatId, entry] of next.entries()) {
+    if (entry.workspaceId === workspaceId) next.delete(chatId)
+  }
+  chats.forEach((chat, i) => next.set(chat.id, { workspaceId, index: i }))
+  return next
+}
+
 export const WorkspaceChatsProvider = ({ children }: { children: ReactNode }) => {
   const [slices, setSlices] = useState<Record<string, WorkspaceSlice>>({})
   const refCounts = useRef<Record<string, number>>({})
+  const chatIndexRef = useRef<Map<string, ChatIndexEntry>>(new Map())
+  const pendingActivityRef = useRef<Map<string, ChatActivityPayload>>(new Map())
+  const activityFrameRef = useRef<number | null>(null)
 
   const refresh = useCallback(async (workspaceId: string) => {
     if (!workspaceId) return
@@ -72,6 +101,7 @@ export const WorkspaceChatsProvider = ({ children }: { children: ReactNode }) =>
       const res = await authFetch(`${API_BASE}/api/workspaces/${workspaceId}/chats`)
       if (!res.ok) return
       const data: Chat[] = await res.json()
+      chatIndexRef.current = indexWorkspaceChats(chatIndexRef.current, workspaceId, data)
       setSlices((prev) => ({ ...prev, [workspaceId]: { chats: data, loading: false } }))
     } finally {
       setSlices((prev) => {
@@ -93,6 +123,7 @@ export const WorkspaceChatsProvider = ({ children }: { children: ReactNode }) =>
         return
       }
       delete refCounts.current[workspaceId]
+      chatIndexRef.current = indexWorkspaceChats(chatIndexRef.current, workspaceId, [])
       setSlices((prev) => {
         if (!(workspaceId in prev)) return prev
         const { [workspaceId]: _removed, ...rest } = prev
@@ -101,85 +132,96 @@ export const WorkspaceChatsProvider = ({ children }: { children: ReactNode }) =>
     }
   }, [refresh])
 
-  // One mutation applied across every registered workspace slice. A chat lives
-  // in exactly one workspace, so non-owning slices return their same array ref
-  // (the `changed` guard) and do not re-render.
-  const applyToAllSlices = useCallback((mut: (chats: Chat[]) => Chat[]) => {
+  const updateChatById = useCallback((chatId: string, updater: (chat: Chat) => Chat) => {
     setSlices((prev) => {
-      let anyChanged = false
-      const next: Record<string, WorkspaceSlice> = {}
-      for (const [wid, slice] of Object.entries(prev)) {
-        const nextChats = mut(slice.chats)
-        if (nextChats !== slice.chats) {
-          anyChanged = true
-          next[wid] = { ...slice, chats: nextChats }
-        } else {
-          next[wid] = slice
-        }
+      let entry = chatIndexRef.current.get(chatId)
+      if (!entry || prev[entry.workspaceId]?.chats[entry.index]?.id !== chatId) {
+        chatIndexRef.current = buildChatIndex(prev)
+        entry = chatIndexRef.current.get(chatId)
       }
-      return anyChanged ? next : prev
+      if (!entry) return prev
+
+      const slice = prev[entry.workspaceId]
+      const current = slice?.chats[entry.index]
+      if (!slice || current?.id !== chatId) return prev
+
+      const updated = updater(current)
+      if (updated === current) return prev
+
+      const nextChats = slice.chats.slice()
+      nextChats[entry.index] = updated
+      return {
+        ...prev,
+        [entry.workspaceId]: { ...slice, chats: nextChats },
+      }
     })
   }, [])
+
+  const applyActivityPayload = useCallback((payload: ChatActivityPayload) => {
+    const { chatId, phase } = payload
+    updateChatById(chatId, (c) => {
+      const updated = { ...c } as Chat & { missionStatus?: string }
+      if (phase === 'completed') { updated.status = 'stopped'; updated.missionStatus = 'success'; updated.waitingReason = undefined }
+      else if (phase === 'error') { updated.status = 'stopped'; updated.missionStatus = 'error'; updated.waitingReason = undefined }
+      else if (phase === 'waiting_input') {
+        updated.status = 'idle'; updated.missionStatus = 'waiting_input'
+        updated.waitingReason = payload.latestMessage?.text
+      }
+      else if (phase === 'waiting_confirmation') {
+        updated.status = 'idle'; updated.missionStatus = 'waiting_confirm'
+        updated.waitingReason = payload.latestMessage?.text
+      }
+      else if (ACTIVE_PHASES.has(phase)) { updated.status = 'running'; updated.missionStatus = 'running'; updated.waitingReason = undefined }
+      updated.members = reconcileAgentsFromActivity(c.members, payload)
+      if (updated.status === c.status
+        && updated.missionStatus === (c as Chat & { missionStatus?: string }).missionStatus
+        && updated.waitingReason === c.waitingReason
+        && updated.members === c.members) {
+        return c
+      }
+      return updated
+    })
+  }, [updateChatById])
+
+  const flushActivityQueue = useCallback(() => {
+    activityFrameRef.current = null
+    if (pendingActivityRef.current.size === 0) return
+    const payloads = Array.from(pendingActivityRef.current.values())
+    pendingActivityRef.current.clear()
+    for (const payload of payloads) applyActivityPayload(payload)
+  }, [applyActivityPayload])
+
+  const scheduleActivityFlush = useCallback(() => {
+    if (activityFrameRef.current != null) return
+    const requestFrame = window.requestAnimationFrame ?? ((cb: FrameRequestCallback) => window.setTimeout(() => cb(performance.now()), 16))
+    activityFrameRef.current = requestFrame(flushActivityQueue)
+  }, [flushActivityQueue])
 
   useEffect(() => {
     const wsClient = getWebSocketClient()
     wsClient.connect().catch(() => {})
 
     const handleStatusChanged = ({ chatId, status, taskStatus }: { chatId: string; status: string; taskStatus?: string }) => {
-      applyToAllSlices((prev) => {
-        let changed = false
-        const next = prev.map((c) => {
-          if (c.id !== chatId) return c
-          if (c.status === status && (!taskStatus || (c as Chat & { missionStatus?: string }).missionStatus === taskStatus)) return c
-          changed = true
-          return { ...c, status: status as Chat['status'], ...(taskStatus ? { missionStatus: taskStatus } : {}) } as Chat
-        })
-        return changed ? next : prev
+      updateChatById(chatId, (chat) => {
+        if (chat.status === status && (!taskStatus || (chat as Chat & { missionStatus?: string }).missionStatus === taskStatus)) return chat
+        return { ...chat, status: status as Chat['status'], ...(taskStatus ? { missionStatus: taskStatus } : {}) } as Chat
       })
     }
 
     const handleActivity = (payload: ChatActivityPayload) => {
-      const { chatId, phase } = payload
-      applyToAllSlices((prev) => {
-        let changed = false
-        const next = prev.map((c) => {
-          if (c.id !== chatId) return c
-          const updated = { ...c } as Chat & { missionStatus?: string }
-          if (phase === 'completed') { updated.status = 'stopped'; updated.missionStatus = 'success'; updated.waitingReason = undefined }
-          else if (phase === 'error') { updated.status = 'stopped'; updated.missionStatus = 'error'; updated.waitingReason = undefined }
-          else if (phase === 'waiting_input') {
-            updated.status = 'idle'; updated.missionStatus = 'waiting_input'
-            updated.waitingReason = payload.latestMessage?.text
-          }
-          else if (phase === 'waiting_confirmation') {
-            updated.status = 'idle'; updated.missionStatus = 'waiting_confirm'
-            updated.waitingReason = payload.latestMessage?.text
-          }
-          else if (ACTIVE_PHASES.has(phase)) { updated.status = 'running'; updated.missionStatus = 'running'; updated.waitingReason = undefined }
-          updated.members = reconcileAgentsFromActivity(c.members, payload)
-          if (updated.status === c.status
-            && updated.missionStatus === (c as Chat & { missionStatus?: string }).missionStatus
-            && updated.waitingReason === c.waitingReason
-            && updated.members === c.members) {
-            return c
-          }
-          changed = true
-          return updated
-        })
-        return changed ? next : prev
-      })
+      if (ACTIVE_PHASES.has(payload.phase)) {
+        pendingActivityRef.current.set(payload.chatId, payload)
+        scheduleActivityFlush()
+        return
+      }
+      pendingActivityRef.current.delete(payload.chatId)
+      applyActivityPayload(payload)
     }
 
     const handleTitleUpdated = ({ chatId, title }: { chatId: string; title: string }) => {
-      applyToAllSlices((prev) => {
-        let changed = false
-        const next = prev.map((c) => {
-          if (c.id !== chatId) return c
-          if (c.title === title) return c
-          changed = true
-          return { ...c, title } as Chat
-        })
-        return changed ? next : prev
+      updateChatById(chatId, (chat) => {
+        if (chat.title === title) return chat
+        return { ...chat, title } as Chat
       })
     }
 
@@ -212,6 +254,12 @@ export const WorkspaceChatsProvider = ({ children }: { children: ReactNode }) =>
     window.addEventListener('teemai:chat-updated', handleChatMutated)
 
     return () => {
+      if (activityFrameRef.current != null) {
+        const cancelFrame = window.cancelAnimationFrame ?? window.clearTimeout
+        cancelFrame(activityFrameRef.current)
+        activityFrameRef.current = null
+      }
+      pendingActivityRef.current.clear()
       wsClient.off('mission.status-changed', handleStatusChanged)
       wsClient.off('mission.activity', handleActivity)
       wsClient.off('mission.title-updated', handleTitleUpdated)
@@ -219,7 +267,7 @@ export const WorkspaceChatsProvider = ({ children }: { children: ReactNode }) =>
       window.removeEventListener('teemai:chat-created', handleChatMutated)
       window.removeEventListener('teemai:chat-updated', handleChatMutated)
     }
-  }, [applyToAllSlices, refresh])
+  }, [applyActivityPayload, flushActivityQueue, refresh, scheduleActivityFlush, updateChatById])
 
   const store = useMemo<WorkspaceChatsStore>(() => ({ slices, register, refresh }), [slices, register, refresh])
 

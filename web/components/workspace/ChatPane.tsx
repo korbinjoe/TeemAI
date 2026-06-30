@@ -8,7 +8,9 @@ import WorkspaceHome from './WorkspaceHome'
 import { missionSwitchPerf } from '../../lib/missionSwitchPerf'
 import { renderPerf } from '../../lib/renderPerf'
 
-const MAX_CACHED = 8
+// Keep active + recent 3 missions fully mounted. Older missions are demoted to
+// the message snapshot cache in useAgentMessages, bounding hidden hooks/WS work.
+const MAX_CACHED = 4
 const MAX_WS_CACHE = 5
 
 const cachedPaneStyle = (active: boolean): React.CSSProperties => ({

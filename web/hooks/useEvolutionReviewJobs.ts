@@ -6,15 +6,26 @@ export interface EvolutionReviewJob {
   targetType: 'agent' | 'skill' | 'team'
   targetId: string
   triggerType: string
+  evidence?: unknown
   status: 'queued' | 'running' | 'proposal_ready' | 'approved' | 'rejected' | 'applied' | 'failed'
   proposal?: {
+    evidence?: unknown
     rootCause: string
     diff: string
     expectedImpact: string
     risk: string
     validationPlan: string
     rollbackPath: string
+    actions?: unknown[]
+    metrics?: Record<string, unknown>
   }
+  appliedActions?: Array<{
+    status: 'applied' | 'failed'
+    changedFile?: string
+    rollbackRef?: string
+    error?: string
+  }>
+  error?: string
   createdAt: string
 }
 
@@ -26,10 +37,13 @@ const useEvolutionReviewJobs = (targetId: string | undefined) => {
     if (!targetId) return
     setLoading(true)
     try {
-      const res = await authFetch(`${API_BASE}/api/evolution/review-jobs?status=proposal_ready`)
+      const res = await authFetch(`${API_BASE}/api/evolution/review-jobs`)
       if (!res.ok) return
       const all = await res.json() as EvolutionReviewJob[]
-      setJobs(all.filter((job) => job.targetId === targetId || job.targetId === 'team'))
+      setJobs(all.filter((job) =>
+        (job.targetId === targetId || job.targetId === 'team')
+        && ['proposal_ready', 'approved', 'applied', 'failed'].includes(job.status)
+      ))
     } finally {
       setLoading(false)
     }

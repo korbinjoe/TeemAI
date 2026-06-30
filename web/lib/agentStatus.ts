@@ -63,14 +63,20 @@ export const reconcileAgentsFromActivity = (
 
   const isTerminal = payload.phase === 'completed' || payload.phase === 'error'
   const terminalStatus: MissionAgentStatus = payload.phase === 'error' ? 'error' : 'done'
+  let changed = false
 
   const updated = members.map((m) => {
     const live = phaseByAgent.get(m.agentId)
     if (live) {
       const next = phaseToAgentStatus(live)
-      return next && next !== m.status ? { ...m, status: next } : m
+      if (next && next !== m.status) {
+        changed = true
+        return { ...m, status: next }
+      }
+      return m
     }
     if (isTerminal && (m.status === 'running' || m.status === 'waiting' || m.status === 'waiting_input')) {
+      changed = true
       return { ...m, status: terminalStatus }
     }
     return m
@@ -86,5 +92,5 @@ export const reconcileAgentsFromActivity = (
     updated.push({ agentId, role: 'worker', status, lastMessageAt: '' })
   })
 
-  return appended ? updated : (updated === members ? members : updated)
+  return appended || changed ? updated : members
 }

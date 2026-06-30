@@ -13,19 +13,6 @@ export interface MessageGroup {
 export function groupMessages(messages: Message[]): MessageGroup[] {
   const seen = new Set<string>()
   const seenContent = new Set<string>()
-  const deduped = messages.filter((m) => {
-    if (m.role === 'user') return true
-    const ik = buildMessageInstanceKey(m)
-    if (seen.has(ik)) return false
-    seen.add(ik)
-    const contentKey = buildContentKey(m)
-    if (contentKey) {
-      if (seenContent.has(contentKey)) return false
-      seenContent.add(contentKey)
-    }
-    return true
-  })
-
   const groups: MessageGroup[] = []
   let currentGroup: MessageGroup | null = null
   const lastGroupByAgent = new Map<string, MessageGroup>()
@@ -42,7 +29,18 @@ export function groupMessages(messages: Message[]): MessageGroup[] {
     return id
   }
 
-  for (const msg of deduped) {
+  for (const msg of messages) {
+    if (msg.role !== 'user') {
+      const ik = buildMessageInstanceKey(msg)
+      if (seen.has(ik)) continue
+      seen.add(ik)
+      const contentKey = buildContentKey(msg)
+      if (contentKey) {
+        if (seenContent.has(contentKey)) continue
+        seenContent.add(contentKey)
+      }
+    }
+
     if (msg.role === 'user') {
       const agentId = msg.agentId || msg.mentions?.[0]?.id
       currentGroup = {

@@ -3,20 +3,24 @@ import type { EvolutionProposal, EvolutionReviewJob, EvolutionReviewJobStore } f
 import { validateEvolutionProposal } from './EvolutionProposalParser'
 
 export const EVOLUTION_REVIEW_TOOLS = [
-  'memory_evolve',
-  'skill_evolve',
   'episode_search',
   'readonly_inspect',
+  'proposal_draft',
 ] as const
 
 export interface EvolutionReviewRunner {
   run(job: EvolutionReviewJob, context: { allowedTools: readonly string[] }): Promise<EvolutionProposal>
 }
 
+export interface EvolutionApplyExecutor {
+  apply(jobId: string): Promise<EvolutionReviewJob>
+}
+
 export class EvolutionReviewService {
   constructor(
     private store: EvolutionReviewJobStore,
     private runner?: EvolutionReviewRunner,
+    private applyExecutor?: EvolutionApplyExecutor,
   ) {}
 
   enqueueFromTrigger(trigger: TriggerResult): EvolutionReviewJob {
@@ -58,7 +62,7 @@ export class EvolutionReviewService {
     this.store.updateStatus(job.id, 'running')
     try {
       const proposal = await this.runIsolatedReview(job)
-      validateEvolutionProposal(proposal)
+      validateEvolutionProposal(proposal, job)
       this.store.setProposal(job.id, proposal)
       return this.store.get(job.id) ?? null
     } catch (err) {
@@ -81,32 +85,18 @@ export class EvolutionReviewService {
     return job
   }
 
-  apply(jobId: string): EvolutionReviewJob {
+  async apply(jobId: string): Promise<EvolutionReviewJob> {
     const job = this.store.get(jobId)
     if (!job) throw new Error('Evolution review job not found')
     if (job.status !== 'approved') throw new Error('Evolution review job must be approved before apply')
-    this.store.updateStatus(jobId, 'applied')
-    const applied = this.store.get(jobId)
-    if (!applied) throw new Error('Evolution review job not found')
-    return applied
+    if (this.applyExecutor) return this.applyExecutor.apply(jobId)
+    throw new Error('Evolution apply executor unavailable')
   }
 
   private async runIsolatedReview(job: EvolutionReviewJob): Promise<EvolutionProposal> {
     if (this.runner) {
       return this.runner.run(job, { allowedTools: EVOLUTION_REVIEW_TOOLS })
     }
-    return this.buildDefaultProposal(job)
-  }
-
-  private buildDefaultProposal(job: EvolutionReviewJob): EvolutionProposal {
-    return {
-      evidence: job.evidence,
-      rootCause: `Review required for ${job.targetType} ${job.targetId} due to ${job.triggerType}.`,
-      diff: 'Proposal only. No file changes were applied by the background review job.',
-      expectedImpact: 'Give Sensei a concrete review item without mutating agent or skill files.',
-      risk: 'Low: this job records a proposal and waits for approval.',
-      validationPlan: 'Inspect evidence, approve only if the proposed change is still relevant, then run targeted tests.',
-      rollbackPath: 'No runtime mutation has occurred; reject the proposal to discard it.',
-    }
+    throw new Error('Evolution review runner unavailable')
   }
 }

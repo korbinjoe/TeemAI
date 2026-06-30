@@ -31,9 +31,9 @@ export const createEvolutionReviewRoutes = (deps: EvolutionReviewRouteDeps): Rou
     }
   })
 
-  router.post('/api/evolution/review-jobs/:id/apply', (req, res) => {
+  router.post('/api/evolution/review-jobs/:id/apply', async (req, res) => {
     try {
-      res.json(deps.reviewService.apply(req.params.id))
+      res.json(await deps.reviewService.apply(req.params.id))
     } catch (err) {
       res.status(400).json({ error: err instanceof Error ? err.message : 'Failed to apply review job' })
     }

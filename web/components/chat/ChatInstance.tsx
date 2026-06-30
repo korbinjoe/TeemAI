@@ -9,14 +9,14 @@ import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } fro
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import type { AgentActivity, QueuedMessage } from '../../types/chat'
+import type { AgentActivity, Message, QueuedMessage } from '../../types/chat'
 import type { AgentSummary } from '../../types/agentConfig'
 import { groupMessages } from './messages/MessageGroup'
 import ChatHeader from './ChatHeader'
 import ChatBody from './ChatBody'
 import ChatPaneToolbarRow from './ChatPaneToolbarRow'
 import ChatViewModeToggle from './ChatViewModeToggle'
-import TerminalPanel, { type TerminalPanelHandle } from '../terminal/TerminalPanel'
+import type { TerminalPanelHandle } from '../terminal/TerminalPanel'
 import { useChatViewMode } from '../../hooks/useChatViewMode'
 import { parseInstanceId } from '../../../shared/utils'
 import InputArea, { type InputAreaHandle } from './input/InputArea'
@@ -31,6 +31,7 @@ import useMultiRepoGitStatus from '../../hooks/useMultiRepoGitStatus'
 import { useChatScroll } from '../../hooks/useChatScroll'
 import { useAgentActivities } from '../../hooks/useAgentActivities'
 import { useAgents } from '../../hooks/useAgents'
+import { SYSTEM_MESSAGE_AGENT } from '../../hooks/useAgentMessages'
 import { useChatWebSocket } from '../../hooks/useChatWebSocket'
 import { useChatActions } from '../../hooks/useChatActions'
 import { useChatTabs } from '../../contexts/ChatTabContext'
@@ -51,6 +52,14 @@ const TERMINAL_PREWARM_DELAY_MS = 1800
 const TERMINAL_PREWARM_ENABLED = import.meta.env.VITE_TERMINAL_PREWARM === 'true'
 const TERMINAL_VIEW_KEEP_ALIVE_MS = 8000
 const RightPanel = lazy(() => import('../ide/RightPanel'))
+const TerminalPanel = lazy(() => import('../terminal/TerminalPanel'))
+
+const slotHasAgentMessage = (messages: Message[]): boolean => {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'agent') return true
+  }
+  return false
+}
 
 /**
  * Claude Code  slash commands  — CLI  fallback
@@ -376,8 +385,10 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
 
   const groups = useMemo(() => groupMessages(visibleMessages), [visibleMessages])
   const activeAgentIds = useMemo(
-    () => [...new Set(mergedMessages.filter((m) => m.role === 'agent' && m.agentId).map((m) => m.agentId!))],
-    [mergedMessages],
+    () => Object.entries(agentMessages)
+      .filter(([agentId, messages]) => agentId !== SYSTEM_MESSAGE_AGENT && slotHasAgentMessage(messages))
+      .map(([agentId]) => agentId),
+    [agentMessages],
   )
   const lastUserGroupId = useMemo(() => {
     for (let i = visibleMessages.length - 1; i >= 0; i--) {
@@ -420,23 +431,41 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
     prevLastGroupIdRef.current = lastUserGroupId
   }, [lastUserGroupId])
 
-  useEffect(() => {
-    if (!isActive || groups.length === 0) return
-    // Activity only ever changes for the currently-running group(s): the last
-    // group per agent, plus the last group with no agentId. Older groups are
-    // closed out by the prev-group effect above, so we never re-scan them.
-    const lastGroupByAgent = new Map<string, (typeof groups)[number]>()
-    let lastNoAgentGroup: (typeof groups)[number] | null = null
-    for (const g of groups) {
-      if (g.agentId) lastGroupByAgent.set(g.agentId, g)
-      else lastNoAgentGroup = g
+  const activityTargetGroups = useMemo(() => {
+    if (groups.length === 0) return []
+    const targetAgentIds = new Set(Object.keys(expertActivities))
+    const wantsNoAgentGroup = !!activeMergedActivity
+    const foundAgents = new Set<string>()
+    const targets: typeof groups = []
+    let foundNoAgentGroup = false
+
+    for (let i = groups.length - 1; i >= 0; i--) {
+      const group = groups[i]
+      if (group.agentId) {
+        if (targetAgentIds.has(group.agentId) && !foundAgents.has(group.agentId)) {
+          targets.push(group)
+          foundAgents.add(group.agentId)
+        }
+      } else if (wantsNoAgentGroup && !foundNoAgentGroup) {
+        targets.push(group)
+        foundNoAgentGroup = true
+      }
+
+      if (foundAgents.size >= targetAgentIds.size && (!wantsNoAgentGroup || foundNoAgentGroup)) {
+        break
+      }
     }
-    const targets = [...lastGroupByAgent.values()]
-    if (lastNoAgentGroup) targets.push(lastNoAgentGroup)
+    return targets
+  }, [groups, expertActivities, activeMergedActivity])
+
+  useEffect(() => {
+    if (!isActive || activityTargetGroups.length === 0) return
+    // Activity only changes for the current tail group(s). Walked from the end
+    // above, so long historical Missions don't rescan every completed group.
     setGroupActivities((prev) => {
       const next = { ...prev }
       let changed = false
-      for (const group of targets) {
+      for (const group of activityTargetGroups) {
         const activity = group.agentId ? expertActivities[group.agentId] : activeMergedActivity
         if (!activity) continue
         const existing = next[group.id]
@@ -456,7 +485,7 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
       }
       return changed ? next : prev
     })
-  }, [isActive, groups, expertActivities, activeMergedActivity])
+  }, [isActive, activityTargetGroups, expertActivities, activeMergedActivity])
 
   useEffect(() => {
     if (!isActive) return
@@ -641,16 +670,18 @@ const ChatInstance = ({ chatId, workspaceId, isActive, isNewChat = false, initAg
               className={`flex-1 min-h-0 flex flex-col${terminalPanelVisible ? (isActive ? '' : ' invisible') : ' hidden'}`}
               aria-hidden={!isActive || !terminalPanelVisible || undefined}
             >
-              <TerminalPanel
-                ref={terminalPanelRef}
-                chatId={chatId}
-                gitStatus={primaryGitStatus}
-                agentActive={terminalPanelVisible && isActive && !!activeMergedActivity && !['completed', 'waiting_input', 'error', 'initializing'].includes(activeMergedActivity.phase)}
-                connected={connected}
-                lockedAgentId={singleAgentMode ? lockedAgentKey : null}
-                inTerminalView={terminalPanelVisible || terminalPrewarmEnabled || terminalPanelKeepAlive}
-                prewarmOnly={terminalPrewarmEnabled && !terminalPanelVisible && !terminalPanelKeepAlive}
-              />
+              <Suspense fallback={<div className="flex-1 min-h-0 bg-bg-primary" aria-hidden />}>
+                <TerminalPanel
+                  ref={terminalPanelRef}
+                  chatId={chatId}
+                  gitStatus={primaryGitStatus}
+                  agentActive={terminalPanelVisible && isActive && !!activeMergedActivity && !['completed', 'waiting_input', 'error', 'initializing'].includes(activeMergedActivity.phase)}
+                  connected={connected}
+                  lockedAgentId={singleAgentMode ? lockedAgentKey : null}
+                  inTerminalView={terminalPanelVisible || terminalPrewarmEnabled || terminalPanelKeepAlive}
+                  prewarmOnly={terminalPrewarmEnabled && !terminalPanelVisible && !terminalPanelKeepAlive}
+                />
+              </Suspense>
             </div>
           )}
           {!isActive && viewMode !== 'terminal' ? (

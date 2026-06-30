@@ -12,6 +12,8 @@ export interface Episode {
   outcome: EpisodeOutcome
   tags: string[]
   files: string[]
+  lesson?: string
+  hasLesson?: boolean
   sourceRef?: string
   startedAt: string
   completedAt?: string
@@ -34,6 +36,8 @@ export class EpisodeStore {
       outcome: params.outcome,
       tags: params.tags,
       files: params.files,
+      lesson: params.lesson,
+      hasLesson: params.hasLesson ?? !!params.lesson,
       sourceRef: params.sourceRef,
       startedAt: params.startedAt,
       completedAt: params.completedAt,
@@ -42,9 +46,9 @@ export class EpisodeStore {
     this.db.prepare(`
       INSERT INTO episodes (
         id, agent_id, mission_id, title, summary, outcome, tags_json, files_json,
-        source_ref, started_at, completed_at
+        lesson, has_lesson, source_ref, started_at, completed_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         agent_id = excluded.agent_id,
         mission_id = excluded.mission_id,
@@ -53,6 +57,8 @@ export class EpisodeStore {
         outcome = excluded.outcome,
         tags_json = excluded.tags_json,
         files_json = excluded.files_json,
+        lesson = excluded.lesson,
+        has_lesson = excluded.has_lesson,
         source_ref = excluded.source_ref,
         started_at = excluded.started_at,
         completed_at = excluded.completed_at
@@ -65,6 +71,8 @@ export class EpisodeStore {
       episode.outcome,
       JSON.stringify(episode.tags),
       JSON.stringify(episode.files),
+      episode.lesson ?? null,
+      episode.hasLesson ? 1 : 0,
       episode.sourceRef ?? null,
       episode.startedAt,
       episode.completedAt ?? null,
@@ -92,6 +100,7 @@ export class EpisodeStore {
       : this.listRecent(Math.max(limit * 8, 24))
 
     return rankEpisodes(candidates, agentId)
+      .filter((episode) => episode.outcome !== 'failed' && episode.outcome !== 'blocked' || !!episode.hasLesson)
       .filter((episode) => episode.score >= 1)
       .slice(0, limit)
   }
@@ -130,6 +139,8 @@ export class EpisodeStore {
       outcome: row.outcome as EpisodeOutcome,
       tags: JSON.parse(row.tags_json as string),
       files: JSON.parse(row.files_json as string),
+      lesson: row.lesson as string | undefined,
+      hasLesson: !!row.has_lesson,
       sourceRef: row.source_ref as string | undefined,
       startedAt: row.started_at as string,
       completedAt: row.completed_at as string | undefined,

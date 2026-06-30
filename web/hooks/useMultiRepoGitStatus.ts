@@ -111,6 +111,7 @@ const useMultiRepoGitStatus = ({
     if (repositories.length > 0) return repositories.map((r) => r.path)
     return []
   }, [activeSession, repositories])
+  const targetPathsKey = targetPaths.join('\0')
 
   const targetBase = activeSession?.baseBranch
   const isWorktreeMode = !!activeSession
@@ -259,7 +260,7 @@ const useMultiRepoGitStatus = ({
       }
       subscribedPaths.current.clear()
     }
-  }, [chatId, enabled, targetPaths, fetchInitialSnapshots, applySnapshot])
+  }, [chatId, enabled, targetPathsKey, fetchInitialSnapshots, applySnapshot])
 
   const aggregate = useMemo<MultiRepoGitStatusAggregate>(() => {
     let totalChangedFiles = 0

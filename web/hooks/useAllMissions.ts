@@ -38,6 +38,12 @@ interface MissionPage {
   hasMore: boolean
 }
 
+type IndexedChat = Chat & {
+  missionStatus?: string
+  archivedAt?: number | null
+  pinnedAt?: number | null
+}
+
 const parseMissionPage = async (res: Response): Promise<MissionPage> => {
   const body = await res.json()
   if (Array.isArray(body)) {
@@ -61,6 +67,12 @@ const mergeById = (base: Chat[], incoming: Chat[]): Chat[] => {
   return appended.length === 0 ? base : [...base, ...appended]
 }
 
+const buildChatIndex = (items: Chat[]): Map<string, number> => {
+  const index = new Map<string, number>()
+  items.forEach((chat, i) => index.set(chat.id, i))
+  return index
+}
+
 export const useAllMissions = (): V2AllChatsResult => {
   const [chats, setChats] = useState<Chat[]>([])
   const [workspaces, setWorkspaces] = useState<WorkspaceLite[]>([])
@@ -68,6 +80,28 @@ export const useAllMissions = (): V2AllChatsResult => {
   const [loadingMore, setLoadingMore] = useState(false)
   const [nextOffset, setNextOffset] = useState<number | null>(null)
   const requestSeq = useRef(0)
+  const chatIndexRef = useRef<Map<string, number>>(new Map())
+  const pendingActivityRef = useRef<Map<string, ChatActivityPayload>>(new Map())
+  const activityFrameRef = useRef<number | null>(null)
+
+  const updateChatById = useCallback((chatId: string, updater: (chat: Chat) => Chat) => {
+    setChats((prev) => {
+      let index = chatIndexRef.current.get(chatId)
+      if (index == null || prev[index]?.id !== chatId) {
+        chatIndexRef.current = buildChatIndex(prev)
+        index = chatIndexRef.current.get(chatId)
+      }
+      if (index == null) return prev
+
+      const current = prev[index]
+      const updated = updater(current)
+      if (updated === current) return prev
+
+      const next = prev.slice()
+      next[index] = updated
+      return next
+    })
+  }, [])
 
   const refresh = useCallback(async () => {
     const seq = ++requestSeq.current
@@ -85,6 +119,7 @@ export const useAllMissions = (): V2AllChatsResult => {
       }
       if (chatsRes.ok) {
         const page = await parseMissionPage(chatsRes)
+        chatIndexRef.current = buildChatIndex(page.items)
         setChats(page.items)
         setNextOffset(page.hasMore ? page.nextOffset : null)
       }
@@ -102,12 +137,57 @@ export const useAllMissions = (): V2AllChatsResult => {
       const res = await authFetch(`${API_BASE}/api/all-chats?${params}`)
       if (!res.ok || seq !== requestSeq.current) return
       const page = await parseMissionPage(res)
-      setChats((prev) => mergeById(prev, page.items))
+      setChats((prev) => {
+        const merged = mergeById(prev, page.items)
+        if (merged !== prev) chatIndexRef.current = buildChatIndex(merged)
+        return merged
+      })
       setNextOffset(page.hasMore ? page.nextOffset : null)
     } finally {
       if (seq === requestSeq.current) setLoadingMore(false)
     }
   }, [nextOffset, loadingMore])
+
+  const applyActivityPayload = useCallback((payload: ChatActivityPayload) => {
+    const { chatId, phase } = payload
+    updateChatById(chatId, (chat) => {
+      const current = chat as IndexedChat
+      const updated = { ...chat } as IndexedChat
+      if (phase === 'completed') { updated.status = 'stopped'; updated.missionStatus = 'success'; updated.waitingReason = undefined }
+      else if (phase === 'error') { updated.status = 'stopped'; updated.missionStatus = 'error'; updated.waitingReason = undefined }
+      else if (phase === 'waiting_input') {
+        updated.status = 'idle'; updated.missionStatus = 'waiting_input'
+        updated.waitingReason = payload.latestMessage?.text
+      }
+      else if (phase === 'waiting_confirmation') {
+        updated.status = 'idle'; updated.missionStatus = 'waiting_confirm'
+        updated.waitingReason = payload.latestMessage?.text
+      }
+      else if (ACTIVE_PHASES.has(phase)) { updated.status = 'running'; updated.missionStatus = 'running'; updated.waitingReason = undefined }
+      updated.members = reconcileAgentsFromActivity(chat.members, payload)
+      if (updated.status === chat.status
+        && updated.missionStatus === current.missionStatus
+        && updated.waitingReason === chat.waitingReason
+        && updated.members === chat.members) {
+        return chat
+      }
+      return updated
+    })
+  }, [updateChatById])
+
+  const flushActivityQueue = useCallback(() => {
+    activityFrameRef.current = null
+    if (pendingActivityRef.current.size === 0) return
+    const payloads = Array.from(pendingActivityRef.current.values())
+    pendingActivityRef.current.clear()
+    for (const payload of payloads) applyActivityPayload(payload)
+  }, [applyActivityPayload])
+
+  const scheduleActivityFlush = useCallback(() => {
+    if (activityFrameRef.current != null) return
+    const requestFrame = window.requestAnimationFrame ?? ((cb: FrameRequestCallback) => window.setTimeout(() => cb(performance.now()), 16))
+    activityFrameRef.current = requestFrame(flushActivityQueue)
+  }, [flushActivityQueue])
 
   useEffect(() => { void refresh() }, [refresh])
 
@@ -116,73 +196,35 @@ export const useAllMissions = (): V2AllChatsResult => {
     wsClient.connect().catch(() => {})
 
     const handleStatusChanged = ({ chatId, status, taskStatus }: { chatId: string; status: string; taskStatus?: string }) => {
-      setChats((prev) => {
-        let changed = false
-        const next = prev.map((c) => {
-          if (c.id !== chatId) return c
-          if (c.status === status && (!taskStatus || (c as any).missionStatus === taskStatus)) return c
-          changed = true
-          return { ...c, status: status as Chat['status'], ...(taskStatus ? { missionStatus: taskStatus } : {}) } as Chat
-        })
-        return changed ? next : prev
+      updateChatById(chatId, (chat) => {
+        const current = chat as IndexedChat
+        if (current.status === status && (!taskStatus || current.missionStatus === taskStatus)) return chat
+        return { ...chat, status: status as Chat['status'], ...(taskStatus ? { missionStatus: taskStatus } : {}) } as Chat
       })
     }
 
     const handleActivity = (payload: ChatActivityPayload) => {
-      const { chatId, phase } = payload
-      setChats((prev) => {
-        let changed = false
-        const next = prev.map((c) => {
-          if (c.id !== chatId) return c
-          const updated = { ...c } as Chat & { missionStatus?: string }
-          if (phase === 'completed') { updated.status = 'stopped'; updated.missionStatus = 'success'; updated.waitingReason = undefined }
-          else if (phase === 'error') { updated.status = 'stopped'; updated.missionStatus = 'error'; updated.waitingReason = undefined }
-          else if (phase === 'waiting_input') {
-            updated.status = 'idle'; updated.missionStatus = 'waiting_input'
-            updated.waitingReason = payload.latestMessage?.text
-          }
-          else if (phase === 'waiting_confirmation') {
-            updated.status = 'idle'; updated.missionStatus = 'waiting_confirm'
-            updated.waitingReason = payload.latestMessage?.text
-          }
-          else if (ACTIVE_PHASES.has(phase)) { updated.status = 'running'; updated.missionStatus = 'running'; updated.waitingReason = undefined }
-          updated.members = reconcileAgentsFromActivity(c.members, payload)
-          if (updated.status === c.status
-            && updated.missionStatus === (c as any).missionStatus
-            && updated.waitingReason === c.waitingReason
-            && updated.members === c.members) {
-            return c
-          }
-          changed = true
-          return updated
-        })
-        return changed ? next : prev
-      })
+      if (ACTIVE_PHASES.has(payload.phase)) {
+        pendingActivityRef.current.set(payload.chatId, payload)
+        scheduleActivityFlush()
+        return
+      }
+      pendingActivityRef.current.delete(payload.chatId)
+      applyActivityPayload(payload)
     }
 
     const handleTitleUpdated = ({ chatId, title }: { chatId: string; title: string }) => {
-      setChats((prev) => {
-        let changed = false
-        const next = prev.map((c) => {
-          if (c.id !== chatId) return c
-          if (c.title === title) return c
-          changed = true
-          return { ...c, title } as Chat
-        })
-        return changed ? next : prev
+      updateChatById(chatId, (chat) => {
+        if (chat.title === title) return chat
+        return { ...chat, title } as Chat
       })
     }
 
     const handleMetaUpdated = ({ chatId, archivedAt, pinnedAt }: { chatId: string; archivedAt: number | null; pinnedAt: number | null }) => {
-      setChats((prev) => {
-        let changed = false
-        const next = prev.map((c) => {
-          if (c.id !== chatId) return c
-          if ((c as any).archivedAt === archivedAt && (c as any).pinnedAt === pinnedAt) return c
-          changed = true
-          return { ...c, archivedAt, pinnedAt } as Chat
-        })
-        return changed ? next : prev
+      updateChatById(chatId, (chat) => {
+        const current = chat as IndexedChat
+        if (current.archivedAt === archivedAt && current.pinnedAt === pinnedAt) return chat
+        return { ...chat, archivedAt, pinnedAt } as Chat
       })
     }
 
@@ -201,6 +243,12 @@ export const useAllMissions = (): V2AllChatsResult => {
     window.addEventListener('teemai:chat-updated', handleChatMutated)
 
     return () => {
+      if (activityFrameRef.current != null) {
+        const cancelFrame = window.cancelAnimationFrame ?? window.clearTimeout
+        cancelFrame(activityFrameRef.current)
+        activityFrameRef.current = null
+      }
+      pendingActivityRef.current.clear()
       wsClient.off('mission.status-changed', handleStatusChanged)
       wsClient.off('mission.activity', handleActivity)
       wsClient.off('mission.title-updated', handleTitleUpdated)
@@ -209,7 +257,7 @@ export const useAllMissions = (): V2AllChatsResult => {
       window.removeEventListener('teemai:chat-created', handleChatMutated)
       window.removeEventListener('teemai:chat-updated', handleChatMutated)
     }
-  }, [refresh])
+  }, [applyActivityPayload, refresh, scheduleActivityFlush, updateChatById])
 
   return { chats, workspaces, loading, loadingMore, hasMore: nextOffset !== null, refresh, loadMore }
 }

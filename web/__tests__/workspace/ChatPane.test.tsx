@@ -89,4 +89,19 @@ describe('ChatPane mission cache visibility', () => {
     expect(reopened.dataset.new).toBe('false')
     expect(reopened.dataset.resumeWarm).toBe('true')
   })
+
+  it('bounds fully mounted mission panes to active plus three recent missions', () => {
+    const { rerender, queryByTestId, getByTestId } = render(<ChatPane />)
+
+    for (const chatId of ['mission-b', 'mission-c', 'mission-d', 'mission-e']) {
+      workspaceState.activeChatId = chatId
+      rerender(<ChatPane />)
+    }
+
+    expect(queryByTestId('chat-mission-a')).toBeNull()
+    for (const chatId of ['mission-b', 'mission-c', 'mission-d', 'mission-e']) {
+      expect(getByTestId(`chat-${chatId}`)).toBeTruthy()
+    }
+    expect(getByTestId('chat-mission-e').dataset.active).toBe('true')
+  })
 })

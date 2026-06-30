@@ -33,7 +33,7 @@ describe('GitWatchManager', () => {
   let repoB: string
 
   beforeEach(() => {
-    manager = new GitWatchManager()
+    manager = new GitWatchManager(50)
     repoA = mkdtempSync(join(tmpdir(), 'gwm-a-'))
     repoB = mkdtempSync(join(tmpdir(), 'gwm-b-'))
     initRepo(repoA)
@@ -59,6 +59,33 @@ describe('GitWatchManager', () => {
     manager.subscribe('ChatA', repoA)
     manager.unsubscribe('ChatA', repoA)
     expect(manager.getRefCount(repoA)).toBe(0)
+  })
+
+  it('keeps an idle watcher briefly and reuses it when switching back quickly', async () => {
+    manager.subscribe('ChatA', repoA)
+    expect(manager.getWatchedPathCount()).toBe(1)
+
+    manager.unsubscribe('ChatA', repoA)
+    expect(manager.getRefCount(repoA)).toBe(0)
+    expect(manager.getWatchedPathCount()).toBe(1)
+
+    await wait(20)
+    manager.subscribe('ChatB', repoA)
+    expect(manager.getRefCount(repoA)).toBe(1)
+    expect(manager.getWatchedPathCount()).toBe(1)
+
+    await wait(80)
+    expect(manager.getWatchedPathCount()).toBe(1)
+  })
+
+  it('closes an idle watcher after the reuse window expires', async () => {
+    manager.subscribe('ChatA', repoA)
+    manager.unsubscribe('ChatA', repoA)
+
+    await wait(100)
+
+    expect(manager.getRefCount(repoA)).toBe(0)
+    expect(manager.getWatchedPathCount()).toBe(0)
   })
 
   it('Idempotent subscription：same chat + same path duplicate subscriptions do not double-count', () => {

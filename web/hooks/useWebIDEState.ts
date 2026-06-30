@@ -8,11 +8,14 @@ export interface EditorTab {
   name: string
   content: string
   originalContent: string
+  contentRevision: number
   language: string
   isDirty: boolean
   isLoading: boolean
   previewType: PreviewType
 }
+
+const nextContentRevision = (tab: EditorTab): number => tab.contentRevision + 1
 
 export const useWebIDEState = (worktreePath?: string) => {
   const [tabs, setTabs] = useState<EditorTab[]>([])
@@ -42,6 +45,7 @@ export const useWebIDEState = (worktreePath?: string) => {
     if (previewType === 'image') {
       const tab: EditorTab = {
         path: filePath, name, content: '', originalContent: '',
+        contentRevision: 0,
         language, isDirty: false, isLoading: false, previewType,
       }
       setTabs(prev => {
@@ -54,6 +58,7 @@ export const useWebIDEState = (worktreePath?: string) => {
 
     const placeholder: EditorTab = {
       path: filePath, name, content: '', originalContent: '',
+      contentRevision: 0,
       language, isDirty: false, isLoading: true, previewType,
     }
     setTabs(prev => {
@@ -69,17 +74,17 @@ export const useWebIDEState = (worktreePath?: string) => {
         const isBinary = data.error === 'binary_file'
         setTabs(prev => prev.map(t =>
           t.path === filePath
-            ? { ...t, content: isBinary ? '' : `// Error: ${data.error}`, isLoading: false, previewType: isBinary ? 'binary' as PreviewType : t.previewType }
+            ? { ...t, content: isBinary ? '' : `// Error: ${data.error}`, contentRevision: nextContentRevision(t), isLoading: false, previewType: isBinary ? 'binary' as PreviewType : t.previewType }
             : t
         ))
         return
       }
       setTabs(prev => prev.map(t =>
-        t.path === filePath ? { ...t, content: data.content, originalContent: data.content, isLoading: false } : t
+        t.path === filePath ? { ...t, content: data.content, originalContent: data.content, contentRevision: nextContentRevision(t), isLoading: false } : t
       ))
     } catch {
       setTabs(prev => prev.map(t =>
-        t.path === filePath ? { ...t, content: '// Failed to load file', isLoading: false } : t
+        t.path === filePath ? { ...t, content: '// Failed to load file', contentRevision: nextContentRevision(t), isLoading: false } : t
       ))
     }
   }, [])
@@ -123,7 +128,7 @@ export const useWebIDEState = (worktreePath?: string) => {
 
     if (res.ok) {
       setTabs(prev => prev.map(t =>
-        t.path === filePath ? { ...t, isDirty: false, originalContent: content } : t
+        t.path === filePath ? { ...t, isDirty: false, originalContent: content, contentRevision: nextContentRevision(t) } : t
       ))
     }
   }, [worktreePath])
@@ -169,7 +174,7 @@ export const useWebIDEState = (worktreePath?: string) => {
           if (data.content === tab.content) return
           setTabs(prev => prev.map(t =>
             t.path === tab.path && !t.isDirty
-              ? { ...t, content: data.content, originalContent: data.content }
+              ? { ...t, content: data.content, originalContent: data.content, contentRevision: nextContentRevision(t) }
               : t
           ))
         } catch {}
@@ -187,7 +192,7 @@ export const useWebIDEState = (worktreePath?: string) => {
       if (data.content === tab.content) return
       setTabs(prev => prev.map(t =>
         t.path === filePath && !t.isDirty
-          ? { ...t, content: data.content, originalContent: data.content }
+          ? { ...t, content: data.content, originalContent: data.content, contentRevision: nextContentRevision(t) }
           : t
       ))
     } catch { /* ignore */ }

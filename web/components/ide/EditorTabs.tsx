@@ -454,7 +454,7 @@ const EditorTabs = ({
                 filePath={activeRelativePath}
                 baseBranch={baseBranch}
                 readOnly={isActiveStaged}
-                refreshKey={activeTab.originalContent.length}
+                refreshKey={activeTab.contentRevision}
               />
             </Suspense>
           ) : activeTab ? (

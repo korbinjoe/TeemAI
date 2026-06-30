@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0-beta.12] - 2026-06-30
+
+### Bug Fixes
+
+- Open bare message file links such as `AGENTS.md` and `AGENTS.md:12` in the in-app IDE instead of the browser
+- Prevent the render performance gate API server from inheriting `ELECTRON`/`TEEMAI_CLI` environment flags that block standalone startup
+
 ## [0.1.0-beta.11] - 2026-06-27
 
 ### Features

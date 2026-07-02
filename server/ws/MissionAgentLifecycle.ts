@@ -96,6 +96,37 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
     return parts.length > 0 ? parts.join('\n\n---\n\n') : undefined
   }
 
+  const buildCodexInitialPrompt = (
+    taskPrompt: string | undefined,
+    initialPromptPrefix: string | undefined,
+  ): string | undefined => {
+    const instructions = initialPromptPrefix?.trim()
+    if (!instructions) return taskPrompt
+
+    const scopedInstructions = [
+      '# TeemAI-scoped instructions',
+      '',
+      'Apply these instructions only to this TeemAI-launched Codex session.',
+      '',
+      '<teemai_instructions>',
+      instructions,
+      '</teemai_instructions>',
+    ].join('\n')
+
+    const task = taskPrompt?.trim()
+    if (!task) return scopedInstructions
+
+    return [
+      scopedInstructions,
+      '',
+      '---',
+      '',
+      '<user_request>',
+      task,
+      '</user_request>',
+    ].join('\n')
+  }
+
   const handleStart = async (
     ws: WebSocket,
     payload: { agentId: string; task?: string; images?: Array<{ data: string; mediaType: string }>; cwd?: string; repositories?: Array<{ path: string }>; resumeSessionId?: string; chatId?: string; cols?: number; rows?: number; previousContext?: { agentName: string; lastMessage?: string; jsonlPath?: string }; executionMode?: 't0' | 't1' | 't2' },
@@ -428,7 +459,7 @@ export const createMissionAgentLifecycle = (deps: MissionAgentLifecycleDeps) => 
         ? store.drainPendingTasks(key)
         : []
       const promptText = provider === 'codex'
-        ? buildCodexPrompt(wrappedTask, codexQueuedTasks)
+        ? buildCodexInitialPrompt(buildCodexPrompt(wrappedTask, codexQueuedTasks), compiled.initialPromptPrefix)
         : wrappedTask
 
       if (promptText) {

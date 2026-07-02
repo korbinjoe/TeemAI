@@ -170,4 +170,36 @@ env_key = "OPENCODE_GO_API_KEY"
     expect(compiled.args[skillConfigIdx - 1]).toBe('-c')
     await compiled.cleanup()
   })
+
+  it('codex compile returns scoped prompt prefix without touching AGENTS.override.md', async () => {
+    vi.stubEnv('CODEX_APP_SERVER', '0')
+    const codexDir = join(homedir(), '.codex')
+    const overridePath = join(codexDir, 'AGENTS.override.md')
+    let originalOverride: string | null = null
+    try {
+      originalOverride = await readFile(overridePath, 'utf-8')
+    } catch {
+      await mkdir(codexDir, { recursive: true })
+    }
+
+    await writeFile(overridePath, 'personal codex override\n', 'utf-8')
+    try {
+      const compiled = await compiler.compile(
+        makeAgent({ model: 'gpt-5-codex' }),
+        { repositories: [{ path: ROOT }], serverPort: 3210 },
+        'codex',
+      )
+
+      expect(compiled.initialPromptPrefix).toContain('Basic tips')
+      expect(await readFile(overridePath, 'utf-8')).toBe('personal codex override\n')
+      await compiled.cleanup()
+      expect(await readFile(overridePath, 'utf-8')).toBe('personal codex override\n')
+    } finally {
+      if (originalOverride !== null) {
+        await writeFile(overridePath, originalOverride, 'utf-8')
+      } else {
+        await rm(overridePath, { force: true })
+      }
+    }
+  })
 })

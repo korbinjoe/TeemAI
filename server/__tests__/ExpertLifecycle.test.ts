@@ -475,5 +475,45 @@ describe('ExpertLifecycle', () => {
       expect(compileMock.mock.calls[0][1].resumeSessionId).toBe('thread-xyz')
       expect(compileMock.mock.calls[0][2]).toBe('codex')
     })
+
+    it('prepends TeemAI instructions to the codex initial prompt without using global override files', async () => {
+      const compileMock = vi.fn().mockResolvedValue({
+        command: 'codex',
+        args: ['exec', '--json'],
+        cwd: '/tmp/test',
+        env: {},
+        initialPromptPrefix: 'TeemAI scoped context',
+        cleanup: vi.fn(),
+      })
+      const deps = createMockDeps(store, {
+        configCompiler: { compile: compileMock } as any,
+        agentRegistry: {
+          get: vi.fn().mockReturnValue({
+            name: 'Codex Agent',
+            icon: 'C',
+            description: 'test',
+            provider: 'codex',
+            subAgentNames: [],
+            tags: [],
+          }),
+        } as any,
+      })
+      const { handleStart } = createMissionAgentLifecycle(deps)
+      const { ws } = mockWs()
+
+      const result = await handleStart(ws, {
+        agentId: 'agent-codex',
+        task: 'do codex work',
+        chatId: 'chat-1',
+      }, 'conn-1')
+
+      expect(result.started).toBe(true)
+      const registered = (deps.sessionRegistry.register as any).mock.calls[0][0]
+      expect(registered.acpClient.prompt).toHaveBeenCalledTimes(1)
+      const promptText = registered.acpClient.prompt.mock.calls[0][1]
+      expect(promptText).toContain('# TeemAI-scoped instructions')
+      expect(promptText).toContain('TeemAI scoped context')
+      expect(promptText).toContain('<user_request>\ndo codex work\n</user_request>')
+    })
   })
 })

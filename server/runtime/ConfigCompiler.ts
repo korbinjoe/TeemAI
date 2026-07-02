@@ -32,6 +32,7 @@ export interface CompiledAgentConfig {
   args: string[]
   env: Record<string, string>
   cwd: string
+  initialPromptPrefix?: string
   settingsPath?: string
   presetSessionId?: string
   /** Codex app-server spawn config; present only when the app-server driver is selected. */
@@ -346,49 +347,9 @@ export class ConfigCompiler {
     }
 
     const promptContent = this.buildPromptContent(agent, context)
+    const initialPromptPrefix = promptContent.trim() || undefined
 
     const cwd = this.resolveCwd(context)
-
-    if (promptContent.trim()) {
-      const codexHome = resolve(homedir(), '.codex')
-      await mkdir(codexHome, { recursive: true })
-      const overridePath = join(codexHome, 'AGENTS.override.md')
-
-      let userOriginal: string | null = null
-      await this.withCodexFileLock(overridePath, async () => {
-        let fileContent: string | null = null
-        try {
-          fileContent = await readFile(overridePath, 'utf-8')
-        } catch {
-        }
-
-        const TEEMAI_MARKER = '<!-- TeemAI Agent Instructions -->'
-        userOriginal = fileContent !== null
-          ? fileContent.split(TEEMAI_MARKER)[0].trimEnd()
-          : null
-
-        const newContent = userOriginal
-          ? `${userOriginal}\n\n${TEEMAI_MARKER}\n${promptContent}`
-          : promptContent
-
-        await writeFile(overridePath, newContent, 'utf-8')
-      })
-      log.info('Wrote ~/.codex/AGENTS.override.md', { agentName: agent.name })
-
-      cleanupFns.push(async () => {
-        try {
-          await this.withCodexFileLock(overridePath, async () => {
-            if (userOriginal) {
-              await writeFile(overridePath, userOriginal, 'utf-8')
-            } else {
-              await unlink(overridePath)
-            }
-          })
-          log.info('Cleaned up ~/.codex/AGENTS.override.md', { agentName: agent.name })
-        } catch {
-        }
-      })
-    }
 
     const codexHooks = this.buildCodexHooksJson(agent)
     if (codexHooks) {
@@ -445,6 +406,7 @@ export class ConfigCompiler {
       args,
       env,
       cwd,
+      initialPromptPrefix,
       ...(appServer ? { codex: { model: agent.model } } : {}),
       cleanup: async () => {
         for (const fn of cleanupFns) {
@@ -461,12 +423,16 @@ export class ConfigCompiler {
     const stopEntries = systemHooks.Stop.map((entry) => ({
       hooks: entry.hooks.map((h) => ({
         type: h.type,
-        command: h.command,
+        command: this.wrapCodexHookCommand(h.command),
         ...(h.timeout ? { timeout: h.timeout } : {}),
       })),
     }))
 
     return { hooks: { Stop: stopEntries } }
+  }
+
+  private wrapCodexHookCommand(command: string): string {
+    return `if [ -n "$TEEMAI_CHAT_ID" ] && [ -n "$TEEMAI_INSTANCE_ID" ]; then ${command}; fi`
   }
 
   private mergeCodexHooks(
@@ -588,7 +554,7 @@ export class ConfigCompiler {
   private codexHookCommandKey(command: unknown): string | null {
     if (typeof command !== 'string') return null
     const normalized = command.trim()
-    const teemaiHook = normalized.match(/(?:^|[\s/])(wb-auto-extract\.sh|satisfaction-score\.sh|render-perf-auto\.sh)(?:\s|$)/)
+    const teemaiHook = normalized.match(/(?:^|[\s/])(wb-auto-extract\.sh|satisfaction-score\.sh|render-perf-auto\.sh)(?:[\s;]|$)/)
     return teemaiHook ? `teemai:${teemaiHook[1]}` : normalized
   }
 

@@ -63,6 +63,9 @@ const countHookCommand = (hooksJson: { hooks?: { Stop?: Array<{ hooks?: Array<{ 
     .length
 }
 
+const hookCommands = (hooksJson: { hooks?: { Stop?: Array<{ hooks?: Array<{ command?: string }> }> } }): string[] =>
+  (hooksJson.hooks?.Stop ?? []).flatMap((entry) => entry.hooks ?? []).map((hook) => hook.command ?? '')
+
 describe('ConfigCompiler Codex hook idempotency', () => {
   const tempRoots: string[] = []
 
@@ -103,6 +106,7 @@ describe('ConfigCompiler Codex hook idempotency', () => {
     const hooksJson = JSON.parse(readFileSync(hooksPath, 'utf-8'))
     expect(countHookCommand(hooksJson, 'wb-auto-extract.sh')).toBe(1)
     expect(countHookCommand(hooksJson, 'satisfaction-score.sh')).toBe(1)
+    expect(hookCommands(hooksJson).every((command) => command.includes('TEEMAI_CHAT_ID') && command.includes('TEEMAI_INSTANCE_ID'))).toBe(true)
 
     for (const cleanup of cleanups.reverse()) {
       await cleanup()
@@ -144,6 +148,7 @@ describe('ConfigCompiler Codex hook idempotency', () => {
 
     const hooksJson = JSON.parse(readFileSync(hooksPath, 'utf-8'))
     expect(countHookCommand(hooksJson, 'render-perf-auto.sh')).toBe(1)
+    expect(hookCommands(hooksJson).every((command) => command.includes('TEEMAI_CHAT_ID') && command.includes('TEEMAI_INSTANCE_ID'))).toBe(true)
 
     for (const cleanup of cleanups.reverse()) {
       await cleanup()

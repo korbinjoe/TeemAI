@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm'
 import { Search, ChevronUp, ChevronDown, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import MermaidBlock from './MermaidBlock'
 
 const ExternalLink = ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
   <a
@@ -21,7 +22,31 @@ const ExternalLink = ({ href, children, ...props }: React.AnchorHTMLAttributes<H
   </a>
 )
 
-const mdComponents = { a: ExternalLink }
+const MERMAID_LANG = /(?:^|\s)language-mermaid(?:\s|$)/
+
+const getChildClassName = (child: unknown): string => {
+  if (child && typeof child === 'object' && 'props' in child) {
+    const props = (child as { props?: { className?: unknown } }).props
+    if (props && typeof props.className === 'string') return props.className
+  }
+  return ''
+}
+
+const CodeRenderer = ({ className, children, ...props }: React.HTMLAttributes<HTMLElement>) => {
+  if (MERMAID_LANG.test(className || '')) {
+    return <MermaidBlock code={String(children ?? '').replace(/\n$/, '')} />
+  }
+  return <code className={className} {...props}>{children}</code>
+}
+
+// Unwrap the <pre> around a mermaid block so the diagram isn't boxed in code styling.
+const PreRenderer = ({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) => {
+  const first = Array.isArray(children) ? children[0] : children
+  if (MERMAID_LANG.test(getChildClassName(first))) return <>{children}</>
+  return <pre {...props}>{children}</pre>
+}
+
+const mdComponents = { a: ExternalLink, code: CodeRenderer, pre: PreRenderer }
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 

@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, cleanup } from '@testing-library/react'
 import MarkdownPreview from '@/components/ide/MarkdownPreview'
+
+vi.mock('@/contexts/ThemeContext', () => ({ useTheme: () => ({ theme: 'dark' }) }))
 
 afterEach(cleanup)
 
@@ -38,5 +40,22 @@ describe('MarkdownPreview search highlight', () => {
       <MarkdownPreview content="nothing to see" fontSizePx={14} />,
     )
     expect(container.querySelectorAll('mark.search-highlight-match').length).toBe(0)
+  })
+
+  it('routes mermaid fenced blocks to the diagram renderer without a <pre> wrapper', () => {
+    const { container } = render(
+      <MarkdownPreview content={'```mermaid\ngraph TD; A-->B\n```'} fontSizePx={14} />,
+    )
+    // MermaidBlock shows a loading placeholder before async render resolves.
+    expect(container.querySelector('.mermaid-loading')).not.toBeNull()
+    expect(container.querySelector('pre')).toBeNull()
+  })
+
+  it('keeps non-mermaid code blocks as plain <pre><code>', () => {
+    const { container } = render(
+      <MarkdownPreview content={'```ts\nconst a = 1\n```'} fontSizePx={14} />,
+    )
+    expect(container.querySelector('pre code')).not.toBeNull()
+    expect(container.querySelector('.mermaid-loading')).toBeNull()
   })
 })

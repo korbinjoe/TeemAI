@@ -518,6 +518,54 @@ html, body, #root {
   font-size: 12px;
 }
 
+.md-preview .mermaid-diagram {
+  display: flex;
+  justify-content: center;
+  background: var(--pre-bg);
+  border: 1px solid rgb(var(--border-color));
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin: 12px 0;
+  overflow: auto;
+}
+.md-preview .mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+.md-preview .mermaid-loading {
+  color: rgb(var(--text-muted));
+  font-size: 12px;
+  padding: 14px 16px;
+  border: 1px dashed rgb(var(--border-color));
+  border-radius: var(--radius-md);
+  margin: 12px 0;
+}
+.md-preview .mermaid-error {
+  border: 1px solid rgb(var(--accent-red));
+  border-radius: var(--radius-md);
+  margin: 12px 0;
+  overflow: hidden;
+}
+.md-preview .mermaid-error-title {
+  background: rgb(var(--accent-red) / 0.12);
+  color: rgb(var(--accent-red));
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+}
+.md-preview .mermaid-error pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+}
+.md-preview .mermaid-error-msg {
+  color: rgb(var(--accent-red));
+  font-size: 11px;
+  padding: 8px 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .md-preview ul,
 .md-preview ol  { padding-left: 20px; margin: 8px 0; }
 .md-preview li  { margin: 4px 0; }
